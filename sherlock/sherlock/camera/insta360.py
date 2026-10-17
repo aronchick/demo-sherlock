@@ -57,9 +57,12 @@ from .base import (
 log = logging.getLogger(__name__)
 
 INSTA360_VID = 0x2E1A
-# 4c04 = Link 2, 4c03 = Link 2 Pro (both gimbal), 4c01 = original Link.
-# 4c02 (Link 2C, no gimbal) is left out on purpose.
-GIMBAL_PIDS = (0x4C04, 0x4C03, 0x4C01)
+# Gimbal models only. 4c04 = Link 2 and 4c01 = original Link agree across
+# link-ctl (csmarshall) and linkctl (illegalstudio); 4c06 = Link 2 Pro per
+# linkctl's hardware-validated table. 4c03 is left out: linkctl lists it as
+# the gimbal-less Link 2C, link-ctl treats it as a Link 2 Pro. Add it with
+# INSTA360_PID=4c03 only after the probe confirms a gimbal.
+GIMBAL_PIDS = (0x4C04, 0x4C06, 0x4C01)
 
 CT_UNIT = 1
 CT_ZOOM_ABSOLUTE = 0x0B

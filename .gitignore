@@ -7,3 +7,5 @@ snapshots/
 data/
 runs/
 .runtime/
+*.egg-info/
+build/

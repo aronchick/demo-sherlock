@@ -182,6 +182,51 @@ def test_snapshot_waits_for_the_gimbal_to_settle():
     assert cam.src.asked[-1] == pytest.approx(cam._settle_until)  # asks for a post-settle frame
 
 
+class RetainedFrames:
+    """Like _FrameSource: keeps the last frame and its capture time, and only
+    captures a new one when a caller asks for something newer. Each frame's
+    pixels hold the pan the gimbal was last sent, so a test can tell which pose
+    a frame really shows."""
+
+    def __init__(self, transport: FakeTransport):
+        self.tr = transport
+        self.frame, self.stamp = self._capture(), time.monotonic()
+        self.on_read = None  # hook to fire once, e.g. an auto-home mid-read
+
+    def _capture(self) -> np.ndarray:
+        pans = [c[1] for c in self.tr.calls if c[0] == "pantilt"]
+        return np.full((H, W, 3), 100 + (pans[-1] if pans else 0), np.uint8)
+
+    def read(self, newer_than: float = 0.0) -> np.ndarray:
+        if self.on_read:
+            hook, self.on_read = self.on_read, None
+            hook()
+        if self.stamp < newer_than:
+            time.sleep(max(0.0, newer_than - time.monotonic()))
+            self.frame, self.stamp = self._capture(), time.monotonic()
+        return self.frame
+
+
+def test_scout_frames_are_captured_after_settling_at_the_pose_they_carry():
+    tr = FakeTransport()
+    frames = RetainedFrames(tr)
+    t = Tuning(home_after_s=0.0, settle_s=0.1, cmd_timeout_s=1.0, units_per_deg=1)
+    cam = Insta360Camera("hero", "0", transport=tr, tuning=t, frames=frames)
+    frames.frame, frames.stamp = frames._capture(), time.monotonic()  # home view, cached
+    cam.move(pan=30)
+    f = cam.wide_frame()  # the cached home frame must not come back labelled pan 30
+    assert int(f[0, 0, 0]) == 130 and cam._view_pose.pan == 30
+    # auto-home fires while the Scout is reading: the frame read across the move
+    # is dropped and the next one is labelled with the home pose
+    def home_mid_read() -> None:  # the gimbal moves and the stream delivers it
+        cam._go_home(cam._home_gen)
+        frames.frame, frames.stamp = frames._capture(), time.monotonic()
+
+    frames.on_read = home_mid_read
+    f = cam.wide_frame()
+    assert int(f[0, 0, 0]) == 100 and cam._view_pose.pan == 0
+
+
 def test_returns_home_when_idle_and_new_moves_reset_the_clock():
     tr = FakeTransport()
     cam = make(tr, home_after_s=0.3)

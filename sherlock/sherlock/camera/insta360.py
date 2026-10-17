@@ -408,6 +408,9 @@ class Insta360Camera(Camera):
         # After a failed move the gimbal may have taken some SETs and not others,
         # so self.pose no longer describes it; the next move resends everything.
         self._pose_unknown = False
+        # Seqlock between _drive and the Scout: odd while SETs are in flight,
+        # bumped again once the new pose and settle deadline are published.
+        self._motion_seq = 0
         # Pose and size of the last frame handed to the Scout: detection bboxes
         # are in that frame, even if the gimbal has moved since.
         self._view_pose = replace(self.home)
@@ -420,11 +423,25 @@ class Insta360Camera(Camera):
 
     # --- Camera interface ----------------------------------------------------------
     def wide_frame(self) -> np.ndarray:
+        """A frame captured after the gimbal settled, labelled with the pose it was
+        captured at. No lock (a hung gimbal must not stall the Scout); instead a
+        frame is kept only if no move started or finished while it was read."""
         self._check()
-        pose = replace(self.pose)  # no lock: a hung gimbal must not stall the Scout
-        f = self._read(pose)
-        self._view_pose, self._view_wh = pose, (f.shape[1], f.shape[0])
-        return f
+        deadline = time.monotonic() + 3 * self.tuning.cmd_timeout_s + 2.0
+        while time.monotonic() < deadline:
+            seq = self._motion_seq
+            if seq % 2:  # SETs in flight: the image is mid-slew
+                time.sleep(0.02)
+                continue
+            pose, settle = replace(self.pose), self._settle_until
+            wait = settle - time.monotonic()
+            if wait > 0:
+                time.sleep(wait)
+            f = self._read(pose, newer_than=settle)
+            if self._motion_seq == seq:
+                self._view_pose, self._view_wh = pose, (f.shape[1], f.shape[0])
+                return f
+        raise CameraError(f"{self.name}: gimbal never settled long enough for a frame")
 
     def snapshot(self) -> np.ndarray:
         self._check()
@@ -527,6 +544,13 @@ class Insta360Camera(Camera):
     def _drive(self, target: Pose, force: bool = False) -> None:
         """Send `target` to the gimbal (caller holds the lock). Clamps to hardware
         limits, records the settle deadline, raises CameraError on any failure."""
+        self._motion_seq += 1
+        try:
+            self._send(target, force)
+        finally:
+            self._motion_seq += 1
+
+    def _send(self, target: Pose, force: bool) -> None:
         tn = self.tuning
         force = force or self._pose_unknown
         try:

@@ -203,46 +203,47 @@ not be submitted as vLLM performance evidence.
 
 ### Verifier verdicts
 
-SmolVLM models ignore the Verifier prompt's "reply with JSON" instruction.
-In a local bake-off on 50 open COCO crops, SmolVLM-Instruct and
-SmolVLM-500M answered with `True.` or `Supports.` in 100 of 100 calls each,
-which the old parser read as "not supported" for every real weapon. Both
-models also lean towards yes. So `Verifier.check` now:
+The Verifier asks the VLM a yes/no question about the weapon crop:
 
-1. constrains the reply with vLLM 0.28 structured outputs
-   (`response_format={"type": "json_schema", ...}`, boolean `supported`
-   first), and
-2. requests `logprobs` / `top_logprobs` and decides on the log-odds at the
-   verdict token, `log P(true) - log P(false)`, against a per-model threshold.
+> Is the object in this image {claim}? Judge the object only; do not
+> identify or describe any person. Answer yes or no.
 
-vLLM reports raw logprobs (before temperature) taken after the grammar
-mask, so this margin is the model's logit difference between `true` and
-`false`. Thresholds fitted on that bake-off: **3.31** for
-`HuggingFaceTB/SmolVLM-500M-Instruct`, **0.56** for
-`HuggingFaceTB/SmolVLM-Instruct`. Other models use 0.0 (argmax).
-`VERIFIER_MARGIN` overrides the threshold. Retune it on room photos before
-the final demo.
+An earlier version asked for a JSON verdict. In a local bake-off on 50 open
+COCO crops (a true and a false claim each), the SmolVLM models ignored that
+instruction (`True.`, `Supports.`) and leaned towards yes even when the reply
+was constrained to the JSON schema. They answer the yes/no question
+directly: every reply from the three models tested began with "Yes" or "No".
 
-Endpoints without these features still work. A field refused with HTTP
-400/422/501 is dropped for the rest of the run, one feature at a time, and
-the warning names it. Each verdict records the mode that decided it, in
-the dashboard event and the console line:
+| Verifier, accuracy /100 | SmolVLM-500M | SmolVLM-Instruct (2.2B) |
+|---|---:|---:|
+| JSON schema + tuned log-odds threshold (leave-one-crop-out) | 74 | 95 |
+| yes/no, first word of the reply | 94 | 98 |
+| yes/no + tuned log-odds threshold (leave-one-crop-out) | 95 | 99 |
 
-| Mode | Endpoint support | Decision |
-|---|---|---|
-| `margin` | structured outputs + logprobs (vLLM 0.28) | log-odds > threshold |
-| `constrained` | structured outputs, no logprobs | the generated boolean |
-| `text` | neither (or ignored) | JSON in the reply if any, else a leading `true`/`yes`/`supports` or `false`/`no` |
+How `Verifier.check` decides:
 
-llama.cpp's current server parses the same `response_format` and
-`logprobs` fields, so it should run in `margin` mode. Ollama and MLX servers
-land in whichever row their version supports. Check the logged mode in a
-rehearsal before trusting a verdict.
+- **With logprobs** (vLLM, llama.cpp's server), it requests `top_logprobs`
+  and computes `log P(yes) - log P(no)` at the reply's first word, pooling
+  spellings (` Yes`, `yes`, ...). The claim is supported when this margin
+  exceeds `VERIFIER_MARGIN`, default **0.0** (whichever answer is likelier).
+  Fitted on the bake-off: **-2.75** for SmolVLM-500M and **-1.88** for
+  SmolVLM-Instruct, because the models lean "no" under this question.
+  Retune on room photos before using them.
+- **Without logprobs** (the field refused with HTTP 400/422/501, which is
+  remembered for the run, or ignored, as by some Ollama and MLX servers), it
+  reads the reply's first word. A reply that opens with neither yes nor no
+  is not support. At the default threshold this read agreed with the margin
+  on all 100 bake-off calls for each model.
 
-The prompt text is unchanged, so the benchmark's workload hash and the
-NeMo Gym schemas are too. Benchmark VLM traffic still sends the plain
-prompt without `response_format` or `logprobs`, so its VLM latency
-excludes grammar overhead.
+Each verdict records its mode (`margin` or `text`) in the dashboard event
+and the console line. SmolVLM-500M at the default threshold confirmed 27/30
+real weapon crops, accepted 1/20 false "kitchen knife" claims on cups and
+bottles, and accepted 0/30 wrong-weapon claims on weapon crops.
+
+The prompt changed, so the benchmark's workload hash, which records
+`Verifier.PROMPT`, changes too. The NeMo Gym schemas do not: the verdict
+still carries `supported`, `confidence` (`null` without logprobs) and
+`reason` (the model's reply), plus `mode` and `margin`.
 
 ### Parameter budget and speculation
 
@@ -619,19 +620,19 @@ Sherlock incorporates both existing open datasets and openly published synthetic
      - Weapon escalations (`knife`, `scissors`, `baseball bat`) requiring weapon zoom + weapon crop + head zoom + unanalyzed face crop + `verify` confirmation + `report(alert)`.
      - Fault-injection and false-positive recovery scenarios (`look_at` hardware error, occluded `hero` camera requiring fallback to `scout1`, and unconfirmed Verifier claims requiring downgrade to `log`).
 3. **VLM bake-off evaluation crops (`tests/fixtures/vllm/`)**:
-   - Uses public-domain NASA imagery (`shuttle_crop.jpg`, documented in [`tests/fixtures/vllm/README.md`](tests/fixtures/vllm/README.md)) and 50 CC-BY COCO 2017 object crops (`knife`, `scissors`, `baseball bat`, `cup`, `bottle`) to fit per-model Verifier log-odds thresholds (`MARGIN_DEFAULTS` in `sherlock/sherlock/agents/vision.py`).
+   - Uses public-domain NASA imagery (`shuttle_crop.jpg`, documented in [`tests/fixtures/vllm/README.md`](tests/fixtures/vllm/README.md)) and 50 CC-BY COCO 2017 object crops (`knife`, `scissors`, `baseball bat`, `cup`, `bottle`) to fit the Verifier's yes/no log-odds thresholds (see "Verifier verdicts").
 
 ## Known limitations & next steps
 
 ### Known limitations
-- **Human-in-the-loop review required for security alerts**: Small vision-language models (`SmolVLM-Instruct` 2.25B and `SmolVLM-500M-Instruct` 0.51B) are decision-support tools, not autonomous safety-critical detectors. In our 50-crop COCO bake-off, `Verifier.check` with vLLM JSON schema constraints and log-odds thresholding rejects 20/20 false `"kitchen knife"` claims on cups and bottles, while confirming 29/30 real weapon crops on 2.2B (`margin > 0.56`) and 24/30 on 500M (`margin > 3.31`). Borderline crops near the log-odds threshold can still flip across JPEG re-encodes, so every `alert` attaches both the weapon crop and an unanalyzed human-only face crop for operator verification.
-- **Parameter-count accounting across model card vs. checkpoint tensors**: The default configuration, `NVIDIA-Nemotron-3.5-Lightning` (30B) + the shared `HuggingFaceTB/SmolVLM-500M-Instruct` (`0.51B`), totals **30.51B by model card and 32.09B by base checkpoint tensors** (raw BF16 safetensors headers excluding never-loaded `mtp.*` weights: `31.58B + 0.51B`), under 33B on both counts. The previous `SmolVLM-Instruct` (2.25B) default totals 32.25B by model card but `31.58B + 2.25B = 33.82B` by tensors, over the cap; the 500M costs single-crop Verifier recall (24/30 real weapon crops confirmed vs. 29/30).
+- **Human-in-the-loop review required for security alerts**: Small vision-language models (`SmolVLM-Instruct` 2.25B and `SmolVLM-500M-Instruct` 0.51B) are decision-support tools, not autonomous safety-critical detectors. In our 50-crop COCO bake-off, the yes/no `Verifier.check` at its default threshold confirms 27/30 real weapon crops on 500M and 29/30 on 2.2B, and accepts 1/20 and 0/20 false `"kitchen knife"` claims on cups and bottles. Borderline crops near the log-odds threshold can still flip across JPEG re-encodes, so every `alert` attaches both the weapon crop and an unanalyzed human-only face crop for operator verification.
+- **Parameter-count accounting across model card vs. checkpoint tensors**: The default configuration, `NVIDIA-Nemotron-3.5-Lightning` (30B) + the shared `HuggingFaceTB/SmolVLM-500M-Instruct` (`0.51B`), totals **30.51B by model card and 32.09B by base checkpoint tensors** (raw BF16 safetensors headers excluding never-loaded `mtp.*` weights: `31.58B + 0.51B`), under 33B on both counts. The previous `SmolVLM-Instruct` (2.25B) default totals 32.25B by model card but `31.58B + 2.25B = 33.82B` by tensors, over the cap; the 500M costs single-crop Verifier recall (27/30 real weapon crops confirmed vs. 29/30 at the default Verifier threshold).
 - **Platform-specific USB gimbal control**: Direct UVC pan/tilt/zoom control for the Insta360 Link 2 (`2e1a:4c01`, `2e1a:4c02`, `2e1a:4c04`) relies on macOS IOKit via `link-ctl`. On Linux, the stock `uvcvideo` kernel driver rejects UVC pan/tilt `SET_CUR` transfers without detaching the video stream, so Linux hosts automatically fall back to the secondary camera or software crop (`FakePTZ`).
 - **Local dashboard network scope**: The FastAPI dashboard serves live MJPEG streams and saved evidence crops without authentication and therefore binds to `127.0.0.1` by default (`DASHBOARD_HOST=127.0.0.1`).
 - **NeMo Gym simulation scope**: The 8 tasks in `gym/resources_servers/sherlock/data/tasks.jsonl` evaluate the Director's multi-turn tool policy, fault recovery, and verification discipline against deterministic scene responses rather than live pixel crops.
 
 ### Next steps
-- **Evaluate ~1B vision-language models (`InternVL3-1B`, 0.94B)**: Fits inside the 1.42B tensor-count VLM ceiling (`31.58B + 0.94B = 32.52B <= 33B`) to combine tensor-count compliance with 2B-class Verifier discrimination.
+- **Revisit `InternVL3-1B` (0.94B) only if room photos disappoint**: it fits the 1.42B tensor-count VLM ceiling (`31.58B + 0.94B = 32.52B <= 33B`) and scored 95/100 on the bake-off, but its default 13-tile preprocessing costs about 3.6x SmolVLM-500M's input tokens, and the 500M matches it with the yes/no Verifier.
 - **Expand in-room prop and lighting coverage**: Capture multi-angle in-room sessions across varied lighting with `scripts/capture_props.py` and `scripts/review_labels.py`, then publish the CC-BY dataset and fine-tuned Scout weights to Hugging Face via `scripts/publish_scout_hf.py --public`.
 - **Continuous multi-camera handoff**: Extend `Orchestrator` from reactive single-incident failover (`hero` -> `scout1`) to continuous cross-camera homography calibration so `scout1` bounding boxes map directly into `hero` pan/tilt angles without an intermediate wide sweep.
 

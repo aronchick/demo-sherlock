@@ -1,6 +1,6 @@
 # Ablation 1 (Baseline / Improved): Director = Nemotron 3.5 Lightning (thinking off), system_v2, verbose tools
-# Generative parameters by model card: 30B (Nemotron-3.5-Lightning-30B-A3B) + 2.25B (SmolVLM-Instruct) = 32.25B <= 33B.
-# By checkpoint tensor count: 31.58B (MTP excluded, never loaded) + 2.25B = 33.82B, over the 33B cap.
+# Generative parameters by model card: 30B (Nemotron-3.5-Lightning-30B-A3B) + 0.51B (SmolVLM-500M-Instruct) = 30.51B <= 33B.
+# By checkpoint tensor count: 31.58B (MTP excluded, never loaded) + 0.51B = 32.09B <= 33B.
 # The budget fields below use the model-card figures (see README "Parameter budget and speculation").
 sherlock:
   resources_servers:
@@ -48,5 +48,5 @@ sherlock_agent:
       ablation_description: "Nemotron 3.5 Lightning 30B-A3B (thinking off), system_v2 prompt, verbose tool schemas"
       director_model_name: nvidia/NVIDIA-Nemotron-3.5-Lightning-30B-A3B-NVFP4
       director_params_b: 30.0
-      vlm_model_name: HuggingFaceTB/SmolVLM-Instruct
-      vlm_params_b: 2.246
+      vlm_model_name: HuggingFaceTB/SmolVLM-500M-Instruct
+      vlm_params_b: 0.507

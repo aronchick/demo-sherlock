@@ -1,16 +1,16 @@
 #!/usr/bin/env bash
 # Run on the Brev GPU box (1x H100/A100 80GB). Serves Configuration A. Generative params:
-# 32.25B by model card (30B + 2.25B); 33.82B by checkpoint tensor count (31.58B + 2.25B, over the 33B cap).
+# 30.51B by model card (30B + 0.51B); 32.09B by checkpoint tensor count (31.58B + 0.51B, under the 33B cap).
 #   - Director (:8001): Nemotron 3.5 Lightning 30B-A3B (30B total / 3B active by card; BF16 shard headers:
 #     31.58B without MTP, 32.91B with its 270 embedded mtp.* tensors, which vLLM skips without a
 #     speculative config; see README "Parameter budget and speculation")
-#   - Analyst + Verifier (:8002): shared SmolVLM 2.2B (2,246,272,880 params, Idefics3 arch in vLLM)
+#   - Analyst + Verifier (:8002): shared SmolVLM-500M (507,482,304 params, Idefics3 arch in vLLM)
 # No speculative-decoding draft models are loaded (draft weights count toward the parameter budget).
 set -euo pipefail
 IMG=vllm/vllm-openai:v0.28.0
 # Hopper/Ampere: use the NVFP4 repo's W4A16 kernels (~20GB). Blackwell: NVFP4 natively.
 DIRECTOR=${DIRECTOR:-nvidia/NVIDIA-Nemotron-3.5-Lightning-30B-A3B-NVFP4}
-VLM=${VLM:-HuggingFaceTB/SmolVLM-Instruct}
+VLM=${VLM:-HuggingFaceTB/SmolVLM-500M-Instruct}
 TOOL_PARSER=${TOOL_PARSER:-qwen3_coder}
 REASONING_PARSER=${REASONING_PARSER:-nemotron_v3}
 PREFIX_CACHING=${PREFIX_CACHING:-1}

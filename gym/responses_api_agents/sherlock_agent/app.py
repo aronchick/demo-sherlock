@@ -50,8 +50,8 @@ class SherlockAgentConfig(BaseResponsesAPIAgentConfig):
     ablation_description: str = "Nemotron 3.5 Lightning (thinking off), system_v2, verbose tools"
     director_model_name: str = "nvidia/NVIDIA-Nemotron-3.5-Lightning-30B-A3B-NVFP4"
     director_params_b: float = 30.0
-    vlm_model_name: str = "HuggingFaceTB/SmolVLM-Instruct"
-    vlm_params_b: float = 2.25
+    vlm_model_name: str = "HuggingFaceTB/SmolVLM-500M-Instruct"
+    vlm_params_b: float = 0.507
 
 
 def _resolve_prompt_path(prompt_config: str) -> Path:

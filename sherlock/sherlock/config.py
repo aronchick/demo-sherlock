@@ -38,10 +38,10 @@ class Config:
         _env("DIRECTOR_MODEL", "nvidia/NVIDIA-Nemotron-3.5-Lightning-30B-A3B-NVFP4")))
     analyst: Endpoint = field(default_factory=lambda: Endpoint(
         _env("ANALYST_BASE_URL", "http://localhost:8002/v1"),
-        _env("ANALYST_MODEL", "HuggingFaceTB/SmolVLM-Instruct")))
+        _env("ANALYST_MODEL", "HuggingFaceTB/SmolVLM-500M-Instruct")))
     verifier: Endpoint = field(default_factory=lambda: Endpoint(
         _env("VERIFIER_BASE_URL", "http://localhost:8002/v1"),
-        _env("VERIFIER_MODEL", "HuggingFaceTB/SmolVLM-Instruct")))
+        _env("VERIFIER_MODEL", "HuggingFaceTB/SmolVLM-500M-Instruct")))
     cameras: list[CameraSpec] = field(default_factory=list)
     dashboard_port: int = field(default_factory=lambda: int(_env("DASHBOARD_PORT", "8000")))
     dwell_seconds: float = field(default_factory=lambda: float(_env("DWELL_SECONDS", "0.6")))

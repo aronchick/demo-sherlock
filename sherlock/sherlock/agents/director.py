@@ -8,36 +8,61 @@ import time
 
 from openai import OpenAI
 
-from ..config import Endpoint
+from ..config import Endpoint, _env
 from ..events import BUS
 from ..tools import TOOL_SCHEMAS, ToolBox
 
-SYSTEM = """You are the Director of a multi-camera investigation system.
-A cheap detector just flagged something new. Decide if it's worth a closer look.
-If yes: call look_at with the camera and bbox, then snapshot with a precise question,
-then call report. If a tool returns an error, do not repeat the identical call:
+SYSTEM = """You are the Director of a multi-camera security system.
+A cheap detector just flagged something new. The event's "threat" field decides the plan:
+- "benign" (cup, bottle, phone...): call report with action="ignore" right away. No look_at, no snapshot.
+- "weapon": call, in this order: look_at(camera, weapon bbox) -> snapshot(camera, subject="weapon",
+  question about the object) -> look_at(camera, head_bbox) -> snapshot(camera, subject="face")
+  -> verify(claim naming the weapon, e.g. "a knife") -> report(the same claim you verified,
+  action="alert" if verified else "log", evidence=["weapon_crop", "face_crop"]).
+  Skip the two face steps if head_bbox is null.
+- "unknown": look_at -> snapshot(subject="object") -> verify -> report(action="log").
+Never ask about, describe or identify a person. The face crop is evidence for a human only.
+If a tool returns an error, do not repeat the identical call:
 try list_cameras and use a different camera, or adjust the arguments.
 Be decisive. Use at most {max_calls} tool calls. Always finish with report."""
 
+# The weapon chain alone is six calls; leave room to recover from a fault.
+WEAPON_EXTRA_CALLS = 4
+
+_WEAPON_CLAIMS = {"scissors": "a pair of scissors"}
+
+
+def weapon_claim(label: str) -> str:
+    """What the Verifier must confirm before an alert: that this is the weapon, not
+    just that the Analyst's description fits the crop (a cup described as a cup
+    is a supported claim, and still no reason to alert)."""
+    return _WEAPON_CLAIMS.get(label, f"a {label}")
+
 
 class Director:
-    def __init__(self, ep: Endpoint, tools: ToolBox, max_tool_calls: int = 6, thinking: bool = False):
+    def __init__(self, ep: Endpoint, tools: ToolBox, max_tool_calls: int = 6, thinking: bool | None = None):
         self.client = OpenAI(base_url=ep.base_url, api_key=ep.api_key)
         self.model = ep.model
         self.tools = tools
         self.max_calls = max_tool_calls
+        if thinking is None:
+            thinking = _env("DIRECTOR_THINKING", "0") == "1"
         # Nemotron 3.5 Lightning: thinking on by default; off keeps the tool loop fast.
-        self.extra = {"chat_template_kwargs": {"enable_thinking": thinking}}
+        self.extra = {"chat_template_kwargs": {"enable_thinking": bool(thinking)}}
 
     def investigate(self, detection) -> dict:
         BUS.bump("investigations")
-        msgs = [{"role": "system", "content": SYSTEM.format(max_calls=self.max_calls)},
+        threat = getattr(detection, "threat", "unknown")
+        budget = self.max_calls + (WEAPON_EXTRA_CALLS if threat == "weapon" else 0)
+        head = getattr(detection, "head", None)
+        msgs = [{"role": "system", "content": SYSTEM.format(max_calls=budget)},
                 {"role": "user", "content": json.dumps({
-                    "camera": detection.camera, "label": detection.label,
+                    "camera": detection.camera, "label": detection.label, "threat": threat,
                     "confidence": round(detection.conf, 2), "bbox": list(detection.bbox),
+                    "head_bbox": list(head) if head else None,
                     "cameras": self.tools.t_list_cameras()["cameras"]})}]
         calls = 0
-        while calls < self.max_calls:
+        while calls < budget:
             t0 = time.perf_counter()
             try:
                 r = self.client.chat.completions.create(
@@ -82,20 +107,41 @@ class RuleDirector:
 
     def investigate(self, detection) -> dict:
         BUS.bump("investigations")
+        threat = getattr(detection, "threat", "unknown")
+        if threat == "benign":
+            BUS.emit("director", f"{detection.label} is benign: ignore, no closer look")
+            return self.tools.call("report", {"claim": f"benign {detection.label}", "confidence": 0.9,
+                                              "action": "ignore", "evidence": []})
+        subject = "weapon" if threat == "weapon" else "object"
+        head = getattr(detection, "head", None)
         cams = [detection.camera] + [c for c in self.tools.cameras if c != detection.camera]
         for cam in cams:
-            r = self.tools.call("look_at", {"camera": cam, "bbox": list(detection.bbox)})
-            if "error" in r:
-                BUS.bump("recoveries")
-                BUS.emit("director", f"{cam} failed, trying next camera")
+            if self._failed(cam, self.tools.call("look_at", {"camera": cam, "bbox": list(detection.bbox)})):
                 continue
-            r = self.tools.call("snapshot", {"camera": cam, "question": "What is this object? Read any text."})
-            if "error" in r:
-                BUS.bump("recoveries")
+            r = self.tools.call("snapshot", {"camera": cam, "subject": subject, "question": "What is this object?"})
+            if self._failed(cam, r):
                 continue
-            desc = r["description"]
-            weak = "hard to tell" in desc.lower() or "cannot" in desc.lower()
-            return self.tools.call("report", {"claim": desc.split(".")[0],
-                                              "confidence": 0.4 if weak else 0.85,
-                                              "action": "log" if weak else "alert"})
-        return self.tools.call("report", {"claim": "all cameras failed", "confidence": 0.0, "action": "log"})
+            claim = weapon_claim(detection.label) if threat == "weapon" else r["description"].split(".")[0]
+            evidence = [r["evidence_id"]]
+            # Face evidence is best effort: a failed zoom must not cost us the weapon alert.
+            if threat == "weapon" and head and not self._failed(
+                    cam, self.tools.call("look_at", {"camera": cam, "bbox": list(head)})):
+                f = self.tools.call("snapshot", {"camera": cam, "subject": "face"})
+                if not self._failed(cam, f):
+                    evidence.append(f["evidence_id"])
+            v = self.tools.call("verify", {"claim": claim})
+            supported = bool(v.get("supported"))
+            action = "alert" if threat == "weapon" and supported else "log"
+            return self.tools.call("report", {"claim": claim,
+                                              "confidence": v.get("confidence", 0.4) if supported else 0.4,
+                                              "action": action, "evidence": evidence})
+        return self.tools.call("report", {"claim": f"{detection.label} flagged but all cameras failed",
+                                          "confidence": 0.0, "action": "log"})
+
+    @staticmethod
+    def _failed(cam: str, result: dict) -> bool:
+        if "error" in result:
+            BUS.bump("recoveries")
+            BUS.emit("director", f"{cam}: {result['error']}; recovering")
+            return True
+        return False

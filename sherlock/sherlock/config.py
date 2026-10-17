@@ -34,11 +34,14 @@ class Config:
     scout_backend: str = field(default_factory=lambda: _env("SCOUT_BACKEND", "yolo"))
     yolo_model: str = field(default_factory=lambda: _env("YOLO_MODEL", "yolov8n.pt"))
     director: Endpoint = field(default_factory=lambda: Endpoint(
-        _env("DIRECTOR_BASE_URL", "http://localhost:11434/v1"), _env("DIRECTOR_MODEL", "nemotron-3.5-lightning")))
+        _env("DIRECTOR_BASE_URL", "http://localhost:8001/v1"),
+        _env("DIRECTOR_MODEL", "nvidia/NVIDIA-Nemotron-3.5-Lightning-30B-A3B-NVFP4")))
     analyst: Endpoint = field(default_factory=lambda: Endpoint(
-        _env("ANALYST_BASE_URL", "http://localhost:11434/v1"), _env("ANALYST_MODEL", "qwen2.5vl:3b")))
+        _env("ANALYST_BASE_URL", "http://localhost:8002/v1"),
+        _env("ANALYST_MODEL", "HuggingFaceTB/SmolVLM-Instruct")))
     verifier: Endpoint = field(default_factory=lambda: Endpoint(
-        _env("VERIFIER_BASE_URL", "http://localhost:11434/v1"), _env("VERIFIER_MODEL", "qwen2.5vl:3b")))
+        _env("VERIFIER_BASE_URL", "http://localhost:8002/v1"),
+        _env("VERIFIER_MODEL", "HuggingFaceTB/SmolVLM-Instruct")))
     cameras: list[CameraSpec] = field(default_factory=list)
     dashboard_port: int = field(default_factory=lambda: int(_env("DASHBOARD_PORT", "8000")))
     dwell_seconds: float = field(default_factory=lambda: float(_env("DWELL_SECONDS", "0.6")))
@@ -53,5 +56,4 @@ class Config:
                 self.cameras.append(CameraSpec(name, backend, source))
 
 
-CONFIG = Config()
 CONFIG = Config()

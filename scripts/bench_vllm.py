@@ -39,6 +39,8 @@ sys.path.insert(0, str(ROOT / "sherlock"))
 
 from sherlock.agents import director
 from sherlock.agents.vision import Analyst, Verifier
+from sherlock.config import Endpoint
+from sherlock.dashboard import model_servers
 from sherlock.tools import TOOL_SCHEMAS
 
 SYSTEM = director.SYSTEM
@@ -809,6 +811,26 @@ def main(argv=None) -> int:
     return run(args)
 
 
+def serving_metadata(args) -> dict:
+    """Identify servers before timing traffic; never name a stub as a runtime."""
+    if args.evidence_kind == "stub":
+        return {"model_server": None, "model_servers": {}}
+    servers = {}
+    for workload in args.workloads:
+        role = "director" if workload == "director" else "analyst"
+        base = os.environ.get(role.upper() + "_BASE_URL", "")
+        # Normalize /v1 and reject embedded credentials before probing.
+        base = endpoint(base, "models").removesuffix("/models")
+        key = os.environ.get(
+            role.upper() + "_API_KEY", os.environ.get("OPENAI_API_KEY", "EMPTY")
+        )
+        servers[workload] = model_servers.server(
+            role, Endpoint(base, model_name(workload), key)
+        )
+    primary = "director" if "director" in servers else args.workloads[0]
+    return {"model_server": servers[primary], "model_servers": servers}
+
+
 def run(args):
     cli = parser()
     if (
@@ -871,6 +893,7 @@ def run(args):
         baseline = json.loads(args.compare.read_text()) if args.compare else None
         if baseline is not None:
             compare_runs({**baseline, "runs": []}, {**result, "runs": []})
+        result.update(serving_metadata(args))
         result["runs"] = asyncio.run(sweep(args, crop))
         if baseline is not None:
             result["comparison"] = compare_runs(baseline, result)

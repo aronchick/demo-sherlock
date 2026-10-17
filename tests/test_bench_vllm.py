@@ -602,3 +602,52 @@ def test_endpoint_paths_and_credentials():
     ):
         with pytest.raises(ValueError):
             bench.endpoint(base, "metrics")
+
+
+def test_serving_metadata_probes_endpoint(monkeypatch):
+    class Handler(BaseHTTPRequestHandler):
+        def log_message(self, *_args):
+            pass
+
+        def do_GET(self):
+            body = {"data": [{"owned_by": "vllm"}]} if self.path == "/v1/models" else {"version": "0.28.0"}
+            self.send_response(200)
+            self.end_headers()
+            self.wfile.write(json.dumps(body).encode())
+
+    for name in ("MODEL_SERVER", "DIRECTOR_MODEL_SERVER", "ANALYST_MODEL_SERVER", "BREV_HOST"):
+        monkeypatch.delenv(name, raising=False)
+    server = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
+    thread = threading.Thread(target=server.serve_forever)
+    thread.start()
+    try:
+        base = f"http://127.0.0.1:{server.server_port}"
+        monkeypatch.setenv("DIRECTOR_BASE_URL", base)
+        monkeypatch.setenv("ANALYST_BASE_URL", base + "/v1")
+        bench.model_servers.clear_cache()
+        args = bench.parser().parse_args([])
+        metadata = bench.serving_metadata(args)
+        assert metadata["model_server"] == {
+            "name": "vLLM", "version": "0.28.0", "host": "laptop",
+            "label": "vLLM", "reachable": True, "source": "detected",
+        }
+        assert all(value == metadata["model_server"] for value in metadata["model_servers"].values())
+        args.evidence_kind = "stub"
+        monkeypatch.setattr(bench.model_servers, "server", lambda *_: pytest.fail("stub probed"))
+        assert bench.serving_metadata(args) == {"model_server": None, "model_servers": {}}
+    finally:
+        server.shutdown()
+        server.server_close()
+        thread.join()
+        bench.model_servers.clear_cache()
+
+
+def test_imported_brev_metadata_is_declared():
+    files = list(SCRIPT.parents[1].glob("results/brev_preflight_*/**/vllm_bench_*.json"))
+    assert files
+    for path in files:
+        metadata = json.loads(path.read_text())["model_server"]
+        assert metadata["name"] == "vLLM"
+        assert metadata["version"] == "0.28.0"
+        assert metadata["host"] == "sherlock-h100"
+        assert metadata["source"] == "declared"

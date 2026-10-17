@@ -6,8 +6,12 @@
 
 The base stays YOLOv8n so the runtime Scout keeps its ~10 ms per frame. Then:
 
-    python scripts/eval_scout.py --after runs/scout/weights/best.pt
-    YOLO_MODEL=runs/scout/weights/best.pt python run.py"""
+    uv run scripts/eval_scout.py --measured \\
+        --after runs/scout/weights/best.pt
+    YOLO_MODEL=runs/scout/weights/best.pt python run.py
+
+After --smoke training, evaluate with --smoke instead of --measured. Smoke
+evaluation is a pipeline check and cannot supply measured demo results."""
 from __future__ import annotations
 
 import argparse

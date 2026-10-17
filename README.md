@@ -169,7 +169,7 @@ the publisher rejects smoke or unlabelled evaluation files before staging.
 Routing comes from the weapon flow in `sherlock/sherlock/agents/scout.py`: `weapon` escalates, `badge` and `bottle` are benign
 (ignored, no VLM call), `person` is context for the face crop.
 
-**Publishing (owner approval first).** `uv run --extra yolo scripts/publish_scout_hf.py --model-repo ORG/sherlock-scout
+**Publishing (owner approval first).** `uv run --with huggingface-hub scripts/publish_scout_hf.py --model-repo ORG/sherlock-scout
 --dataset-repo ORG/sherlock-scout-data` stages both repos with cards under `runs/hf_staging/` and lists the
 files; it uploads nothing without `--publish` (and then only to private repos unless `--public`). The
 dataset card is CC-BY-4.0. The weights card defaults to AGPL-3.0 because they are fine-tuned from

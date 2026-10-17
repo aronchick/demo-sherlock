@@ -102,13 +102,20 @@ saved in the results.
 The command tests concurrency **1, 4, 8, 16**, with 64 measured requests per
 cell and four excluded warmups. Director traffic imports `SYSTEM` from
 `sherlock/agents/director.py` and `TOOL_SCHEMAS` from `sherlock/tools.py`.
-It varies detections and includes initial selection, post-zoom and
-post-snapshot turns, with the application's temperature and token limits.
+It varies weapon, unknown and benign detections, including `threat` and
+`head_bbox`. Weapon traffic samples each step through verification and the
+final report, with and without face-evidence steps. Benign traffic has no
+prior camera calls. Weapon prompts add the application's four-call recovery
+budget. Fixture arguments are checked against the imported schemas before
+dispatch; older schemas omit unsupported fields and steps. Requests use
+the application's temperature and token limits.
 It does not execute camera tools. The shared prefix is the real prompt and
 tool schemas; no padding is added to inflate a caching benefit.
 
 VLM traffic alternates the imported Analyst and Verifier prompts using a
-[real JPEG photograph crop](tests/fixtures/vllm/README.md). Supply a camera
+[real JPEG object crop](tests/fixtures/vllm/README.md) of a model spacecraft,
+with no face in the image. Director face-tool results are text metadata;
+face crops are never sent to the VLM. Supply a representative object
 crop with `--image path/to/crop.jpg` for the final run. This fixed-image
 test includes repeated image/prompt cache reuse; it does not represent a
 stream of unique scenes. Workloads run sequentially, so results describe

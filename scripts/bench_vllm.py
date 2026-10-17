@@ -37,12 +37,13 @@ from prometheus_client.parser import text_string_to_metric_families
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "sherlock"))
 
-from sherlock.agents.director import SYSTEM
+from sherlock.agents import director
 from sherlock.agents.vision import Analyst, Verifier
 from sherlock.tools import TOOL_SCHEMAS
 
+SYSTEM = director.SYSTEM
 SCHEMA_VERSION = 1
-FIXTURE = ROOT / "tests/fixtures/vllm/astronaut_crop.jpg"
+FIXTURE = ROOT / "tests/fixtures/vllm/shuttle_crop.jpg"
 PARAMETERS = {
     tool["function"]["name"]: tool["function"]["parameters"] for tool in TOOL_SCHEMAS
 }
@@ -81,50 +82,115 @@ def load_crop(path: Path) -> tuple[str, dict]:
     }
 
 
+def tool_arguments(name: str, values: dict) -> dict:
+    """Keep fixtures compatible with the imported schema; reject missing fields."""
+    args = {k: v for k, v in values.items() if k in PARAMETERS[name]["properties"]}
+    try:
+        VALIDATORS[name].validate(args)
+    except ValidationError as exc:
+        raise ValueError(
+            f"Benchmark fixture no longer matches {name}: {exc.message}"
+        ) from exc
+    return args
+
+
+def director_case(index: int) -> tuple[dict, list]:
+    """Synthetic tool results for each branch of the real investigation flow."""
+    threat = ("weapon", "unknown", "benign")[index % 3]
+    x = 120 + index % 320
+    detection = {
+        "camera": "hero",
+        "label": {"weapon": "knife", "unknown": "object", "benign": "cup"}[threat],
+        "threat": threat,
+        "head_bbox": [x, 20, x + 80, 100]
+        if threat == "weapon" and index // 18 % 2 == 0
+        else None,
+        "confidence": round(0.8 + index % 19 / 100, 2),
+        "bbox": [x, 180, x + 160, 320],
+        "cameras": [
+            {"name": name, "pan": 0, "tilt": 0, "zoom": 1, "covered": False}
+            for name in ("hero", "scout1")
+        ],
+    }
+    history = []
+
+    def step(name, values, result):
+        history.append((name, tool_arguments(name, values), result))
+
+    evidence = []
+    claim = "benign cup"
+    if threat != "benign":
+        pose = {
+            "ok": True,
+            "name": "hero",
+            "pan": -30,
+            "tilt": 5,
+            "zoom": 3,
+            "covered": False,
+        }
+        step("look_at", {"camera": "hero", "bbox": detection["bbox"]}, pose)
+        subject = "weapon" if threat == "weapon" else "object"
+        claim = (
+            "A kitchen knife with a steel blade and a dark handle."
+            if threat == "weapon"
+            else "A white model spacecraft with dark windows."
+        )
+        evidence.append(f"{subject}_crop")
+        step(
+            "snapshot",
+            {"camera": "hero", "subject": subject, "question": "What is this object?"},
+            {"description": claim, "evidence_id": evidence[0]},
+        )
+        # Permit execution before the weapon-flow PR lands, using the installed
+        # schema's capabilities. Face evidence is metadata only, never VLM input.
+        if detection["head_bbox"] and "subject" in PARAMETERS["snapshot"]["properties"]:
+            step("look_at", {"camera": "hero", "bbox": detection["head_bbox"]}, pose)
+            step(
+                "snapshot",
+                {"camera": "hero", "subject": "face"},
+                {"evidence_id": "face_crop", "stored": True, "analyzed": False},
+            )
+            evidence.append("face_crop")
+        if "verify" in PARAMETERS:
+            step(
+                "verify",
+                {"claim": claim},
+                {
+                    "supported": True,
+                    "confidence": 0.9,
+                    "reason": "Object visible in crop.",
+                },
+            )
+    step(
+        "report",
+        {
+            "claim": claim,
+            "confidence": 0.9,
+            "evidence": evidence,
+            "action": {"weapon": "alert", "unknown": "log", "benign": "ignore"}[threat],
+        },
+        {"done": True},
+    )
+    return detection, history
+
+
 def payload(workload: str, index: int, model: str, crop: str, max_calls: int) -> dict:
     if workload == "director":
-        # Vary detections after the shared system/schema prefix. Include later
-        # turns so this measures a tool loop, not only initial tool selection.
-        x = 120 + index % 320
-        detection = {
-            "camera": "hero",
-            "label": "person",
-            "confidence": round(0.8 + index % 19 / 100, 2),
-            "bbox": [x, 40, x + 200, 424],
-            "cameras": [
-                {"name": name, "pan": 0, "tilt": 0, "zoom": 1, "covered": False}
-                for name in ("hero", "scout1")
-            ],
-        }
+        detection, history = director_case(index)
+        budget = max_calls + (
+            getattr(director, "WEAPON_EXTRA_CALLS", 4)
+            if detection["threat"] == "weapon"
+            else 0
+        )
         messages = [
-            {"role": "system", "content": SYSTEM.format(max_calls=max_calls)},
+            {"role": "system", "content": SYSTEM.format(max_calls=budget)},
             {"role": "user", "content": json.dumps(detection)},
         ]
-        history = [
-            (
-                "look_at",
-                {"camera": "hero", "bbox": detection["bbox"]},
-                {
-                    "ok": True,
-                    "name": "hero",
-                    "pan": -30,
-                    "tilt": 5,
-                    "zoom": 3,
-                    "covered": False,
-                },
-            ),
-            (
-                "snapshot",
-                {
-                    "camera": "hero",
-                    "question": "Describe the person and any readable text.",
-                },
-                {
-                    "description": "A person in an orange flight suit, with a flag patch on the sleeve."
-                },
-            ),
-        ]
-        for turn, (name, args, result) in enumerate(history[: index % 3]):
+        # Sample requests before each step, including the final report. Never
+        # request another action after a completed report. Benign stays one turn.
+        for turn, (name, args, result) in enumerate(
+            history[: index // 3 % len(history)]
+        ):
             call_id = f"call_{turn}"
             messages.extend(
                 [
@@ -159,9 +225,9 @@ def payload(workload: str, index: int, model: str, crop: str, max_calls: int) ->
             "chat_template_kwargs": {"enable_thinking": False},
         }
     prompt = (
-        Analyst.PROMPT.format(question="Describe the person and any readable text.")
+        Analyst.PROMPT.format(question="What is this object? Read any visible text.")
         if index % 2 == 0
-        else Verifier.PROMPT.format(claim="A person is wearing an orange flight suit.")
+        else Verifier.PROMPT.format(claim="A white model spacecraft with dark windows.")
     )
     return {
         "model": model,
@@ -752,6 +818,7 @@ def main(argv=None) -> int:
                 {
                     "script": digest(Path(__file__).read_bytes()),
                     "system": SYSTEM,
+                    "weapon_extra_calls": getattr(director, "WEAPON_EXTRA_CALLS", 4),
                     "tools": TOOL_SCHEMAS,
                     "analyst": Analyst.PROMPT,
                     "verifier": Verifier.PROMPT,

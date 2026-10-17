@@ -23,6 +23,25 @@ bench = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(bench)
 
 
+def example_arguments(name):
+    return bench.tool_arguments(
+        name,
+        {
+            "camera": "hero",
+            "bbox": [1, 2, 3, 4],
+            "subject": "weapon",
+            "question": "What is this object?",
+            "claim": "A kitchen knife.",
+            "confidence": 0.9,
+            "action": "alert",
+            "evidence": ["weapon_crop", "face_crop"],
+            "pan": 0,
+            "tilt": 0,
+            "zoom": 2,
+        },
+    )
+
+
 @contextmanager
 def stub(mode="normal"):
     class Handler(BaseHTTPRequestHandler):
@@ -58,6 +77,7 @@ def stub(mode="normal"):
             body = json.loads(self.rfile.read(int(self.headers["Content-Length"])))
             with self.server.lock:
                 self.server.count += 1
+                request_number = self.server.count
                 self.server.bodies.append(body)
             if mode == "http_error":
                 self.send_response(503)
@@ -75,10 +95,15 @@ def stub(mode="normal"):
                 event({"choices": [{"delta": {"role": "assistant"}}]})
                 time.sleep(0.05 if mode == "timeout" else 0.002)
                 if body["model"] == "director" and mode != "prose":
+                    # Exercise every imported tool, including new tools, over
+                    # real fragmented SSE. This stub checks structure, not policy.
+                    name = body["tools"][request_number % len(body["tools"])][
+                        "function"
+                    ]["name"]
                     arguments = (
-                        '{"camera":"hero","bbox":[1,2,3,4]}'
+                        json.dumps(example_arguments(name))
                         if mode != "bad_tool"
-                        else '{"camera":5}'
+                        else '{"unknown_argument":5}'
                     )
                     event(
                         {
@@ -91,7 +116,7 @@ def stub(mode="normal"):
                                                 "id": "call_1",
                                                 "type": "function",
                                                 "function": {
-                                                    "name": "look_at",
+                                                    "name": name,
                                                     "arguments": arguments[:9],
                                                 },
                                             }
@@ -122,7 +147,7 @@ def stub(mode="normal"):
                     )
                     finish = "tool_calls"
                 else:
-                    for content in ("A person ", "in a flight suit."):
+                    for content in ("A white model ", "spacecraft with dark windows."):
                         event({"choices": [{"delta": {"content": content}}]})
                     finish = "stop"
                 if mode == "truncated":
@@ -229,12 +254,21 @@ def test_cli_full_sweep_and_ab(tmp_path):
                 assert summary["tool_call_validity_rate"] == 1
         assert server.count == 2 * 8 * 17
         director = next(b for b in server.bodies if b["model"] == "director")
-        assert director["messages"][0]["content"] == bench.SYSTEM.format(max_calls=6)
+        threat = json.loads(director["messages"][1]["content"])["threat"]
+        budget = 6 + (
+            getattr(bench.director, "WEAPON_EXTRA_CALLS", 4)
+            if threat == "weapon"
+            else 0
+        )
+        assert director["messages"][0]["content"] == bench.SYSTEM.format(
+            max_calls=budget
+        )
         assert director["tools"] == bench.TOOL_SCHEMAS
         assert director["chat_template_kwargs"] == {"enable_thinking": False}
-        assert {
-            len(b["messages"]) for b in server.bodies if b["model"] == "director"
-        } == {2, 4, 6}
+        assert (
+            max(len(b["messages"]) for b in server.bodies if b["model"] == "director")
+            >= 6
+        )
         vision = next(b for b in server.bodies if b["model"] == "vlm")
         data = vision["messages"][0]["content"][1]["image_url"]["url"]
         image = bench.cv2.imdecode(
@@ -243,7 +277,126 @@ def test_cli_full_sweep_and_ab(tmp_path):
             ),
             bench.cv2.IMREAD_COLOR,
         )
-        assert image.shape == (384, 384, 3)
+        assert image.shape == (240, 110, 3)
+
+
+def test_director_routing_and_history_match_runtime_schemas():
+    seen = set()
+    for index in range(72):
+        body = bench.payload("director", index, "director", "unused", 6)
+        event = json.loads(body["messages"][1]["content"])
+        _, plan = bench.director_case(index)
+        report_name, report_args, _result = plan[-1]
+        assert report_name == "report"
+        assert (
+            report_args["action"]
+            == {"weapon": "alert", "benign": "ignore", "unknown": "log"}[
+                event["threat"]
+            ]
+        )
+        if "evidence" in bench.PARAMETERS["report"]["properties"]:
+            evidence = (
+                []
+                if event["threat"] == "benign"
+                else ["weapon_crop" if event["threat"] == "weapon" else "object_crop"]
+            )
+            if event["head_bbox"]:
+                evidence.append("face_crop")
+            assert report_args["evidence"] == evidence
+        assert event["threat"] in {"weapon", "benign", "unknown"}
+        assert "head_bbox" in event
+        budget = 6 + (
+            getattr(bench.director, "WEAPON_EXTRA_CALLS", 4)
+            if event["threat"] == "weapon"
+            else 0
+        )
+        assert body["messages"][0]["content"] == bench.SYSTEM.format(max_calls=budget)
+        seen.add(
+            (event["threat"], event["head_bbox"] is not None, len(body["messages"]))
+        )
+        calls = []
+        for message in body["messages"][2::2]:
+            call = message["tool_calls"][0]
+            assert bench.valid_call({**call, **call["function"]})
+            calls.append(
+                (call["function"]["name"], json.loads(call["function"]["arguments"]))
+            )
+        assert all(name != "report" for name, _args in calls)
+        if event["threat"] == "benign":
+            assert not calls
+        else:
+            if calls:
+                assert calls[0] == (
+                    "look_at",
+                    {"camera": "hero", "bbox": event["bbox"]},
+                )
+            if (
+                len(calls) >= 2
+                and "subject" in bench.PARAMETERS["snapshot"]["properties"]
+            ):
+                assert calls[1][1]["subject"] == (
+                    "weapon" if event["threat"] == "weapon" else "object"
+                )
+            if len(calls) >= 4:
+                assert calls[2] == (
+                    "look_at",
+                    {"camera": "hero", "bbox": event["head_bbox"]},
+                )
+                assert calls[3] == ("snapshot", {"camera": "hero", "subject": "face"})
+                assert json.loads(body["messages"][9]["content"]) == {
+                    "evidence_id": "face_crop",
+                    "stored": True,
+                    "analyzed": False,
+                }
+            if len(calls) == 5:
+                assert calls[4][0] == "verify"
+    assert {threat for threat, _head, _length in seen} == {
+        "weapon",
+        "benign",
+        "unknown",
+    }
+    if "verify" in bench.PARAMETERS:
+        assert ("weapon", True, 12) in seen  # complete chain before report
+        assert ("weapon", False, 8) in seen  # no face steps without a head box
+        assert ("unknown", False, 8) in seen
+
+
+@pytest.mark.parametrize("name", bench.PARAMETERS)
+def test_tool_requirements_and_enums_come_from_runtime_schema(name):
+    args = example_arguments(name)
+
+    def valid(values):
+        return bench.valid_call(
+            {
+                "id": "x",
+                "type": "function",
+                "name": name,
+                "arguments": json.dumps(values),
+            }
+        )
+
+    assert valid(args)
+    schema = bench.PARAMETERS[name]
+    for required in schema.get("required", []):
+        assert not valid({key: value for key, value in args.items() if key != required})
+    for field, properties in schema["properties"].items():
+        if "enum" in properties:
+            for choice in properties["enum"]:
+                assert valid({**args, field: choice})
+            assert not valid({**args, field: "not_a_runtime_enum_value"})
+
+
+def test_vlm_prompts_ask_only_about_the_object():
+    analyst = bench.payload("vlm", 0, "vlm", "image-data", 6)
+    verifier = bench.payload("vlm", 1, "vlm", "image-data", 6)
+    assert analyst["messages"][0]["content"][0]["text"] == bench.Analyst.PROMPT.format(
+        question="What is this object? Read any visible text."
+    )
+    assert verifier["messages"][0]["content"][0][
+        "text"
+    ] == bench.Verifier.PROMPT.format(
+        claim="A white model spacecraft with dark windows."
+    )
 
 
 @pytest.mark.parametrize(
@@ -321,7 +474,6 @@ def test_nonfinite_tool_arguments_are_not_json():
     [
         ("look_at", {"camera": "hero", "bbox": [1, 2, 3, 4]}, True),
         ("look_at", {"camera": "hero", "bbox": [1, 2, 3]}, False),
-        ("snapshot", {"camera": "hero", "question": "What is it?"}, True),
         ("report", {"claim": "person", "confidence": 1.2, "action": "alert"}, False),
         ("report", {"claim": "person", "confidence": 0.8, "action": "shoot"}, False),
         ("look_at", {"camera": "hero", "bbox": [1, 2, 3, 4], "typo": 1}, False),

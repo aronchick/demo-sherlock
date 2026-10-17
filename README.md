@@ -870,13 +870,17 @@ at startup (console log; the board shows only events after it connects), and
 detection)` before each injected detection, in the console and the board's
 event feed.
 
-With real models, the scripted room shows the Verifier catching the Scout: the
-cup's "a knife" claim is rejected, the report becomes a log entry with no face
-crop kept, and seconds later the scene's real knife is confirmed.
+The scripted room then shows the Verifier catching the Scout: the cup's "a
+knife" claim is rejected, the report becomes a log entry with no face crop
+kept, and seconds later the scene's real knife is confirmed. With real models
+(endpoints per `.env`):
 
 ```bash
 SCOUT_MISLABEL=cup=knife uv run python run.py --synthetic
 ```
+
+Offline, `SCOUT_MISLABEL=cup=knife just up` plays the same beat: the mock
+Verifier classifies the drawn crop, so it rejects the cup too.
 
 ## Open data and synthetic dataset provenance
 

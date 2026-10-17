@@ -41,7 +41,8 @@ class SherlockAgentConfig(BaseResponsesAPIAgentConfig):
     entrypoint: str = "app.py"
     resources_server: ResourcesServerRef
     model_server: ModelServerRef
-    max_steps: int = 8
+    max_steps: int = 6
+    weapon_extra_steps: int = 4
     prompt_config: str | None = "gym/prompts/system_v2.yaml"
     tool_descriptions: str = "verbose"  # "verbose" | "terse"
     ablation_id: str = "nemotron_lightning"
@@ -70,6 +71,24 @@ def _merge_cookies(jar: dict[str, str], response_cookies: Any) -> dict[str, str]
     return jar
 
 
+def _is_weapon_event(messages: list[Any]) -> bool:
+    for msg in messages:
+        role = getattr(msg, "role", None) or (msg.get("role") if isinstance(msg, dict) else None)
+        if role != "user":
+            continue
+        content = getattr(msg, "content", None) or (
+            msg.get("content") if isinstance(msg, dict) else ""
+        )
+        if isinstance(content, str) and (
+            '"threat": "weapon"' in content
+            or '"threat":"weapon"' in content
+            or '"label": "knife"' in content
+            or '"label": "scissors"' in content
+        ):
+            return True
+    return False
+
+
 class SherlockAgent(SimpleResponsesAPIAgent):
     ray_enabled = False
     config: SherlockAgentConfig
@@ -85,7 +104,8 @@ class SherlockAgent(SimpleResponsesAPIAgent):
         if self.config.prompt_config:
             prompt_path = _resolve_prompt_path(self.config.prompt_config)
             loaded = OmegaConf.load(prompt_path)
-            self._system_prompt = str(loaded.system).strip()
+            raw_prompt = str(loaded.system).strip()
+            self._system_prompt = raw_prompt.replace("{max_calls}", str(self.config.max_steps))
         else:
             self._system_prompt = None
 
@@ -120,6 +140,10 @@ class SherlockAgent(SimpleResponsesAPIAgent):
                 *body.input,
             ]
 
+        effective_max_steps = self.config.max_steps + (
+            self.config.weapon_extra_steps if _is_weapon_event(body.input) else 0
+        )
+
         steps = 0
         output_accumulator: list[Any] = []
         cookies: dict[str, str] = _merge_cookies({}, request.cookies)
@@ -141,7 +165,7 @@ class SherlockAgent(SimpleResponsesAPIAgent):
             step_items: list[Any] = list(output)
 
             all_fn_calls = [item for item in output if item.type == "function_call"]
-            if not all_fn_calls or steps >= self.config.max_steps:
+            if not all_fn_calls:
                 break
 
             reported_done = False
@@ -175,7 +199,7 @@ class SherlockAgent(SimpleResponsesAPIAgent):
                     break
 
             body.input.extend(step_items)
-            if reported_done:
+            if reported_done or steps >= effective_max_steps:
                 break
 
         request._cookies = dict(cookies)

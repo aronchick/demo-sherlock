@@ -23,25 +23,117 @@ if _existing_sherlock is not None:
     if str(_SHERLOCK_PKG_ROOT / "sherlock") not in _existing_file:
         del sys.modules["sherlock"]
 
-from sherlock.tools import TOOL_SCHEMAS  # read-only import
+import sherlock.tools as _sherlock_tools  # read-only module import for runtime TOOL_SCHEMAS
 
 TERSE_DESCRIPTIONS: dict[str, str] = {
     "look_at": "Zoom camera to bbox.",
     "move": "Set camera pan/tilt/zoom.",
-    "snapshot": "Ask Analyst about frame.",
+    "snapshot": "Capture crop from camera.",
+    "verify": "Verify claim against crop.",
     "list_cameras": "List cameras.",
     "report": "Submit final finding.",
 }
+
+_VERIFY_TOOL_SCHEMA: dict[str, Any] = {
+    "type": "function",
+    "function": {
+        "name": "verify",
+        "description": (
+            "Ask Verifier to check a factual claim against the most recent weapon/object crop."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "claim": {
+                    "type": "string",
+                    "description": "Specific factual claim to check against visual evidence.",
+                },
+            },
+            "required": ["claim"],
+        },
+    },
+}
+
+
+def _load_runtime_tool_schemas() -> list[dict[str, Any]]:
+    """Read sherlock.tools.TOOL_SCHEMAS at runtime and ensure the 6-tool contract is present."""
+    raw_schemas = copy.deepcopy(getattr(_sherlock_tools, "TOOL_SCHEMAS", []))
+    by_name = {
+        entry.get("function", {}).get("name"): entry
+        for entry in raw_schemas
+        if isinstance(entry, dict) and isinstance(entry.get("function"), dict)
+    }
+
+    # If weapon-flow PR #7 is already merged into sherlock.tools.TOOL_SCHEMAS, return as-is.
+    if "verify" in by_name and "subject" in (
+        by_name.get("snapshot", {})
+        .get("function", {})
+        .get("parameters", {})
+        .get("properties", {})
+    ):
+        return raw_schemas
+
+    # Otherwise overlay the weapon-flow 6-tool schema additions without mutating sherlock.tools
+    normalized: list[dict[str, Any]] = []
+    for entry in raw_schemas:
+        fn = entry.get("function", {})
+        name = fn.get("name")
+        if name == "snapshot":
+            fn["description"] = (
+                "Capture a cropped frame from camera. For 'weapon' or 'object', the Analyst VLM "
+                "describes the crop. For 'face', the crop is stored as visual evidence ONLY and "
+                "never sent to any model."
+            )
+            fn["parameters"] = {
+                "type": "object",
+                "properties": {
+                    "camera": {"type": "string"},
+                    "subject": {
+                        "type": "string",
+                        "enum": ["weapon", "object", "face"],
+                        "description": (
+                            "What the camera is aimed at. Use 'face' for head/person "
+                            "identification crops (no VLM call)."
+                        ),
+                    },
+                    "question": {
+                        "type": "string",
+                        "description": "Focused question for Analyst (ignored when subject='face').",
+                    },
+                },
+                "required": ["camera", "subject"],
+            }
+            normalized.append(entry)
+            normalized.append(copy.deepcopy(_VERIFY_TOOL_SCHEMA))
+        elif name == "report":
+            props = fn.setdefault("parameters", {}).setdefault("properties", {})
+            props.setdefault(
+                "evidence",
+                {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": (
+                        "Evidence IDs attached to this report (e.g. ['weapon_crop', 'face_crop'])."
+                    ),
+                },
+            )
+            normalized.append(entry)
+        else:
+            normalized.append(entry)
+
+    if "verify" not in {e.get("function", {}).get("name") for e in normalized}:
+        normalized.append(copy.deepcopy(_VERIFY_TOOL_SCHEMA))
+    return normalized
 
 
 def get_tool_schemas(
     mode: str = "verbose",
     responses_api_format: bool = True,
 ) -> list[dict[str, Any]]:
-    """Return tool schemas derived from sherlock.tools.TOOL_SCHEMAS without mutating it.
+    """Return tool schemas derived at runtime from sherlock.tools.TOOL_SCHEMAS.
 
     Args:
-        mode: "verbose" (exact descriptions from sherlock.tools.TOOL_SCHEMAS)
+        mode: "verbose" (full descriptions from sherlock.tools.TOOL_SCHEMAS)
               or "terse" (minimal descriptions, parameter descriptions stripped).
         responses_api_format: If True, returns OpenAI Responses API function tool dicts
               ({"type": "function", "name": ..., "description": ..., "parameters": ..., "strict": False}).
@@ -50,7 +142,7 @@ def get_tool_schemas(
     if mode not in ("verbose", "terse"):
         raise ValueError(f"Unsupported tool_descriptions mode: {mode!r}")
 
-    schemas = copy.deepcopy(TOOL_SCHEMAS)
+    schemas = _load_runtime_tool_schemas()
     result: list[dict[str, Any]] = []
     for entry in schemas:
         fn = copy.deepcopy(entry["function"])
@@ -76,13 +168,19 @@ def get_tool_schemas(
 
 
 def validate_tool_args(name: str, args: Any) -> tuple[bool, str | None]:
-    """Validate tool call arguments against sherlock.tools.TOOL_SCHEMAS contract.
+    """Validate tool call arguments against the runtime 6-tool TOOL_SCHEMAS contract.
 
     Returns:
         (is_valid, error_message)
     """
     if not isinstance(args, dict):
         return False, f"{name}: arguments must be a JSON object, got {type(args).__name__}"
+
+    schemas_by_name = {
+        s["function"]["name"]: s["function"] for s in _load_runtime_tool_schemas()
+    }
+    if name not in schemas_by_name:
+        return False, f"no such tool {name!r}"
 
     if name == "look_at":
         if "camera" not in args or not isinstance(args["camera"], str) or not args["camera"].strip():
@@ -108,8 +206,18 @@ def validate_tool_args(name: str, args: Any) -> tuple[bool, str | None]:
     if name == "snapshot":
         if "camera" not in args or not isinstance(args["camera"], str) or not args["camera"].strip():
             return False, "snapshot: missing or invalid 'camera' string"
-        if "question" not in args or not isinstance(args["question"], str) or not args["question"].strip():
-            return False, "snapshot: missing or invalid 'question' string"
+        subject = args.get("subject")
+        if subject not in ("weapon", "object", "face"):
+            return False, f"invalid subject {subject!r}; must be weapon|object|face"
+        question = args.get("question")
+        if question is not None and not isinstance(question, str):
+            return False, "snapshot: 'question' must be a string when provided"
+        return True, None
+
+    if name == "verify":
+        claim = args.get("claim")
+        if not isinstance(claim, str) or not claim.strip():
+            return False, "verify requires a non-empty claim"
         return True, None
 
     if name == "list_cameras":
@@ -119,6 +227,7 @@ def validate_tool_args(name: str, args: Any) -> tuple[bool, str | None]:
         claim = args.get("claim")
         confidence = args.get("confidence")
         action = args.get("action")
+        evidence = args.get("evidence")
         if not isinstance(claim, str) or not claim.strip():
             return False, "report: 'claim' must be a non-empty string"
         if isinstance(confidence, bool) or not isinstance(confidence, (int, float)):
@@ -127,6 +236,10 @@ def validate_tool_args(name: str, args: Any) -> tuple[bool, str | None]:
             return False, "report: 'confidence' must be between 0.0 and 1.0"
         if action not in ("log", "alert", "ignore"):
             return False, "report: 'action' must be one of ['log', 'alert', 'ignore']"
+        if evidence is not None and (
+            not isinstance(evidence, list) or any(not isinstance(item, str) for item in evidence)
+        ):
+            return False, "report: 'evidence' must be a list of strings"
         return True, None
 
     return False, f"no such tool {name!r}"
@@ -153,6 +266,7 @@ class SceneSpec:
     label: str
     conf: float
     bbox: list[int]
+    threat: str = "unknown"  # "benign" | "weapon" | "unknown"
     frame_size: list[int] = field(default_factory=lambda: [1280, 720])
     cameras: list[str] = field(default_factory=lambda: ["hero", "scout1"])
     head_bbox: list[int] | None = None
@@ -170,21 +284,29 @@ class SceneSpec:
     expected_keywords: list[str] = field(default_factory=list)
 
     def to_scout_event(self) -> dict[str, Any]:
-        event: dict[str, Any] = {
+        return {
             "camera": self.camera,
             "label": self.label,
+            "threat": self.threat,
             "conf": self.conf,
+            "confidence": round(self.conf, 3),
             "bbox": list(self.bbox),
+            "head_bbox": list(self.head_bbox) if self.head_bbox is not None else None,
             "frame_size": list(self.frame_size),
+            "cameras": list(self.cameras),
         }
-        if self.head_bbox is not None:
-            event["head_bbox"] = list(self.head_bbox)
-        return event
 
     def to_user_message(self) -> str:
-        return (
-            f"Scout sighting: {json.dumps(self.to_scout_event())}\n"
-            f"Available cameras: {list(self.cameras)}"
+        return json.dumps(
+            {
+                "camera": self.camera,
+                "label": self.label,
+                "threat": self.threat,
+                "confidence": round(self.conf, 3),
+                "bbox": list(self.bbox),
+                "head_bbox": list(self.head_bbox) if self.head_bbox is not None else None,
+                "cameras": list(self.cameras),
+            }
         )
 
 
@@ -194,6 +316,7 @@ SCENES: list[SceneSpec] = [
         category="benign",
         camera="hero",
         label="cup",
+        threat="benign",
         conf=0.88,
         bbox=[420, 310, 490, 410],
         primary_description="white ceramic coffee mug sitting on the desk",
@@ -206,6 +329,7 @@ SCENES: list[SceneSpec] = [
         category="benign",
         camera="hero",
         label="bottle",
+        threat="benign",
         conf=0.85,
         bbox=[180, 290, 240, 430],
         primary_description="clear reusable water bottle next to keyboard",
@@ -218,6 +342,7 @@ SCENES: list[SceneSpec] = [
         category="standard",
         camera="hero",
         label="suitcase",
+        threat="unknown",
         conf=0.91,
         bbox=[680, 340, 920, 620],
         primary_description="brown cardboard parcel labeled FRAGILE - LAB EQUIPMENT by the doorway",
@@ -229,6 +354,7 @@ SCENES: list[SceneSpec] = [
         category="weapon",
         camera="hero",
         label="knife",
+        threat="weapon",
         conf=0.94,
         bbox=[600, 340, 740, 420],
         head_bbox=[540, 120, 690, 270],
@@ -243,6 +369,7 @@ SCENES: list[SceneSpec] = [
         category="weapon",
         camera="scout1",
         label="scissors",
+        threat="weapon",
         conf=0.89,
         bbox=[310, 360, 430, 450],
         head_bbox=[280, 140, 420, 280],
@@ -257,6 +384,7 @@ SCENES: list[SceneSpec] = [
         category="fault",
         camera="hero",
         label="backpack",
+        threat="unknown",
         conf=0.89,
         bbox=[500, 260, 720, 560],
         injected_gimbal_failures=1,
@@ -270,6 +398,7 @@ SCENES: list[SceneSpec] = [
         category="fault",
         camera="hero",
         label="backpack",
+        threat="unknown",
         conf=0.90,
         bbox=[520, 250, 760, 580],
         covered_cameras=["hero"],
@@ -284,6 +413,7 @@ SCENES: list[SceneSpec] = [
         category="fault",
         camera="hero",
         label="suitcase",
+        threat="unknown",
         conf=0.86,
         bbox=[780, 300, 1020, 610],
         injected_arg_corruptions=1,
@@ -327,6 +457,9 @@ class SceneEpisodeState:
         }
         self.tool_trace: list[dict[str, Any]] = []
         self.snapshots_taken: list[dict[str, Any]] = []
+        self.evidence: dict[str, dict[str, Any]] = {}
+        self.verdict: dict[str, Any] | None = None
+        self.vlm_calls: int = 0
         self.report_payload: dict[str, Any] | None = None
         self.encountered_error: bool = False
         self.recovered_after_error: bool = False
@@ -426,7 +559,6 @@ class SceneEpisodeState:
             elif _bbox_iou(bbox, self.scene.bbox) >= 0.25:
                 region = "primary"
             else:
-                # Also detect head vs primary by vertical center when agent estimates head bbox
                 cy = 0.5 * (bbox[1] + bbox[3])
                 primary_cy = 0.5 * (self.scene.bbox[1] + self.scene.bbox[3])
                 if self.scene.head_bbox is not None and cy < primary_cy - 60:
@@ -504,6 +636,8 @@ class SceneEpisodeState:
 
         elif name == "snapshot":
             cam_name = args["camera"]
+            subject = args["subject"]
+            question = str(args.get("question") or "")
             if cam_name in self.covered_cameras:
                 self.encountered_error = True
                 out = {
@@ -526,36 +660,103 @@ class SceneEpisodeState:
 
             pose = self.camera_poses[cam_name]
             region = pose.get("target_region", "wide")
-            question_lower = args["question"].lower()
-            if region == "head" or (
-                self.scene.head_description
-                and any(k in question_lower for k in ("face", "head", "person", "who", "wearing", "subject"))
-                and any(s.get("region") == "primary" for s in self.snapshots_taken)
-            ):
-                desc = self.scene.head_description or self.scene.primary_description
-                effective_region = "head"
-            elif region in ("primary", "head") or pose.get("zoom", 1.0) > 1.1:
-                desc = self.scene.primary_description
-                effective_region = "primary"
+
+            # Enforce face-aim guard: refusing to send head/face crop to VLM when subject != "face"
+            if subject != "face" and region == "head":
+                self.encountered_error = True
+                out = {
+                    "error": "refusing to send head/face region to VLM; use subject='face'"
+                }
+                self.tool_trace.append(
+                    {
+                        "tool": name,
+                        "args": args,
+                        "valid_args": True,
+                        "injected_fault": False,
+                        "error": True,
+                        "result": out,
+                    }
+                )
+                return out
+
+            evidence_id = f"{subject}_crop"
+            if subject == "face":
+                effective_region = "head" if region == "head" else region
+                snap_record = {
+                    "camera": cam_name,
+                    "subject": subject,
+                    "evidence_id": evidence_id,
+                    "question": "",
+                    "region": effective_region,
+                    "description": None,
+                    "stored": True,
+                    "analyzed": False,
+                }
+                self.snapshots_taken.append(snap_record)
+                self.evidence[evidence_id] = snap_record
+                if self.encountered_error:
+                    self.recovered_after_error = True
+                out = {
+                    "evidence_id": evidence_id,
+                    "camera": cam_name,
+                    "stored": True,
+                    "analyzed": False,
+                }
             else:
                 desc = self.scene.primary_description or self.scene.wide_description
                 effective_region = "primary"
+                self.vlm_calls += 1
+                snap_record = {
+                    "camera": cam_name,
+                    "subject": subject,
+                    "evidence_id": evidence_id,
+                    "question": question,
+                    "region": effective_region,
+                    "description": desc,
+                    "stored": True,
+                    "analyzed": True,
+                }
+                self.snapshots_taken.append(snap_record)
+                self.evidence[evidence_id] = snap_record
+                if self.encountered_error:
+                    self.recovered_after_error = True
+                out = {
+                    "evidence_id": evidence_id,
+                    "description": desc,
+                    "camera": cam_name,
+                    "region": effective_region,
+                    "vlm_ms": 115.0,
+                }
 
-            snap_record = {
-                "camera": cam_name,
-                "question": args["question"],
-                "region": effective_region,
-                "description": desc,
+        elif name == "verify":
+            claim = args["claim"].strip()
+            crop_ev = self.evidence.get("weapon_crop") or self.evidence.get("object_crop")
+            if crop_ev is None:
+                self.encountered_error = True
+                out = {"error": "no weapon/object crop to verify against; call snapshot first"}
+                self.tool_trace.append(
+                    {
+                        "tool": name,
+                        "args": args,
+                        "valid_args": True,
+                        "injected_fault": False,
+                        "error": True,
+                        "result": out,
+                    }
+                )
+                return out
+
+            self.vlm_calls += 1
+            desc = str(crop_ev.get("description") or self.scene.primary_description)
+            self.verdict = {
+                "supported": True,
+                "confidence": 0.93,
+                "reason": f"Confirmed against {crop_ev['evidence_id']}: {desc}",
+                "claim": claim,
             }
-            self.snapshots_taken.append(snap_record)
             if self.encountered_error:
                 self.recovered_after_error = True
-            out = {
-                "description": desc,
-                "camera": cam_name,
-                "region": effective_region,
-                "vlm_ms": 115.0,
-            }
+            out = dict(self.verdict)
 
         elif name == "list_cameras":
             if self.encountered_error:
@@ -574,10 +775,13 @@ class SceneEpisodeState:
             }
 
         elif name == "report":
+            evidence_list = list(args.get("evidence") or [])
             self.report_payload = {
                 "claim": args["claim"],
                 "confidence": float(args["confidence"]),
                 "action": args["action"],
+                "evidence": evidence_list,
+                "verdict": self.verdict,
             }
             if self.report_time_ms is None and now_ms > 0.0:
                 self.report_time_ms = now_ms
@@ -602,14 +806,16 @@ class SceneEpisodeState:
 
 
 def score_episode(state: SceneEpisodeState, fallback_elapsed_ms: float = 0.0) -> dict[str, Any]:
-    """Deterministic verifier scoring for a completed Sherlock episode."""
+    """Deterministic verifier scoring for a completed Sherlock episode under the 6-tool contract."""
     scene = state.scene
     total_calls = len(state.tool_trace)
     valid_calls = sum(1 for t in state.tool_trace if t["valid_args"])
     tool_call_validity = (valid_calls / total_calls) if total_calls > 0 else 0.0
 
     # Steps to report
-    report_indices = [i for i, t in enumerate(state.tool_trace) if t["tool"] == "report" and t["valid_args"]]
+    report_indices = [
+        i for i, t in enumerate(state.tool_trace) if t["tool"] == "report" and t["valid_args"]
+    ]
     steps_to_report = (report_indices[0] + 1) if report_indices else total_calls
 
     if state.report_time_ms is not None and state.start_time_ms > 0.0:
@@ -621,19 +827,35 @@ def score_episode(state: SceneEpisodeState, fallback_elapsed_ms: float = 0.0) ->
     has_report = report is not None
     action_correct = 1.0 if (has_report and report["action"] in scene.expected_actions) else 0.0
 
-    # Benign zero-snapshot check
+    # Benign zero-snapshot check (single report(ignore), zero snapshots, zero VLM calls)
     num_snapshots = len(state.snapshots_taken)
     if scene.require_zero_snapshots:
-        benign_no_snapshot = 1.0 if num_snapshots == 0 else 0.0
+        benign_no_snapshot = 1.0 if (num_snapshots == 0 and state.vlm_calls == 0) else 0.0
     else:
         benign_no_snapshot = 1.0 if num_snapshots >= 1 else 0.0
 
-    # Weapon protocol check: must capture both primary (weapon) and head crops
-    regions_captured = {s["region"] for s in state.snapshots_taken}
+    # Weapon protocol check:
+    # look_at(weapon) -> snapshot(weapon) -> look_at(head_bbox) -> snapshot(face) -> verify -> report(alert, evidence)
+    has_verified = state.verdict is not None and bool(state.verdict.get("supported"))
     if scene.require_weapon_protocol:
-        has_weapon_crop = "primary" in regions_captured
-        has_head_crop = "head" in regions_captured
-        if has_weapon_crop and has_head_crop and action_correct == 1.0:
+        has_weapon_crop = (
+            "weapon_crop" in state.evidence
+            and state.evidence["weapon_crop"].get("region") == "primary"
+        )
+        has_face_crop = (
+            "face_crop" in state.evidence
+            and state.evidence["face_crop"].get("region") == "head"
+            and state.evidence["face_crop"].get("analyzed") is False
+        )
+        reported_evidence = set((report or {}).get("evidence") or [])
+        has_attached_evidence = {"weapon_crop", "face_crop"}.issubset(reported_evidence)
+        if (
+            has_weapon_crop
+            and has_face_crop
+            and has_verified
+            and has_attached_evidence
+            and action_correct == 1.0
+        ):
             weapon_protocol_score = 1.0
         elif has_weapon_crop and action_correct == 1.0:
             weapon_protocol_score = 0.5
@@ -654,7 +876,13 @@ def score_episode(state: SceneEpisodeState, fallback_elapsed_ms: float = 0.0) ->
     if scene.require_recovery or state.encountered_error:
         recovery_score = (
             1.0
-            if (state.recovered_after_error and has_report and camera_switch_ok and num_snapshots >= 1)
+            if (
+                state.recovered_after_error
+                and has_report
+                and camera_switch_ok
+                and num_snapshots >= 1
+                and (scene.require_zero_snapshots or has_verified)
+            )
             else 0.0
         )
     else:
@@ -662,7 +890,11 @@ def score_episode(state: SceneEpisodeState, fallback_elapsed_ms: float = 0.0) ->
 
     # Overall task_success (strict deterministic binary pass/fail for the scene)
     if scene.require_zero_snapshots:
-        task_success = 1.0 if (has_report and action_correct == 1.0 and num_snapshots == 0) else 0.0
+        task_success = (
+            1.0
+            if (has_report and action_correct == 1.0 and num_snapshots == 0 and state.vlm_calls == 0)
+            else 0.0
+        )
     elif scene.require_weapon_protocol:
         task_success = (
             1.0
@@ -672,13 +904,19 @@ def score_episode(state: SceneEpisodeState, fallback_elapsed_ms: float = 0.0) ->
     elif scene.require_recovery:
         task_success = (
             1.0
-            if (has_report and action_correct == 1.0 and recovery_score == 1.0 and num_snapshots >= 1)
+            if (
+                has_report
+                and action_correct == 1.0
+                and recovery_score == 1.0
+                and num_snapshots >= 1
+                and has_verified
+            )
             else 0.0
         )
     else:
         task_success = (
             1.0
-            if (has_report and action_correct == 1.0 and num_snapshots >= 1)
+            if (has_report and action_correct == 1.0 and num_snapshots >= 1 and has_verified)
             else 0.0
         )
 
@@ -701,7 +939,7 @@ def score_episode(state: SceneEpisodeState, fallback_elapsed_ms: float = 0.0) ->
         "recovery_score": float(recovery_score),
         "benign_no_snapshot": float(benign_no_snapshot),
         "weapon_protocol_score": float(weapon_protocol_score),
-        "vlm_calls": float(num_snapshots),
+        "vlm_calls": float(state.vlm_calls),
     }
 
 

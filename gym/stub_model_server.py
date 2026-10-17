@@ -23,6 +23,7 @@ def _parse_scout_context(messages: list[dict[str, Any]]) -> tuple[dict[str, Any]
     scout_event: dict[str, Any] = {
         "camera": "hero",
         "label": "suitcase",
+        "threat": "unknown",
         "conf": 0.9,
         "bbox": [400, 300, 600, 500],
         "frame_size": [1280, 720],
@@ -30,7 +31,17 @@ def _parse_scout_context(messages: list[dict[str, Any]]) -> tuple[dict[str, Any]
     cameras = ["hero", "scout1"]
     for msg in messages:
         if msg.get("role") == "user" and isinstance(msg.get("content"), str):
-            text = msg["content"]
+            text = msg["content"].strip()
+            if text.startswith("{"):
+                try:
+                    parsed = json.loads(text)
+                    if isinstance(parsed, dict) and "label" in parsed:
+                        scout_event = parsed
+                        if isinstance(parsed.get("cameras"), list):
+                            cameras = [str(c) for c in parsed["cameras"]]
+                        continue
+                except json.JSONDecodeError:
+                    pass
             for line in text.splitlines():
                 if line.startswith("Scout sighting:"):
                     raw_json = line.split("Scout sighting:", 1)[1].strip()
@@ -84,6 +95,11 @@ def _extract_history(messages: list[dict[str, Any]]) -> list[dict[str, Any]]:
 def _has_verbose_tool_descriptions(tools: list[dict[str, Any]]) -> bool:
     for t in tools:
         fn = t.get("function", t)
+        if fn.get("name") == "snapshot":
+            params = fn.get("parameters", {})
+            subj_prop = params.get("properties", {}).get("subject", {})
+            if "What the camera is aimed at" in str(subj_prop.get("description", "")):
+                return True
         if fn.get("name") == "look_at":
             params = fn.get("parameters", {})
             bbox_prop = params.get("properties", {}).get("bbox", {})
@@ -103,12 +119,29 @@ def _decide_next_tool_call(
 ) -> tuple[str, dict[str, Any], str]:
     """Return (tool_name, tool_args, optional_reasoning) based on conversation state."""
     label = str(scout_event.get("label", "object"))
+    threat = str(
+        scout_event.get("threat")
+        or (
+            "benign"
+            if label in BENIGN_LABELS
+            else ("weapon" if label in WEAPON_LABELS else "unknown")
+        )
+    )
     primary_cam = str(scout_event.get("camera", "hero"))
     bbox = list(scout_event.get("bbox", [400, 300, 600, 500]))
     head_bbox = scout_event.get("head_bbox")
 
-    has_benign_rule = "Benign everyday items" in system_prompt
-    has_weapon_rule = "two-crop" in system_prompt or "head_bbox" in system_prompt
+    has_benign_rule = (
+        "No look_at, no snapshot" in system_prompt
+        or '"benign"' in system_prompt
+        or 'threat == "benign"' in system_prompt
+        or "Benign everyday items" in system_prompt
+    )
+    has_weapon_rule = (
+        'subject="face"' in system_prompt
+        or "two-crop" in system_prompt
+        or "head_bbox" in system_prompt
+    )
     verbose_tools = _has_verbose_tool_descriptions(tools)
     is_qwen = "qwen" in model.lower()
 
@@ -116,12 +149,12 @@ def _decide_next_tool_call(
     reasoning = ""
     if enable_thinking:
         reasoning = (
-            f"Analyzing Scout sighting of {label} on {primary_cam} at bbox {bbox} "
+            f"Analyzing Scout sighting of {label} (threat={threat}) on {primary_cam} at bbox {bbox} "
             f"(step {step_idx + 1}). Checking camera health, tool constraints, and reporting protocol."
         )
 
     # 1. Benign scenes
-    if label in BENIGN_LABELS:
+    if threat == "benign" or label in BENIGN_LABELS:
         # With system_v2 and thinking off, immediately report ignore with zero snapshots
         if has_benign_rule and not (enable_thinking and label == "bottle"):
             return (
@@ -133,13 +166,23 @@ def _decide_next_tool_call(
                 },
                 reasoning,
             )
-        # Without benign rule (system_v1) or when over-thinking bottle, model zooms & snapshots first
+        # Without benign rule (system_v1) or when over-thinking bottle, model zooms, snapshots, verifies, then reports
         if step_idx == 0:
             return ("look_at", {"camera": primary_cam, "bbox": bbox}, reasoning)
         if step_idx == 1:
             return (
                 "snapshot",
-                {"camera": primary_cam, "question": f"Confirm whether this {label} is benign."},
+                {
+                    "camera": primary_cam,
+                    "subject": "object",
+                    "question": f"Confirm whether this {label} is benign.",
+                },
+                reasoning,
+            )
+        if step_idx == 2:
+            return (
+                "verify",
+                {"claim": f"Object on {primary_cam} is a benign {label}."},
                 reasoning,
             )
         return (
@@ -162,7 +205,9 @@ def _decide_next_tool_call(
                 if cam_info.get("status") == "ok" and cam_info.get("name") != primary_cam:
                     discovered_backup = cam_info["name"]
                     break
-    if discovered_backup:
+    if discovered_backup and any(
+        "covered" in str((c.get("result") or {}).get("error", "")) for c in history
+    ):
         active_cam = discovered_backup
 
     # Check if the most recent tool call returned an error
@@ -172,52 +217,89 @@ def _decide_next_tool_call(
 
     if last_err:
         if "covered" in last_err and not discovered_backup:
-            # Qwen retries hero once with move before listing cameras
-            if is_qwen and sum(1 for c in history if (c.get("result") or {}).get("error")) == 1:
-                return ("move", {"camera": primary_cam, "pan": 0.0, "tilt": 0.0, "zoom": 2.0}, reasoning)
             return ("list_cameras", {}, reasoning)
         if "garbage" in last_err or "simulated fault" in last_err:
-            # Recover by retrying look_at on active camera
+            # Qwen checks camera status first before retrying look_at
+            if is_qwen and not any(c["name"] == "list_cameras" for c in history):
+                return ("list_cameras", {}, reasoning)
             return ("look_at", {"camera": active_cam, "bbox": bbox}, reasoning)
         if "bbox must be" in last_err or "missing or invalid" in last_err:
-            # Recover from corrupted or malformed arguments by sending valid schema args
             return ("look_at", {"camera": active_cam, "bbox": bbox}, reasoning)
+        if "invalid subject" in last_err:
+            subj = "weapon" if (threat == "weapon" or label in WEAPON_LABELS) else "object"
+            return (
+                "snapshot",
+                {
+                    "camera": active_cam,
+                    "subject": subj,
+                    "question": f"Inspect the {label} carefully.",
+                },
+                reasoning,
+            )
 
-    # Under terse tool descriptions, the model doesn't see "[x1, y1, x2, y2]" or required snapshot question
+    # Under terse tool descriptions, the model doesn't see "[x1, y1, x2, y2]" or subject enum help
     if not verbose_tools and step_idx == 0 and label in ("scissors", "suitcase"):
-        # Emit malformed bbox dict on first attempt before recovering on step 2
         return (
             "look_at",
-            {"camera": active_cam, "bbox": {"x1": bbox[0], "y1": bbox[1], "x2": bbox[2], "y2": bbox[3]}},  # type: ignore[dict-item]
+            {
+                "camera": active_cam,
+                "bbox": {"x1": bbox[0], "y1": bbox[1], "x2": bbox[2], "y2": bbox[3]},
+            },  # type: ignore[dict-item]
             reasoning,
         )
 
-    # Count successful look_at and snapshots so far
+    # Count successful look_at, snapshots, and verify calls so far
     ok_snapshots = [
-        c for c in history
-        if c["name"] == "snapshot" and isinstance(c.get("result"), dict) and "description" in c["result"]
+        c
+        for c in history
+        if c["name"] == "snapshot"
+        and isinstance(c.get("result"), dict)
+        and "evidence_id" in c["result"]
     ]
     ok_looks = [
-        c for c in history
-        if c["name"] in ("look_at", "move") and isinstance(c.get("result"), dict) and c["result"].get("ok")
+        c
+        for c in history
+        if c["name"] in ("look_at", "move")
+        and isinstance(c.get("result"), dict)
+        and c["result"].get("ok")
+    ]
+    ok_verifies = [
+        c
+        for c in history
+        if c["name"] == "verify"
+        and isinstance(c.get("result"), dict)
+        and "supported" in c["result"]
     ]
 
-    # 2. Weapon scenes
-    if label in WEAPON_LABELS:
+    # 2. Weapon scenes: look_at(weapon) -> snapshot(weapon) -> look_at(head) -> snapshot(face) -> verify -> report
+    if threat == "weapon" or label in WEAPON_LABELS:
         if len(ok_looks) == 0:
             return ("look_at", {"camera": active_cam, "bbox": bbox}, reasoning)
         if len(ok_snapshots) == 0:
             if not verbose_tools and sum(1 for c in history if c["name"] == "snapshot") == 0:
-                # Under terse tools, omit required 'question' field once
-                return ("snapshot", {"camera": active_cam}, reasoning)
+                # Under terse tools, omit required 'subject' field once
+                return (
+                    "snapshot",
+                    {"camera": active_cam, "question": f"Verify the {label}."},
+                    reasoning,
+                )
             return (
                 "snapshot",
-                {"camera": active_cam, "question": f"Verify the {label} in the subject's hand."},
+                {
+                    "camera": active_cam,
+                    "subject": "weapon",
+                    "question": f"Verify the {label} in the subject's hand.",
+                },
                 reasoning,
             )
-        # Second crop (head_bbox) required by weapon protocol in system_v2
+
+        # Second crop (head_bbox -> subject="face") required by weapon protocol in system_v2
         # Note: Qwen misses the second crop on secondary camera (scout1)
-        do_second_crop = has_weapon_rule and head_bbox is not None and not (is_qwen and active_cam == "scout1")
+        do_second_crop = (
+            has_weapon_rule
+            and head_bbox is not None
+            and not (is_qwen and active_cam == "scout1")
+        )
         if do_second_crop:
             if len(ok_looks) < 2:
                 return ("look_at", {"camera": active_cam, "bbox": list(head_bbox)}, reasoning)
@@ -226,40 +308,71 @@ def _decide_next_tool_call(
                     "snapshot",
                     {
                         "camera": active_cam,
-                        "question": "Describe the person's head, face, and clothing for identification.",
+                        "subject": "face",
                     },
                     reasoning,
                 )
 
-        descriptions = [str(s["result"].get("description", "")) for s in ok_snapshots]
-        evidence_str = "; ".join(d for d in descriptions if d)
+        weapon_desc = next(
+            (
+                str(s["result"].get("description", ""))
+                for s in ok_snapshots
+                if s["result"].get("evidence_id") == "weapon_crop"
+            ),
+            label,
+        )
+        if len(ok_verifies) == 0:
+            return (
+                "verify",
+                {"claim": f"Person on {active_cam} is holding a {label} ({weapon_desc})."},
+                reasoning,
+            )
+
+        evidence_ids = [
+            str(s["result"]["evidence_id"])
+            for s in ok_snapshots
+            if s["result"].get("evidence_id")
+        ]
         return (
             "report",
             {
-                "claim": f"Weapon alert ({label}) on {active_cam}: {evidence_str}",
+                "claim": f"Weapon alert ({label}) on {active_cam}: {weapon_desc}",
                 "confidence": 0.95,
                 "action": "alert",
+                "evidence": evidence_ids,
             },
             reasoning,
         )
 
-    # 3. Standard & fault-recovery scenes (suitcase, backpack, etc.)
+    # 3. Unknown / standard & fault-recovery scenes: look_at -> snapshot(object) -> verify -> report(log)
     if len(ok_looks) == 0:
         return ("look_at", {"camera": active_cam, "bbox": bbox}, reasoning)
     if len(ok_snapshots) == 0:
         return (
             "snapshot",
-            {"camera": active_cam, "question": f"What is this {label} and are there any markings?"},
+            {
+                "camera": active_cam,
+                "subject": "object",
+                "question": f"What is this {label} and are there any markings?",
+            },
             reasoning,
         )
 
     desc = str(ok_snapshots[-1]["result"].get("description", label))
+    if len(ok_verifies) == 0:
+        return (
+            "verify",
+            {"claim": f"Object on {active_cam} is {desc}."},
+            reasoning,
+        )
+
     return (
         "report",
         {
             "claim": f"Inspected {label} on {active_cam}: {desc}",
             "confidence": 0.89,
             "action": "log",
+            "evidence": ["object_crop"],
         },
         reasoning,
     )

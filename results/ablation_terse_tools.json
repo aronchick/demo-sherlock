@@ -15,57 +15,57 @@
     "enable_thinking": false,
     "prompt_config": "gym/prompts/system_v2.yaml",
     "tool_descriptions": "terse",
-    "max_steps": 8
+    "max_steps": 6
   },
   "summary_metrics": {
     "num_tasks": 8,
-    "tool_call_validity": 0.8872,
+    "tool_call_validity": 0.9051,
     "task_success": 1.0,
-    "steps_to_report": 4.12,
-    "time_to_report_ms": 56.98,
+    "steps_to_report": 4.88,
+    "time_to_report_ms": 71.81,
     "action_correct": 1.0,
     "recovery_score": 1.0,
     "benign_no_snapshot": 1.0,
     "weapon_protocol_score": 1.0,
-    "avg_vlm_calls": 1.0,
-    "reward": 0.9831,
-    "suite_wall_time_ms": 507.14
+    "avg_vlm_calls": 1.5,
+    "reward": 0.9858,
+    "suite_wall_time_ms": 633.5
   },
   "nemo_gym_aggregate_metrics": {
     "key_metrics": {
-      "mean/reward": 0.983075,
+      "mean/reward": 0.9857625,
       "mean/task_success": 1.0,
-      "mean/tool_call_validity": 0.8872,
-      "mean/steps_to_report": 4.125,
-      "mean/time_to_report_ms": 56.977500000000006,
+      "mean/tool_call_validity": 0.9050499999999999,
+      "mean/steps_to_report": 4.875,
+      "mean/time_to_report_ms": 71.81375,
       "mean/action_correct": 1.0,
       "mean/recovery_score": 1.0,
       "mean/benign_no_snapshot": 1.0,
       "mean/weapon_protocol_score": 1.0,
-      "mean/vlm_calls": 1.0,
+      "mean/vlm_calls": 1.5,
       "mean/input_tokens": 180.0,
       "mean/output_tokens": 24.0,
       "mean/total_tokens": 204.0
     },
     "agent_metrics": {
-      "mean/reward": 0.983075,
+      "mean/reward": 0.9857625,
       "mean/task_success": 1.0,
-      "mean/tool_call_validity": 0.8872,
-      "mean/steps_to_report": 4.125,
-      "mean/time_to_report_ms": 56.977500000000006,
+      "mean/tool_call_validity": 0.9050499999999999,
+      "mean/steps_to_report": 4.875,
+      "mean/time_to_report_ms": 71.81375,
       "mean/action_correct": 1.0,
       "mean/recovery_score": 1.0,
       "mean/benign_no_snapshot": 1.0,
       "mean/weapon_protocol_score": 1.0,
-      "mean/vlm_calls": 1.0,
+      "mean/vlm_calls": 1.5,
       "mean/input_tokens": 180.0,
       "mean/output_tokens": 24.0,
       "mean/total_tokens": 204.0,
       "max/reward": 1.0,
       "max/task_success": 1.0,
       "max/tool_call_validity": 1.0,
-      "max/steps_to_report": 7.0,
-      "max/time_to_report_ms": 101.0,
+      "max/steps_to_report": 8.0,
+      "max/time_to_report_ms": 130.68,
       "max/action_correct": 1.0,
       "max/recovery_score": 1.0,
       "max/benign_no_snapshot": 1.0,
@@ -74,9 +74,9 @@
       "max/input_tokens": 180.0,
       "max/output_tokens": 24.0,
       "max/total_tokens": 204.0,
-      "min/reward": 0.9571,
+      "min/reward": 0.9625,
       "min/task_success": 1.0,
-      "min/tool_call_validity": 0.7143,
+      "min/tool_call_validity": 0.75,
       "min/steps_to_report": 1.0,
       "min/time_to_report_ms": 14.94,
       "min/action_correct": 1.0,
@@ -87,29 +87,29 @@
       "min/input_tokens": 180.0,
       "min/output_tokens": 24.0,
       "min/total_tokens": 204.0,
-      "median/reward": 0.9875,
+      "median/reward": 0.9893000000000001,
       "median/task_success": 1.0,
-      "median/tool_call_validity": 0.91665,
-      "median/steps_to_report": 4.5,
-      "median/time_to_report_ms": 58.269999999999996,
+      "median/tool_call_validity": 0.92855,
+      "median/steps_to_report": 5.5,
+      "median/time_to_report_ms": 74.275,
       "median/action_correct": 1.0,
       "median/recovery_score": 1.0,
       "median/benign_no_snapshot": 1.0,
       "median/weapon_protocol_score": 1.0,
-      "median/vlm_calls": 1.0,
+      "median/vlm_calls": 2.0,
       "median/input_tokens": 180.0,
       "median/output_tokens": 24.0,
       "median/total_tokens": 204.0,
-      "std/reward": 0.018822535885019785,
+      "std/reward": 0.01589051266816596,
       "std/task_success": 0.0,
-      "std/tool_call_validity": 0.12542650665401062,
-      "std/steps_to_report": 2.1671244937540095,
-      "std/time_to_report_ms": 29.83455367283283,
+      "std/tool_call_validity": 0.10595503089249028,
+      "std/steps_to_report": 2.5877458475338284,
+      "std/time_to_report_ms": 39.35119527591071,
       "std/action_correct": 0.0,
       "std/recovery_score": 0.0,
       "std/benign_no_snapshot": 0.0,
       "std/weapon_protocol_score": 0.0,
-      "std/vlm_calls": 0.7559289460184544,
+      "std/vlm_calls": 0.9258200997725514,
       "std/input_tokens": 0.0,
       "std/output_tokens": 0.0,
       "std/total_tokens": 0.0,
@@ -123,7 +123,7 @@
       "task_success": 1.0,
       "tool_call_validity": 1.0,
       "steps_to_report": 1.0,
-      "time_to_report_ms": 17.38,
+      "time_to_report_ms": 20.97,
       "action_correct": 1.0,
       "recovery_score": 1.0,
       "benign_no_snapshot": 1.0,
@@ -133,7 +133,9 @@
       "report": {
         "claim": "Benign cup spotted on hero; no VLM inspection needed.",
         "confidence": 0.94,
-        "action": "ignore"
+        "action": "ignore",
+        "evidence": [],
+        "verdict": null
       }
     },
     {
@@ -152,64 +154,95 @@
       "report": {
         "claim": "Benign bottle spotted on hero; no VLM inspection needed.",
         "confidence": 0.94,
-        "action": "ignore"
+        "action": "ignore",
+        "evidence": [],
+        "verdict": null
       }
     },
     {
       "scene_id": "standard_suitcase_03",
       "category": "standard",
       "task_success": 1.0,
-      "tool_call_validity": 0.75,
-      "steps_to_report": 4.0,
-      "time_to_report_ms": 54.1,
+      "tool_call_validity": 0.8,
+      "steps_to_report": 5.0,
+      "time_to_report_ms": 68.23,
       "action_correct": 1.0,
       "recovery_score": 1.0,
       "benign_no_snapshot": 1.0,
       "weapon_protocol_score": 1.0,
-      "vlm_calls": 1.0,
-      "reward": 0.9625,
+      "vlm_calls": 2.0,
+      "reward": 0.97,
       "report": {
         "claim": "Inspected suitcase on hero: brown cardboard parcel labeled FRAGILE - LAB EQUIPMENT by the doorway",
         "confidence": 0.89,
-        "action": "log"
+        "action": "log",
+        "evidence": [
+          "object_crop"
+        ],
+        "verdict": {
+          "supported": true,
+          "confidence": 0.93,
+          "reason": "Confirmed against object_crop: brown cardboard parcel labeled FRAGILE - LAB EQUIPMENT by the doorway",
+          "claim": "Object on hero is brown cardboard parcel labeled FRAGILE - LAB EQUIPMENT by the doorway."
+        }
       }
     },
     {
       "scene_id": "weapon_knife_hero_04",
       "category": "weapon",
       "task_success": 1.0,
-      "tool_call_validity": 0.8333,
-      "steps_to_report": 6.0,
-      "time_to_report_ms": 85.18,
+      "tool_call_validity": 0.8571,
+      "steps_to_report": 7.0,
+      "time_to_report_ms": 109.68,
       "action_correct": 1.0,
       "recovery_score": 1.0,
       "benign_no_snapshot": 1.0,
       "weapon_protocol_score": 1.0,
       "vlm_calls": 2.0,
-      "reward": 0.975,
+      "reward": 0.9786,
       "report": {
-        "claim": "Weapon alert (knife) on hero: stainless steel kitchen knife held in right hand at waist height; person wearing dark hoodie and red baseball cap facing north hallway",
+        "claim": "Weapon alert (knife) on hero: stainless steel kitchen knife held in right hand at waist height",
         "confidence": 0.95,
-        "action": "alert"
+        "action": "alert",
+        "evidence": [
+          "weapon_crop",
+          "face_crop"
+        ],
+        "verdict": {
+          "supported": true,
+          "confidence": 0.93,
+          "reason": "Confirmed against weapon_crop: stainless steel kitchen knife held in right hand at waist height",
+          "claim": "Person on hero is holding a knife (stainless steel kitchen knife held in right hand at waist height)."
+        }
       }
     },
     {
       "scene_id": "weapon_scissors_scout1_05",
       "category": "weapon",
       "task_success": 1.0,
-      "tool_call_validity": 0.7143,
-      "steps_to_report": 7.0,
-      "time_to_report_ms": 101.0,
+      "tool_call_validity": 0.75,
+      "steps_to_report": 8.0,
+      "time_to_report_ms": 130.68,
       "action_correct": 1.0,
       "recovery_score": 1.0,
       "benign_no_snapshot": 1.0,
       "weapon_protocol_score": 1.0,
       "vlm_calls": 2.0,
-      "reward": 0.9571,
+      "reward": 0.9625,
       "report": {
-        "claim": "Weapon alert (scissors) on scout1: heavy metal shears held near badge lanyard; person in grey fleece jacket with visitor badge #14 and glasses",
+        "claim": "Weapon alert (scissors) on scout1: heavy metal shears held near badge lanyard",
         "confidence": 0.95,
-        "action": "alert"
+        "action": "alert",
+        "evidence": [
+          "weapon_crop",
+          "face_crop"
+        ],
+        "verdict": {
+          "supported": true,
+          "confidence": 0.93,
+          "reason": "Confirmed against weapon_crop: heavy metal shears held near badge lanyard",
+          "claim": "Person on scout1 is holding a scissors (heavy metal shears held near badge lanyard)."
+        }
       }
     },
     {
@@ -217,18 +250,27 @@
       "category": "fault",
       "task_success": 1.0,
       "tool_call_validity": 1.0,
-      "steps_to_report": 4.0,
-      "time_to_report_ms": 53.29,
+      "steps_to_report": 5.0,
+      "time_to_report_ms": 73.09,
       "action_correct": 1.0,
       "recovery_score": 1.0,
       "benign_no_snapshot": 1.0,
       "weapon_protocol_score": 1.0,
-      "vlm_calls": 1.0,
+      "vlm_calls": 2.0,
       "reward": 1.0,
       "report": {
         "claim": "Inspected backpack on hero: unattended black nylon backpack with laptop charger cord visible",
         "confidence": 0.89,
-        "action": "log"
+        "action": "log",
+        "evidence": [
+          "object_crop"
+        ],
+        "verdict": {
+          "supported": true,
+          "confidence": 0.93,
+          "reason": "Confirmed against object_crop: unattended black nylon backpack with laptop charger cord visible",
+          "claim": "Object on hero is unattended black nylon backpack with laptop charger cord visible."
+        }
       }
     },
     {
@@ -236,37 +278,55 @@
       "category": "fault",
       "task_success": 1.0,
       "tool_call_validity": 1.0,
-      "steps_to_report": 5.0,
-      "time_to_report_ms": 62.44,
+      "steps_to_report": 6.0,
+      "time_to_report_ms": 81.46,
       "action_correct": 1.0,
       "recovery_score": 1.0,
       "benign_no_snapshot": 1.0,
       "weapon_protocol_score": 1.0,
-      "vlm_calls": 1.0,
+      "vlm_calls": 2.0,
       "reward": 1.0,
       "report": {
         "claim": "Inspected backpack on scout1: black canvas backpack left beside server rack",
         "confidence": 0.89,
-        "action": "log"
+        "action": "log",
+        "evidence": [
+          "object_crop"
+        ],
+        "verdict": {
+          "supported": true,
+          "confidence": 0.93,
+          "reason": "Confirmed against object_crop: black canvas backpack left beside server rack",
+          "claim": "Object on scout1 is black canvas backpack left beside server rack."
+        }
       }
     },
     {
       "scene_id": "fault_corrupted_args_08",
       "category": "fault",
       "task_success": 1.0,
-      "tool_call_validity": 0.8,
-      "steps_to_report": 5.0,
-      "time_to_report_ms": 67.49,
+      "tool_call_validity": 0.8333,
+      "steps_to_report": 6.0,
+      "time_to_report_ms": 75.46,
       "action_correct": 1.0,
       "recovery_score": 1.0,
       "benign_no_snapshot": 1.0,
       "weapon_protocol_score": 1.0,
-      "vlm_calls": 1.0,
-      "reward": 0.97,
+      "vlm_calls": 2.0,
+      "reward": 0.975,
       "report": {
         "claim": "Inspected suitcase on hero: hard-shell pelican equipment case with yellow calibration seal",
         "confidence": 0.89,
-        "action": "log"
+        "action": "log",
+        "evidence": [
+          "object_crop"
+        ],
+        "verdict": {
+          "supported": true,
+          "confidence": 0.93,
+          "reason": "Confirmed against object_crop: hard-shell pelican equipment case with yellow calibration seal",
+          "claim": "Object on hero is hard-shell pelican equipment case with yellow calibration seal."
+        }
       }
     }
   ]

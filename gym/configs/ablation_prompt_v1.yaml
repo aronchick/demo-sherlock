@@ -37,7 +37,8 @@ sherlock_agent:
       model_server:
         type: responses_api_models
         name: policy_model
-      max_steps: 8
+      max_steps: 6
+      weapon_extra_steps: 4
       prompt_config: gym/prompts/system_v1.yaml
       tool_descriptions: verbose
       ablation_id: prompt_v1

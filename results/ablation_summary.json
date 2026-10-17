@@ -18,21 +18,21 @@
         "enable_thinking": false,
         "prompt_config": "gym/prompts/system_v1.yaml",
         "tool_descriptions": "verbose",
-        "max_steps": 8
+        "max_steps": 6
       },
       "summary_metrics": {
         "num_tasks": 8,
         "tool_call_validity": 1.0,
         "task_success": 0.5,
-        "steps_to_report": 3.5,
-        "time_to_report_ms": 49.52,
+        "steps_to_report": 4.5,
+        "time_to_report_ms": 65.86,
         "action_correct": 1.0,
         "recovery_score": 1.0,
         "benign_no_snapshot": 0.75,
         "weapon_protocol_score": 0.875,
-        "avg_vlm_calls": 1.0,
+        "avg_vlm_calls": 2.0,
         "reward": 0.6937,
-        "suite_wall_time_ms": 443.03
+        "suite_wall_time_ms": 586.58
       }
     },
     {
@@ -49,21 +49,21 @@
         "enable_thinking": false,
         "prompt_config": "gym/prompts/system_v2.yaml",
         "tool_descriptions": "terse",
-        "max_steps": 8
+        "max_steps": 6
       },
       "summary_metrics": {
         "num_tasks": 8,
-        "tool_call_validity": 0.8872,
+        "tool_call_validity": 0.9051,
         "task_success": 1.0,
-        "steps_to_report": 4.12,
-        "time_to_report_ms": 56.98,
+        "steps_to_report": 4.88,
+        "time_to_report_ms": 71.81,
         "action_correct": 1.0,
         "recovery_score": 1.0,
         "benign_no_snapshot": 1.0,
         "weapon_protocol_score": 1.0,
-        "avg_vlm_calls": 1.0,
-        "reward": 0.9831,
-        "suite_wall_time_ms": 507.14
+        "avg_vlm_calls": 1.5,
+        "reward": 0.9858,
+        "suite_wall_time_ms": 633.5
       }
     },
     {
@@ -80,21 +80,21 @@
         "enable_thinking": true,
         "prompt_config": "gym/prompts/system_v2.yaml",
         "tool_descriptions": "verbose",
-        "max_steps": 8
+        "max_steps": 6
       },
       "summary_metrics": {
         "num_tasks": 8,
         "tool_call_validity": 1.0,
         "task_success": 0.875,
-        "steps_to_report": 3.75,
-        "time_to_report_ms": 151.1,
+        "steps_to_report": 4.62,
+        "time_to_report_ms": 198.27,
         "action_correct": 1.0,
         "recovery_score": 1.0,
         "benign_no_snapshot": 0.875,
         "weapon_protocol_score": 1.0,
-        "avg_vlm_calls": 1.12,
+        "avg_vlm_calls": 1.75,
         "reward": 0.9187,
-        "suite_wall_time_ms": 1252.5
+        "suite_wall_time_ms": 1649.39
       }
     },
     {
@@ -111,21 +111,21 @@
         "enable_thinking": false,
         "prompt_config": "gym/prompts/system_v2.yaml",
         "tool_descriptions": "verbose",
-        "max_steps": 8
+        "max_steps": 6
       },
       "summary_metrics": {
         "num_tasks": 8,
         "tool_call_validity": 1.0,
         "task_success": 0.875,
-        "steps_to_report": 3.38,
-        "time_to_report_ms": 76.32,
+        "steps_to_report": 4.12,
+        "time_to_report_ms": 86.18,
         "action_correct": 1.0,
         "recovery_score": 1.0,
         "benign_no_snapshot": 1.0,
         "weapon_protocol_score": 0.9375,
-        "avg_vlm_calls": 0.88,
+        "avg_vlm_calls": 1.5,
         "reward": 0.9281,
-        "suite_wall_time_ms": 668.54
+        "suite_wall_time_ms": 739.11
       }
     },
     {
@@ -142,21 +142,21 @@
         "enable_thinking": false,
         "prompt_config": "gym/prompts/system_v2.yaml",
         "tool_descriptions": "verbose",
-        "max_steps": 8
+        "max_steps": 6
       },
       "summary_metrics": {
         "num_tasks": 8,
         "tool_call_validity": 1.0,
         "task_success": 1.0,
-        "steps_to_report": 3.5,
-        "time_to_report_ms": 60.93,
+        "steps_to_report": 4.25,
+        "time_to_report_ms": 65.88,
         "action_correct": 1.0,
         "recovery_score": 1.0,
         "benign_no_snapshot": 1.0,
         "weapon_protocol_score": 1.0,
-        "avg_vlm_calls": 1.0,
+        "avg_vlm_calls": 1.5,
         "reward": 1.0,
-        "suite_wall_time_ms": 559.8
+        "suite_wall_time_ms": 592.27
       }
     }
   ]

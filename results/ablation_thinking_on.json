@@ -15,34 +15,34 @@
     "enable_thinking": true,
     "prompt_config": "gym/prompts/system_v2.yaml",
     "tool_descriptions": "verbose",
-    "max_steps": 8
+    "max_steps": 6
   },
   "summary_metrics": {
     "num_tasks": 8,
     "tool_call_validity": 1.0,
     "task_success": 0.875,
-    "steps_to_report": 3.75,
-    "time_to_report_ms": 151.1,
+    "steps_to_report": 4.62,
+    "time_to_report_ms": 198.27,
     "action_correct": 1.0,
     "recovery_score": 1.0,
     "benign_no_snapshot": 0.875,
     "weapon_protocol_score": 1.0,
-    "avg_vlm_calls": 1.12,
+    "avg_vlm_calls": 1.75,
     "reward": 0.9187,
-    "suite_wall_time_ms": 1252.5
+    "suite_wall_time_ms": 1649.39
   },
   "nemo_gym_aggregate_metrics": {
     "key_metrics": {
       "mean/reward": 0.91875,
       "mean/task_success": 0.875,
       "mean/tool_call_validity": 1.0,
-      "mean/steps_to_report": 3.75,
-      "mean/time_to_report_ms": 151.10375,
+      "mean/steps_to_report": 4.625,
+      "mean/time_to_report_ms": 198.26749999999998,
       "mean/action_correct": 1.0,
       "mean/recovery_score": 1.0,
       "mean/benign_no_snapshot": 0.875,
       "mean/weapon_protocol_score": 1.0,
-      "mean/vlm_calls": 1.125,
+      "mean/vlm_calls": 1.75,
       "mean/input_tokens": 180.0,
       "mean/output_tokens": 64.0,
       "mean/total_tokens": 244.0
@@ -51,21 +51,21 @@
       "mean/reward": 0.91875,
       "mean/task_success": 0.875,
       "mean/tool_call_validity": 1.0,
-      "mean/steps_to_report": 3.75,
-      "mean/time_to_report_ms": 151.10375,
+      "mean/steps_to_report": 4.625,
+      "mean/time_to_report_ms": 198.26749999999998,
       "mean/action_correct": 1.0,
       "mean/recovery_score": 1.0,
       "mean/benign_no_snapshot": 0.875,
       "mean/weapon_protocol_score": 1.0,
-      "mean/vlm_calls": 1.125,
+      "mean/vlm_calls": 1.75,
       "mean/input_tokens": 180.0,
       "mean/output_tokens": 64.0,
       "mean/total_tokens": 244.0,
       "max/reward": 1.0,
       "max/task_success": 1.0,
       "max/tool_call_validity": 1.0,
-      "max/steps_to_report": 5.0,
-      "max/time_to_report_ms": 202.49,
+      "max/steps_to_report": 6.0,
+      "max/time_to_report_ms": 265.81,
       "max/action_correct": 1.0,
       "max/recovery_score": 1.0,
       "max/benign_no_snapshot": 1.0,
@@ -78,7 +78,7 @@
       "min/task_success": 0.0,
       "min/tool_call_validity": 1.0,
       "min/steps_to_report": 1.0,
-      "min/time_to_report_ms": 42.03,
+      "min/time_to_report_ms": 52.74,
       "min/action_correct": 1.0,
       "min/recovery_score": 1.0,
       "min/benign_no_snapshot": 0.0,
@@ -90,26 +90,26 @@
       "median/reward": 1.0,
       "median/task_success": 1.0,
       "median/tool_call_validity": 1.0,
-      "median/steps_to_report": 4.0,
-      "median/time_to_report_ms": 161.43,
+      "median/steps_to_report": 5.0,
+      "median/time_to_report_ms": 210.885,
       "median/action_correct": 1.0,
       "median/recovery_score": 1.0,
       "median/benign_no_snapshot": 1.0,
       "median/weapon_protocol_score": 1.0,
-      "median/vlm_calls": 1.0,
+      "median/vlm_calls": 2.0,
       "median/input_tokens": 180.0,
       "median/output_tokens": 64.0,
       "median/total_tokens": 244.0,
       "std/reward": 0.22980970388562794,
       "std/task_success": 0.3535533905932738,
       "std/tool_call_validity": 0.0,
-      "std/steps_to_report": 1.3887301496588271,
-      "std/time_to_report_ms": 55.2928357378112,
+      "std/steps_to_report": 1.685018016012207,
+      "std/time_to_report_ms": 71.11640713847764,
       "std/action_correct": 0.0,
       "std/recovery_score": 0.0,
       "std/benign_no_snapshot": 0.3535533905932738,
       "std/weapon_protocol_score": 0.0,
-      "std/vlm_calls": 0.6408699444616557,
+      "std/vlm_calls": 0.7071067811865476,
       "std/input_tokens": 0.0,
       "std/output_tokens": 0.0,
       "std/total_tokens": 0.0,
@@ -123,7 +123,7 @@
       "task_success": 1.0,
       "tool_call_validity": 1.0,
       "steps_to_report": 1.0,
-      "time_to_report_ms": 42.03,
+      "time_to_report_ms": 52.74,
       "action_correct": 1.0,
       "recovery_score": 1.0,
       "benign_no_snapshot": 1.0,
@@ -133,7 +133,9 @@
       "report": {
         "claim": "Benign cup spotted on hero; no VLM inspection needed.",
         "confidence": 0.94,
-        "action": "ignore"
+        "action": "ignore",
+        "evidence": [],
+        "verdict": null
       }
     },
     {
@@ -141,18 +143,25 @@
       "category": "benign",
       "task_success": 0.0,
       "tool_call_validity": 1.0,
-      "steps_to_report": 3.0,
-      "time_to_report_ms": 121.15,
+      "steps_to_report": 4.0,
+      "time_to_report_ms": 165.59,
       "action_correct": 1.0,
       "recovery_score": 1.0,
       "benign_no_snapshot": 0.0,
       "weapon_protocol_score": 1.0,
-      "vlm_calls": 1.0,
+      "vlm_calls": 2.0,
       "reward": 0.35,
       "report": {
         "claim": "Confirmed benign bottle on desk.",
         "confidence": 0.92,
-        "action": "ignore"
+        "action": "ignore",
+        "evidence": [],
+        "verdict": {
+          "supported": true,
+          "confidence": 0.93,
+          "reason": "Confirmed against object_crop: clear reusable water bottle next to keyboard",
+          "claim": "Object on hero is a benign bottle."
+        }
       }
     },
     {
@@ -160,18 +169,27 @@
       "category": "standard",
       "task_success": 1.0,
       "tool_call_validity": 1.0,
-      "steps_to_report": 3.0,
-      "time_to_report_ms": 120.16,
+      "steps_to_report": 4.0,
+      "time_to_report_ms": 164.62,
       "action_correct": 1.0,
       "recovery_score": 1.0,
       "benign_no_snapshot": 1.0,
       "weapon_protocol_score": 1.0,
-      "vlm_calls": 1.0,
+      "vlm_calls": 2.0,
       "reward": 1.0,
       "report": {
         "claim": "Inspected suitcase on hero: brown cardboard parcel labeled FRAGILE - LAB EQUIPMENT by the doorway",
         "confidence": 0.89,
-        "action": "log"
+        "action": "log",
+        "evidence": [
+          "object_crop"
+        ],
+        "verdict": {
+          "supported": true,
+          "confidence": 0.93,
+          "reason": "Confirmed against object_crop: brown cardboard parcel labeled FRAGILE - LAB EQUIPMENT by the doorway",
+          "claim": "Object on hero is brown cardboard parcel labeled FRAGILE - LAB EQUIPMENT by the doorway."
+        }
       }
     },
     {
@@ -179,8 +197,8 @@
       "category": "weapon",
       "task_success": 1.0,
       "tool_call_validity": 1.0,
-      "steps_to_report": 5.0,
-      "time_to_report_ms": 202.49,
+      "steps_to_report": 6.0,
+      "time_to_report_ms": 262.36,
       "action_correct": 1.0,
       "recovery_score": 1.0,
       "benign_no_snapshot": 1.0,
@@ -188,9 +206,19 @@
       "vlm_calls": 2.0,
       "reward": 1.0,
       "report": {
-        "claim": "Weapon alert (knife) on hero: stainless steel kitchen knife held in right hand at waist height; person wearing dark hoodie and red baseball cap facing north hallway",
+        "claim": "Weapon alert (knife) on hero: stainless steel kitchen knife held in right hand at waist height",
         "confidence": 0.95,
-        "action": "alert"
+        "action": "alert",
+        "evidence": [
+          "weapon_crop",
+          "face_crop"
+        ],
+        "verdict": {
+          "supported": true,
+          "confidence": 0.93,
+          "reason": "Confirmed against weapon_crop: stainless steel kitchen knife held in right hand at waist height",
+          "claim": "Person on hero is holding a knife (stainless steel kitchen knife held in right hand at waist height)."
+        }
       }
     },
     {
@@ -198,8 +226,8 @@
       "category": "weapon",
       "task_success": 1.0,
       "tool_call_validity": 1.0,
-      "steps_to_report": 5.0,
-      "time_to_report_ms": 200.16,
+      "steps_to_report": 6.0,
+      "time_to_report_ms": 265.81,
       "action_correct": 1.0,
       "recovery_score": 1.0,
       "benign_no_snapshot": 1.0,
@@ -207,9 +235,19 @@
       "vlm_calls": 2.0,
       "reward": 1.0,
       "report": {
-        "claim": "Weapon alert (scissors) on scout1: heavy metal shears held near badge lanyard; person in grey fleece jacket with visitor badge #14 and glasses",
+        "claim": "Weapon alert (scissors) on scout1: heavy metal shears held near badge lanyard",
         "confidence": 0.95,
-        "action": "alert"
+        "action": "alert",
+        "evidence": [
+          "weapon_crop",
+          "face_crop"
+        ],
+        "verdict": {
+          "supported": true,
+          "confidence": 0.93,
+          "reason": "Confirmed against weapon_crop: heavy metal shears held near badge lanyard",
+          "claim": "Person on scout1 is holding a scissors (heavy metal shears held near badge lanyard)."
+        }
       }
     },
     {
@@ -217,18 +255,27 @@
       "category": "fault",
       "task_success": 1.0,
       "tool_call_validity": 1.0,
-      "steps_to_report": 4.0,
-      "time_to_report_ms": 161.58,
+      "steps_to_report": 5.0,
+      "time_to_report_ms": 213.46,
       "action_correct": 1.0,
       "recovery_score": 1.0,
       "benign_no_snapshot": 1.0,
       "weapon_protocol_score": 1.0,
-      "vlm_calls": 1.0,
+      "vlm_calls": 2.0,
       "reward": 1.0,
       "report": {
         "claim": "Inspected backpack on hero: unattended black nylon backpack with laptop charger cord visible",
         "confidence": 0.89,
-        "action": "log"
+        "action": "log",
+        "evidence": [
+          "object_crop"
+        ],
+        "verdict": {
+          "supported": true,
+          "confidence": 0.93,
+          "reason": "Confirmed against object_crop: unattended black nylon backpack with laptop charger cord visible",
+          "claim": "Object on hero is unattended black nylon backpack with laptop charger cord visible."
+        }
       }
     },
     {
@@ -236,18 +283,27 @@
       "category": "fault",
       "task_success": 1.0,
       "tool_call_validity": 1.0,
-      "steps_to_report": 5.0,
-      "time_to_report_ms": 199.98,
+      "steps_to_report": 6.0,
+      "time_to_report_ms": 253.25,
       "action_correct": 1.0,
       "recovery_score": 1.0,
       "benign_no_snapshot": 1.0,
       "weapon_protocol_score": 1.0,
-      "vlm_calls": 1.0,
+      "vlm_calls": 2.0,
       "reward": 1.0,
       "report": {
         "claim": "Inspected backpack on scout1: black canvas backpack left beside server rack",
         "confidence": 0.89,
-        "action": "log"
+        "action": "log",
+        "evidence": [
+          "object_crop"
+        ],
+        "verdict": {
+          "supported": true,
+          "confidence": 0.93,
+          "reason": "Confirmed against object_crop: black canvas backpack left beside server rack",
+          "claim": "Object on scout1 is black canvas backpack left beside server rack."
+        }
       }
     },
     {
@@ -255,18 +311,27 @@
       "category": "fault",
       "task_success": 1.0,
       "tool_call_validity": 1.0,
-      "steps_to_report": 4.0,
-      "time_to_report_ms": 161.28,
+      "steps_to_report": 5.0,
+      "time_to_report_ms": 208.31,
       "action_correct": 1.0,
       "recovery_score": 1.0,
       "benign_no_snapshot": 1.0,
       "weapon_protocol_score": 1.0,
-      "vlm_calls": 1.0,
+      "vlm_calls": 2.0,
       "reward": 1.0,
       "report": {
         "claim": "Inspected suitcase on hero: hard-shell pelican equipment case with yellow calibration seal",
         "confidence": 0.89,
-        "action": "log"
+        "action": "log",
+        "evidence": [
+          "object_crop"
+        ],
+        "verdict": {
+          "supported": true,
+          "confidence": 0.93,
+          "reason": "Confirmed against object_crop: hard-shell pelican equipment case with yellow calibration seal",
+          "claim": "Object on hero is hard-shell pelican equipment case with yellow calibration seal."
+        }
       }
     }
   ]

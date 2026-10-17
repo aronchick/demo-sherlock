@@ -97,6 +97,7 @@ class SherlockResourcesServer(SimpleResourcesServer):
         app.post("/look_at")(self.look_at)
         app.post("/move")(self.move)
         app.post("/snapshot")(self.snapshot)
+        app.post("/verify_claim")(self.verify_claim)
         app.post("/list_cameras")(self.list_cameras)
         app.post("/report")(self.report)
         return app
@@ -141,6 +142,12 @@ class SherlockResourcesServer(SimpleResourcesServer):
         state = self._get_or_create_session(request)
         return state.step_tool("snapshot", body, now_ms=time.perf_counter() * 1000.0)
 
+    async def verify_claim(
+        self, request: Request, body: dict[str, Any] = _DEFAULT_DICT_BODY
+    ) -> dict[str, Any]:
+        state = self._get_or_create_session(request)
+        return state.step_tool("verify", body, now_ms=time.perf_counter() * 1000.0)
+
     async def list_cameras(
         self, request: Request, body: dict[str, Any] = _DEFAULT_DICT_BODY
     ) -> dict[str, Any]:
@@ -169,23 +176,33 @@ class SherlockResourcesServer(SimpleResourcesServer):
                         if isinstance(raw_args_str, str)
                         else raw_args_str
                     )
-                except ( json.JSONDecodeError, TypeError ):
+                except (json.JSONDecodeError, TypeError):
                     parsed_args = raw_args_str
                 state.step_tool(fn_name, parsed_args)
         return state
 
     async def verify(
-        self, request: Request, body: SherlockVerifyRequest
-    ) -> SherlockVerifyResponse:
-        scene_id = _extract_scene_id_from_messages(body)
+        self, request: Request, body: Any = _DEFAULT_DICT_BODY
+    ) -> SherlockVerifyResponse | dict[str, Any]:
+        # Disambiguate tool call `verify(claim)` vs NeMo Gym episode verification
+        if isinstance(body, dict) and "response" not in body:
+            state = self._get_or_create_session(request)
+            return state.step_tool("verify", body, now_ms=time.perf_counter() * 1000.0)
+
+        verify_body = (
+            body
+            if isinstance(body, SherlockVerifyRequest)
+            else SherlockVerifyRequest.model_validate(body)
+        )
+        scene_id = _extract_scene_id_from_messages(verify_body)
         scene = get_scene(scene_id)
 
         session_id = request.session.get(SESSION_ID_KEY) if hasattr(request, "session") else None
         state = self._sessions.get(session_id) if session_id else None
         if state is None or state.scene.scene_id != scene_id or not state.tool_trace:
-            state = self._replay_from_response_output(scene, body)
+            state = self._replay_from_response_output(scene, verify_body)
 
-        fallback_ms = float(body.elapsed_ms) if body.elapsed_ms is not None else 45.0
+        fallback_ms = float(verify_body.elapsed_ms) if verify_body.elapsed_ms is not None else 45.0
         scores = score_episode(state, fallback_elapsed_ms=fallback_ms)
 
         reward_components = {
@@ -198,7 +215,7 @@ class SherlockResourcesServer(SimpleResourcesServer):
         }
 
         return SherlockVerifyResponse(
-            **body.model_dump(exclude={"scene_id", "category"}),
+            **verify_body.model_dump(exclude={"scene_id", "category"}),
             reward=scores["reward"],
             reward_components=reward_components,
             metrics={

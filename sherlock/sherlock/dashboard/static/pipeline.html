@@ -323,10 +323,28 @@ for (const r of ['director', 'analyst', 'verifier']) {
   el.textContent = base;
   el.title = CFG.mock ? 'mock, no model server' : `${(M[r] || {}).model} at ${(M[r] || {}).url}`;
 }
-$('expanso').classList.toggle('live', CFG.expanso);
-const EXPANSO_DETAIL = 'Expanso Edge processes this data; Expanso Cloud deploys and monitors it, no image data';
-$('expansoText').textContent = (CFG.expanso ? 'connected · ' : 'not connected in this run · ') + EXPANSO_DETAIL;
-$('expanso').title = $('expansoText').textContent;
+// Expanso status comes from /expanso: live only while the Edge pipelines on this
+// laptop accept this run's events. Nothing here is configured by hand.
+function expansoFooter(s) {
+  const live = !!(s && s.edge);
+  const where = s && s.mode === 'cloud'
+    ? 'Expanso Cloud deploys and monitors the pipelines'
+    : 'local mode, not deployed from Expanso Cloud';
+  const text = live
+    ? `connected · Expanso Edge carries events and alerts off the laptop; ${where} · face crops never leave`
+    : 'not connected in this run · start the Edge pipelines and set SHERLOCK_EDGE=1 to carry events and alerts';
+  $('expanso').classList.toggle('live', live);
+  $('expansoText').textContent = text;
+  $('expanso').title = text;
+  return s;
+}
+function pollExpanso(onStatus) {
+  const tick = () => fetch('/expanso', {cache: 'no-store'}).then(r => r.ok ? r.json() : null)
+    .catch(() => null).then(s => { expansoFooter(s); if (onStatus) onStatus(s); });
+  tick();
+  setInterval(tick, 5000);
+}
+pollExpanso();
 
 // ---- stages (DOM) -------------------------------------------------------------------
 const ST = { camera: $('wideFrame'), scout: $('st-scout'), director: $('st-director'), analyst: $('st-analyst'),

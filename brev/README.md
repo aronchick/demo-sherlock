@@ -92,6 +92,22 @@ ssh -N -o ExitOnForwardFailure=yes \
   -L 127.0.0.1:8002:127.0.0.1:8002 my-instance
 ```
 
+With the Expanso data plane (README: Expanso Edge data plane), the same
+tunnel also forwards the core intake and lets the core's metrics pipeline
+reach the dashboard. Both stay on loopback at each end:
+
+```bash
+ssh -N -o ExitOnForwardFailure=yes \
+  -L 127.0.0.1:8001:127.0.0.1:8001 \
+  -L 127.0.0.1:8002:127.0.0.1:8002 \
+  -L 127.0.0.1:23121:127.0.0.1:23121 \
+  -R 127.0.0.1:23100:127.0.0.1:8000 my-instance
+```
+
+The `-R` mapping assumes the dashboard on port 8000; change the last `8000`
+if `DASHBOARD_PORT` differs. The dashboard accepts serving records only from
+loopback callers.
+
 Keep the tunnel running and use the loopback `.env` values. Both local ports must
 be free before forwarding. From the Mac repository root, verify reachability:
 

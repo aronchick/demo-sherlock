@@ -15,6 +15,7 @@ from .agents.scout import Detection, Scout, classify
 from .agents.vision import Analyst, MockAnalyst, MockVerifier, Verifier
 from .camera import Camera, CameraError, build_camera
 from .config import CONFIG, Config
+from .edge import EdgeSink
 from .events import BUS
 from .scene import ScriptedScene
 from .tools import ToolBox
@@ -60,6 +61,7 @@ class Sherlock:
         self.scout = Scout(backend, cfg.yolo_model, cfg.dwell_seconds, truth=self._scene_truth,
                            measure=not cfg.mock and backend != "scene", handled_via=self._handled_via)
         self.evidence_dir = pathlib.Path(evidence_dir or os.environ.get("EVIDENCE_DIR", "snapshots"))
+        self.edge = EdgeSink.from_env(self.evidence_dir)  # None unless SHERLOCK_EDGE=1
         self.latest_wide: dict[str, np.ndarray] = {}
         self.log: list[dict] = []
         self.active: Detection | None = None
@@ -94,13 +96,18 @@ class Sherlock:
         self.running = True
         self._thread = threading.Thread(target=self._loop, daemon=True)
         self._thread.start()
+        if self.edge:
+            self.edge.start()
         missing = f", unavailable {list(self.unavailable)}" if self.unavailable else ""
-        BUS.emit("system", f"started with cameras {list(self.cameras)}{missing}, mock={self.cfg.mock}")
+        BUS.emit("system", f"started with cameras {list(self.cameras)}{missing}, mock={self.cfg.mock}"
+                 + (", Expanso Edge sink on" if self.edge else ""))
 
     def stop(self) -> None:
         self.running = False
         if self._thread:
             self._thread.join(timeout=10)
+        if self.edge:
+            self.edge.stop()
 
     def _loop(self) -> None:
         down: set[str] = set()  # loud once per outage, not every frame: keeps the tool chain readable

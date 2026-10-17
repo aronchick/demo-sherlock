@@ -2,11 +2,13 @@ from __future__ import annotations
 
 import asyncio
 import json
+import os
 import pathlib
 import queue
 import re
+import time
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import (
     FileResponse,
     HTMLResponse,
@@ -23,6 +25,21 @@ from .numbers import read_numbers
 STATIC = pathlib.Path(__file__).parent / "static"
 _INCIDENT_ID = re.compile(r"^[0-9]{8}-[0-9]{6}-[0-9]{3,}$")
 _EVIDENCE_NAMES = {"weapon_crop", "face_crop", "object_crop"}
+_SERVING_SERVERS = {"director", "vlm"}
+_SERVING_FIELDS = {"up", "at", "kv_cache_usage", "prefix_cache_queries", "prefix_cache_hits",
+                   "requests_running", "requests_waiting", "error"}
+_SERVING_STALE_S = 60.0
+_LOOPBACK = {"127.0.0.1", "::1"}
+
+
+def expanso_mode() -> str | None:
+    """local or cloud, as written by scripts/expanso.sh while its nodes run here."""
+    path = pathlib.Path(os.environ.get("SHERLOCK_RUNTIME_DIR", ".runtime")) / "expanso" / "mode"
+    try:
+        mode = path.read_text().strip()
+    except OSError:
+        return None
+    return mode if mode in {"local", "cloud"} else None
 
 
 def make_app(sherlock: Sherlock) -> FastAPI:
@@ -108,6 +125,37 @@ def make_app(sherlock: Sherlock) -> FastAPI:
     @app.post("/demo/corrupt/{n}")
     def corrupt(n: int):
         sherlock.inject_corruption(n)
+        return {"ok": True}
+
+    serving: dict[str, dict] = {}
+
+    @app.get("/expanso")
+    def expanso():
+        """What the footers may claim. 'edge' is true only while the Edge pipelines on
+        this laptop are accepting this run's events; serving is what the cloud core's
+        vLLM metrics pipeline last pushed, dropped once it goes stale."""
+        status = sherlock.edge.status() if sherlock.edge else {"edge": False}
+        now = time.time()
+        fresh = {k: v for k, v in serving.items() if now - v["received"] < _SERVING_STALE_S}
+        return JSONResponse({**status, "mode": expanso_mode(), "serving": fresh},
+                            headers={"Cache-Control": "no-store"})
+
+    @app.post("/api/serving")
+    async def serving_in(request: Request):
+        """Records from jobs/sherlock-vllm-metrics.yaml, arriving through the SSH
+        tunnel's reverse port, so only loopback callers are accepted."""
+        if (request.client.host if request.client else "") not in _LOOPBACK:
+            raise HTTPException(403)
+        body = await request.body()
+        if len(body) > 8192:
+            raise HTTPException(413)
+        try:
+            rec = json.loads(body)
+        except ValueError:
+            raise HTTPException(400) from None
+        if not isinstance(rec, dict) or rec.get("server") not in _SERVING_SERVERS:
+            raise HTTPException(400)
+        serving[rec["server"]] = {**{k: rec[k] for k in _SERVING_FIELDS if k in rec}, "received": time.time()}
         return {"ok": True}
 
     @app.get("/reports")

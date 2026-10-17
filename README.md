@@ -16,11 +16,11 @@ One tiny model gates the expensive ones. The dashboard counts "VLM calls avoided
 
 Sherlock runs on two machines. The laptop with the cameras watches every
 frame and decides when a model is worth calling. A Brev GPU box serves the
-models with vLLM. Expanso Edge is meant to move everything that happens
-after a decision (events, incidents, evidence, serving metrics, training
-examples) from the laptop to a cloud core. That data plane is designed in
-[Expanso Edge data plane](#expanso-edge-data-plane-proposed-not-built) but
-**is not built yet**.
+models with vLLM. Expanso Edge moves everything that happens after a
+decision (events, incidents, evidence, serving metrics, training examples)
+from the laptop to a core on the Brev box, and Expanso Cloud deploys and
+monitors those pipelines
+([Expanso Edge data plane](#expanso-edge-data-plane)).
 
 ```
  LAPTOP (Mac, cameras attached)            BREV GPU BOX (1x H100 80GB)
@@ -135,68 +135,103 @@ verifier score the Director while YAML configs change one component at a
 time: prompt, tool descriptions, thinking, or Director model
 ([NeMo Gym ablation](#nemo-gym-ablation)). No weights change.
 
-### Expanso Edge data plane (proposed, not built)
+### Expanso Edge data plane
 
-**Status today:** nothing in this repository runs on Expanso. The dashboard
-footer that mentions Expanso shows "not connected" unless
-`SHERLOCK_EXPANSO=connected` is set by hand. The design below is what the
-footer should describe once it is real.
+Five Expanso Edge jobs (`jobs/sherlock-*.yaml`) on two nodes, deployed from
+Expanso Cloud by node label. The orchestrator hands its events to them
+through a small sink (`sherlock/sherlock/edge.py`) that is **off unless
+`SHERLOCK_EDGE=1`**, so `just up` and `just live` work with no Expanso.
 
 **What Expanso carries, and what it does not.** Model calls stay direct
 HTTP from the orchestrator to vLLM: they sit inside a tool loop where every
-millisecond shows on stage. Expanso Edge moves what happens after each
-decision, on the laptop and in the cloud, and Expanso Cloud deploys and
-monitors every job by node label.
+millisecond shows on stage. Expanso Edge carries what happens after each
+decision. The sink never slows the camera loop: the event bus drops events
+for a subscriber that falls behind, and every POST has a short timeout and
+is dropped on failure.
 
 ```
- LAPTOP: node sherlock-edge               CLOUD: node sherlock-core
+ LAPTOP: node sherlock-edge               BREV BOX: node sherlock-core
  (role=sherlock-edge)                     (role=sherlock-core)
 
- orchestrator                             C1 sherlock-core-intake
-   ├─POST─► E1 sherlock-telemetry ──┐       ├─► incidents/  + alert webhook
-   ├─POST─► E2 sherlock-incidents ──┼──────►├─► telemetry/
-   └─POST─► E3 sherlock-examples ───┘       └─► examples/  (next Scout set)
+ orchestrator sink                        C1 sherlock-core-intake :23121
+   ├─► E1 sherlock-telemetry :23111 ─┐      ├─► telemetry/<date>.jsonl
+   ├─► E2 sherlock-incidents :23112 ─┼─────►├─► incident/<date>.jsonl
+   └─► E3 sherlock-examples  :23113 ─┘      ├─► example/<date>.jsonl
+          │ core unreachable                └─► alert webhook (optional)
+          ▼
+   .runtime/expanso/spool/*.jsonl
 
- dashboard ◄──────────────────────────── C2 sherlock-vllm-metrics
-                                            ◄── :8001/metrics, :8002/metrics
+ dashboard /api/serving ◄─────────────── C2 sherlock-vllm-metrics
+   (reverse tunnel :23100)                  ◄── :8001/metrics, :8002/metrics
 
  Expanso Cloud: deploys all five jobs by label, shows node
- health, job revisions and rollbacks
+ health, job versions and rollbacks
 ```
 
 | Job | Node | Input | What it does | Output |
 |---|---|---|---|---|
-| E1 `sherlock-telemetry` | Laptop | `http_server` on loopback; the orchestrator POSTs each dashboard event | Drops image fields; adds node, camera, model and Git commit; batches | Core intake `/telemetry` |
-| E2 `sherlock-incidents` | Laptop | `http_server`; one POST per report | `switch` on action: `alert` goes out at once with the weapon crop; `log` and `ignore` send metadata only. The face crop is replaced by its SHA-256 and local path | Core intake `/incident` |
-| E3 `sherlock-examples` | Laptop | `http_server`; object crops the Verifier rejected or scored near the threshold | Hard examples for the next Scout fine-tune. Object crops only, never faces. Off by default | Core intake `/example` |
-| C1 `sherlock-core-intake` | Cloud | `http_server /{endpoint}` | Validates, stamps receipt time, routes by endpoint; failed messages are logged and rejected, not dropped silently | `file` stores per stream; `http_client` alert webhook |
-| C2 `sherlock-vllm-metrics` | Cloud (Brev box) | `generate` every 10 s, then GET both vLLM `/metrics` | Per-model KV-cache use, prefix-cache hits, queue depth, request counts | Core store and the laptop dashboard |
+| E1 `sherlock-telemetry` | Laptop | `http_server` `127.0.0.1:23111/events`; the sink sends every bus event in batches | Splits batches, drops any `*_b64` field, stamps node and time | Core `/telemetry` in batches; local spool if the core is unreachable |
+| E2 `sherlock-incidents` | Laptop | `http_server` `:23112/incident`; one POST per report | Rejects a report without incident or action. Enforces the crop policy itself: crop bytes only on `alert`, **never the face crop** (hash, size and local path only); re-hashes each crop it sends. `switch`: alerts go at once, other reports in 1 s batches | Core `/incident`; local spool on failure |
+| E3 `sherlock-examples` | Laptop | `http_server` `:23113/example`; sent only with `SHERLOCK_EDGE_EXAMPLES=1` | Crops the Verifier did not confirm, for the next Scout fine-tune. Rejects anything but a weapon or object crop | Core `/example`; local spool on failure |
+| C1 `sherlock-core-intake` | Brev box | `http_server` `127.0.0.1:23121/{endpoint}` | Splits batches, rejects unknown streams, stamps receipt, logs each alert | `file` per stream and day; `http_client` to `SHERLOCK_ALERT_WEBHOOK` if set |
+| C2 `sherlock-vllm-metrics` | Brev box | `generate` every 10 s, then GET both vLLM `/metrics` | KV-cache use, prefix-cache queries and hits, running and waiting requests; a down server is recorded as `up: false` | `file` per day; the laptop dashboard, dropped if the tunnel is down |
 
-Every component named here (`http_server`, `http_client`, `generate`,
-`switch`, `file`, Bloblang `.hash()`) is in the Expanso Edge
-documentation; the job layout follows `demo-edge-to-core-fleet`
-(`core-intake`) and `demo-edge-zoom-on-interest`.
+A rejected message is refused, not passed on: the sender gets an error
+response. (An Expanso `catch` clears the error flag, so the jobs log
+failures with a `switch` on `errored()` instead; a test guards this.)
 
-**Code changes to build it:**
+**Decisions taken:** the core runs on the Brev box next to vLLM, so
+stopping Brev stops it; the face crop never leaves the laptop; E3 is off by
+default because room photos show real people.
 
-1. A small event sink in `sherlock/sherlock/events.py` that POSTs events and
-   reports to E1 and E2 when `SHERLOCK_EDGE_URL` is set, and does nothing
-   when it is not, so `just up` keeps working with no Expanso.
-2. `jobs/` with the five job files, deployed through Expanso Cloud.
-3. Dashboard: read C2's metrics, and drive the Expanso footer from a real
-   node heartbeat instead of the `SHERLOCK_EXPANSO` flag.
-4. Expanso credentials and node identity in project-local, gitignored paths
-   with owner-only permissions; never a global profile.
+**Dashboard.** The footer on `/` and `/topology` polls `/expanso`. It says
+"connected" only while the Edge pipelines accepted this run's events in the
+last 30 s, and says whether the nodes run locally or from Expanso Cloud.
+`/topology` shows C2's serving numbers under each vLLM server.
 
-**Open decisions:**
+**Run it offline (both nodes on this Mac, no Cloud):**
 
-1. **Where the core node runs.** The Brev box already exists and sits next
-   to vLLM, but stopping Brev stops the core. A small persistent cloud VM
-   keeps incidents and history between sessions.
-2. **Whether the face crop ever leaves the laptop.** Proposed: no. Only its
-   hash and local path go up, so a reviewer opens it on the device.
-3. **Whether E3 starts on.** Proposed: off. Room photos show real people,
-   and the Scout publisher already requires everyone pictured to agree.
+```bash
+just expanso-local                 # starts both nodes, deploys the jobs
+SHERLOCK_EDGE=1 just up            # mock run; or SHERLOCK_EDGE=1 just live
+just down && just expanso-down
+```
+
+Core records land in `.runtime/expanso/core/`. Locally C2 reads
+`127.0.0.1:8001` and `:8002`, which is the Brev tunnel when it is up.
+
+**Run it with Expanso Cloud.** Credentials come from one owner-only
+(`chmod 600`) env file holding `EXPANSO_CLI_ENDPOINT`, `EXPANSO_CLI_API_KEY`
+and `EXPANSO_EDGE_BOOTSTRAP_TOKEN`: `EXPANSO_WORKSPACE_ENV` if set, else the
+demos' shared `_demo-kit/.env`, else `./.env`. Node identity stays in the
+gitignored `.cloud-state/`; nothing touches a global Expanso profile.
+
+1. On the Mac: `just expanso-edge` registers the laptop as `sherlock-edge`
+   and deploys all five jobs. C1 and C2 stay queued until the core connects.
+2. On the Brev box, from a copy of this repository, with only
+   `EXPANSO_EDGE_BOOTSTRAP_TOKEN` in its `.env` (mode 600):
+
+   ```bash
+   curl -fsSL https://get.expanso.io/edge/install.sh | bash
+   scripts/expanso.sh core
+   ```
+
+   Records land in `~/sherlock-core/`.
+3. On the Mac, the tunnel also carries the core intake (forward) and the
+   serving numbers (reverse); see `brev/README.md`.
+4. `SHERLOCK_EDGE=1 just live`. `just expanso-status` lists the nodes and
+   jobs; `just expanso-down` stops the nodes started on that machine;
+   `just expanso-clean` deletes the five jobs from Cloud.
+
+**Verified on 17 Oct 2026, on this Mac:** in local mode the mock run's
+alert reached the core with the weapon crop (edge and sender hashes match)
+and the face crop as hash and size only; 26 telemetry events arrived as
+single records; E3 refused a face crop and stored an object crop; with the
+core stopped, events and incidents spooled locally with no sink failures;
+C2 recorded a stub server's numbers and a down server as `up: false`. In
+Expanso Cloud, `sherlock-edge` connected and Cloud ran E1 to E3 on it, with
+C1 and C2 queued for `sherlock-core`. **Not yet run:** the core node on the
+Brev box, which needs the GPU box to exist.
 
 ### Not measured yet
 
@@ -267,8 +302,8 @@ host when it cannot tell; `MODEL_SERVER` (or `DIRECTOR_`, `ANALYST_`, `VERIFIER_
 When every endpoint is on the laptop, the topology page greys out the Brev box.
 The Sherlock board (the cascade, the chain and the incident card) lives at `/log`. It only reads the existing `/events` and `/stream`
 endpoints and loads no network resources (its fonts are vendored under `dashboard/static/fonts/`, SIL OFL).
-The footer notes that Expanso Edge processes this data and Expanso Cloud deploys and monitors it, and says
-"not connected" until you set `SHERLOCK_EXPANSO=connected` for a run where an Edge pipeline really is doing so.
+The footer says whether Expanso Edge is carrying this run's events: "connected" only while the Edge
+pipelines are accepting them ([Expanso Edge data plane](#expanso-edge-data-plane)).
 
 ## vLLM on Brev (Config A default)
 1. On the Brev GPU box (1x H100/A100 80GB), start both vLLM containers:
@@ -714,6 +749,8 @@ sherlock/tools.py    Tool schemas + dispatcher + failure injection
 sherlock/orchestrator.py   Scout → investigate → verify loop, per-incident evidence, stats
 sherlock/scene.py    Scripted synthetic room (cup, then knife) for --synthetic
 sherlock/dashboard/  FastAPI SSE + MJPEG + the judge-facing UI
+sherlock/edge.py     Sink to the Expanso Edge jobs (off unless SHERLOCK_EDGE=1)
+jobs/, edge/         Five Expanso Edge jobs and the two node configs; scripts/expanso.sh runs them
 scripts/             ptz_probe.py, plus the Scout fine-tune kit: capture_props, build_scout_dataset,
                      review_labels, train_scout, eval_scout, publish_scout_hf (shared: scout_data.py)
 tests/               End-to-end mock run: alert chain, ignore path (zero VLM calls), evidence, recovery;

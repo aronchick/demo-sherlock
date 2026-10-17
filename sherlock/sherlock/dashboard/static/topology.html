@@ -93,8 +93,8 @@
       <div class="body">
         <div class="group">
           <div class="ghead"><div class="glogo" id="serverName">model servers</div><small id="serverSub"></small></div>
-          <div class="unit" id="u-director" style="--c: var(--director)"><div class="role" id="r-director">Decide · Director</div><div class="name">Nemotron 3.5 Lightning</div><div class="model" id="m-director"></div><div class="what">reads the Scout's ticket, picks the next camera tool</div><span class="ms"></span></div>
-          <div class="unit" id="u-vlm" style="--c: var(--analyst)"><div class="role" id="r-vlm">Read + Check · Analyst and Verifier</div><div class="name">SmolVLM, shared</div><div class="model" id="m-analyst"></div><div class="what">describes the zoomed crop, then a second pass checks the claim</div><span class="ms"></span></div>
+          <div class="unit" id="u-director" style="--c: var(--director)"><div class="role" id="r-director">Decide · Director</div><div class="name">Nemotron 3.5 Lightning</div><div class="model" id="m-director"></div><div class="what">reads the Scout's ticket, picks the next camera tool</div><div class="model serving" id="sv-director" hidden></div><span class="ms"></span></div>
+          <div class="unit" id="u-vlm" style="--c: var(--analyst)"><div class="role" id="r-vlm">Read + Check · Analyst and Verifier</div><div class="name">SmolVLM, shared</div><div class="model" id="m-analyst"></div><div class="what">describes the zoomed crop, then a second pass checks the claim</div><div class="model serving" id="sv-vlm" hidden></div><span class="ms"></span></div>
         </div>
       </div>
     </div>
@@ -150,8 +150,41 @@ if (CFG.mock) {
     $('brevSub').textContent = 'not in this run: the Director, Analyst and Verifier run on this laptop';
   }
 }
-$('expanso').classList.toggle('live', CFG.expanso);
-$('expansoText').textContent = (CFG.expanso ? 'connected · ' : 'not connected in this run · ') + 'Expanso Edge processes this data on the laptop; Expanso Cloud deploys and monitors it, no image data';
+// Expanso status comes from /expanso: live only while the Edge pipelines on this
+// laptop accept this run's events. Nothing here is configured by hand.
+function expansoFooter(s) {
+  const live = !!(s && s.edge);
+  const where = s && s.mode === 'cloud'
+    ? 'Expanso Cloud deploys and monitors the pipelines'
+    : 'local mode, not deployed from Expanso Cloud';
+  const text = live
+    ? `connected · Expanso Edge carries events and alerts off the laptop; ${where} · face crops never leave`
+    : 'not connected in this run · start the Edge pipelines and set SHERLOCK_EDGE=1 to carry events and alerts';
+  $('expanso').classList.toggle('live', live);
+  $('expansoText').textContent = text;
+  $('expanso').title = text;
+  return s;
+}
+function pollExpanso(onStatus) {
+  const tick = () => fetch('/expanso', {cache: 'no-store'}).then(r => r.ok ? r.json() : null)
+    .catch(() => null).then(s => { expansoFooter(s); if (onStatus) onStatus(s); });
+  tick();
+  setInterval(tick, 5000);
+}
+// Model-server numbers pushed by the cloud core's metrics pipeline (C2), if running.
+const pct = v => v == null ? '–' : Math.round(v * 100) + '%';
+function showServing(s) {
+  const sv = (s && s.serving) || {};
+  for (const [server, id] of [['director', 'sv-director'], ['vlm', 'sv-vlm']]) {
+    const m = sv[server], el = $(id);
+    if (!m) { el.textContent = ''; el.hidden = true; continue; }
+    el.hidden = false;
+    el.textContent = !m.up ? 'metrics: server not answering · via Expanso'
+      : `KV cache ${pct(m.kv_cache_usage)} · prefix hits ${m.prefix_cache_queries ? pct(m.prefix_cache_hits / m.prefix_cache_queries) : '–'}`
+        + ` · ${m.requests_running ?? 0} running · ${m.requests_waiting ?? 0} waiting · via Expanso`;
+  }
+}
+pollExpanso(showServing);
 
 const timers = {};
 function hot(id, ms = 1200) { const el = $(id); if (!el) return; el.classList.add('hot'); clearTimeout(timers[id]); timers[id] = setTimeout(() => el.classList.remove('hot'), ms); }

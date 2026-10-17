@@ -4,7 +4,6 @@ agents, the orchestrator or the event log page."""
 from __future__ import annotations
 
 import json
-import os
 import pathlib
 
 from fastapi import APIRouter, FastAPI, HTTPException
@@ -23,8 +22,8 @@ def page_config() -> dict:
     """What the pages may claim, read from the environment on every request.
 
     mock: the models are in-process mocks, so nothing leaves the laptop.
-    expanso: SHERLOCK_EXPANSO=connected, set only once an Expanso Edge pipeline is
-    really processing this data. The footer shows "not connected" until then.
+    The Expanso footer is not configured here: the pages poll /expanso, which is
+    true only while the Edge pipelines are really accepting this run's events.
     models: the configured model per role and where its endpoint points. A
     localhost endpoint is reported as the laptop (an SSH tunnel to Brev also looks
     like that, so BREV_HOST names the box when a tunnel is in use).
@@ -44,7 +43,6 @@ def page_config() -> dict:
         models[role] = {"model": ep.model, "where": where(ep.base_url), "url": ep.base_url}
     return {
         "mock": cfg.mock,
-        "expanso": os.environ.get("SHERLOCK_EXPANSO") == "connected",
         "cameras": [{"name": c.name, "backend": c.backend} for c in cfg.cameras],
         "models": models,
         "servers": describe(cfg),

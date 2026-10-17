@@ -75,13 +75,13 @@ def test_font_route_serves_only_the_vendored_woff2_files(name):
 
 
 @pytest.mark.parametrize(("env", "expected"), [
-    ({}, {"mock": False, "expanso": False}),
-    ({"SHERLOCK_MOCK": "1"}, {"mock": True, "expanso": False}),
-    ({"SHERLOCK_EXPANSO": "connected"}, {"mock": False, "expanso": True}),
-    ({"SHERLOCK_EXPANSO": "yes"}, {"mock": False, "expanso": False}),
+    ({}, {"mock": False}),
+    ({"SHERLOCK_MOCK": "1"}, {"mock": True}),
+    ({"SHERLOCK_EXPANSO": "connected"}, {"mock": False}),
 ])
 def test_page_only_claims_what_is_running(monkeypatch, env, expected):
-    """Expanso shows as connected only when explicitly declared, and mock mode is stated."""
+    """Mock mode is stated, and no environment flag can declare Expanso connected:
+    the footer polls /expanso, which reports only real deliveries."""
     for key in ("SHERLOCK_MOCK", "SHERLOCK_EXPANSO"):
         monkeypatch.delenv(key, raising=False)
     for key, value in env.items():
@@ -89,3 +89,5 @@ def test_page_only_claims_what_is_running(monkeypatch, env, expected):
     r = TestClient(mount_pipeline(FastAPI())).get("/pipeline")
     cfg = _page_cfg(r.text)
     assert {k: cfg[k] for k in expected} == expected
+    assert "expanso" not in cfg
+    assert "pollExpanso(" in r.text

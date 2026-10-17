@@ -50,6 +50,8 @@ sherlock/tools.py    Tool schemas + dispatcher + failure injection
 sherlock/orchestrator.py   Scout → investigate → verify loop, stats
 sherlock/dashboard/  FastAPI SSE + MJPEG + the judge-facing UI
 tests/               End-to-end mock run incl. tool failure recovery and covered-lens fallback
+gym/                 Native NeMo Gym resources server, verifier, agent, and YAML ablation configs
+results/             Per-ablation JSON artifacts (results/ablation_*.json)
 ```
 
 ## Development
@@ -58,6 +60,40 @@ The lint gate is one command, and it must report zero findings:
 uvx ruff@0.17.1 check .
 ```
 `ruff.toml` pins this exact version (`required-version`; other versions refuse to run) and spells out its rule set, so every machine gets the same answer.
+
+## NeMo Gym ablation
+
+Sherlock includes a native [NeMo Gym](https://github.com/NVIDIA-NeMo/Gym) (`nemo-gym==0.7.0`) environment and multi-metric verifier under `gym/` for single-component agent ablations. The 8 scripted tasks (`gym/resources_servers/sherlock/data/tasks.jsonl`) and the verifier (`SherlockResourcesServer.verify`) stay fixed while YAML configs swap one Director agent component at a time:
+
+1. **System prompt (`prompt_v1` vs `nemotron_lightning`)**: `gym/prompts/system_v1.yaml` vs `gym/prompts/system_v2.yaml` (adds zero-snapshot benign filtering and the two-crop weapon + head/face protocol).
+2. **Tool descriptions (`terse_tools` vs `nemotron_lightning`)**: `terse` (3-word tool strings, stripped parameter hints) vs `verbose` (`sherlock.tools.TOOL_SCHEMAS`).
+3. **Reasoning mode (`thinking_on` vs `nemotron_lightning`)**: `enable_thinking: true` vs `enable_thinking: false` on `nvidia/NVIDIA-Nemotron-3.5-Lightning-30B-A3B-NVFP4`.
+4. **Director model (`qwen_director` vs `nemotron_lightning`)**: `Qwen/Qwen2.5-7B-Instruct` (7.6B) vs `nvidia/NVIDIA-Nemotron-3.5-Lightning-30B-A3B-NVFP4` (30B total / 3B active).
+
+Every configuration pairs the Director with `HuggingFaceTB/SmolVLM-Instruct` (2.25B) for the Analyst/Verifier VLM, keeping total generative parameters at or under the 33B limit (32.25B for Nemotron 3.5 Lightning configs; 9.85B for Qwen 2.5 7B).
+
+### Run one ablation with one command
+
+```bash
+# Local end-to-end validation (uses the built-in OpenAI-compatible stub when DIRECTOR_BASE_URL is unset):
+uv run python -m gym.run_ablation --config gym/configs/ablation_nemotron_lightning.yaml
+
+# Run against a live Brev vLLM or Ollama endpoint:
+DIRECTOR_BASE_URL=https://<brev-host>/v1 uv run python -m gym.run_ablation --config gym/configs/ablation_nemotron_lightning.yaml
+
+# Run all 5 YAML ablations and write results/ablation_*.json:
+uv run python -m gym.run_ablation --all
+```
+
+### Ablation metrics (local stub validation; replace with live Brev vLLM numbers once `DIRECTOR_BASE_URL` is up)
+
+| Ablation Config | Swapped Component | Director Model | Total Gen Params | Prompt | Tools | Thinking | Tool-Call Validity | Task Success | Steps to Report | Time to Report (ms) |
+|---|---|---|---:|---|---|---|---:|---:|---:|---:|
+| `prompt_v1` | System prompt (`v1`) | `Nemotron-3.5-Lightning-30B-A3B-NVFP4` | 32.25B | `system_v1` | `verbose` | `off` | 100.0% | 50.0% | 3.50 | 49.5 *(stub)* |
+| `terse_tools` | Tool schemas (`terse`) | `Nemotron-3.5-Lightning-30B-A3B-NVFP4` | 32.25B | `system_v2` | `terse` | `off` | 88.7% | 100.0% | 4.12 | 57.0 *(stub)* |
+| `thinking_on` | Thinking (`on`) | `Nemotron-3.5-Lightning-30B-A3B-NVFP4` | 32.25B | `system_v2` | `verbose` | `on` | 100.0% | 87.5% | 3.75 | 151.1 *(stub)* |
+| `qwen_director` | Model (`Qwen2.5-7B`) | `Qwen2.5-7B-Instruct` | 9.85B | `system_v2` | `verbose` | `off` | 100.0% | 87.5% | 3.38 | 76.3 *(stub)* |
+| `nemotron_lightning` | Reference (`v2` + `verbose` + `off`) | `Nemotron-3.5-Lightning-30B-A3B-NVFP4` | 32.25B | `system_v2` | `verbose` | `off` | 100.0% | 100.0% | 3.50 | 60.9 *(stub)* |
 
 ## Demo script (3 min)
 1. Dashboard up, wide view showing the room, counter climbing with zero VLM calls.

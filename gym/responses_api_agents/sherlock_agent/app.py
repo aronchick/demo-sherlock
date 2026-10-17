@@ -179,6 +179,15 @@ class SherlockAgent(SimpleResponsesAPIAgent):
 
             all_fn_calls = [item for item in output if item.type == "function_call"]
             if not all_fn_calls:
+                if steps < effective_max_steps:
+                    body.input.extend(step_items)
+                    body.input.append(
+                        NeMoGymEasyInputMessage(
+                            role="user",
+                            content="Use the tools. Finish with report.",
+                        )
+                    )
+                    continue
                 break
 
             reported_done = False

@@ -284,7 +284,7 @@ class SceneSpec:
     expected_keywords: list[str] = field(default_factory=list)
 
     def to_scout_event(self) -> dict[str, Any]:
-        return {
+        ev: dict[str, Any] = {
             "camera": self.camera,
             "label": self.label,
             "threat": self.threat,
@@ -295,19 +295,23 @@ class SceneSpec:
             "frame_size": list(self.frame_size),
             "cameras": list(self.cameras),
         }
+        if self.threat == "weapon":
+            ev["claim"] = "a pair of scissors" if self.label == "scissors" else f"a {self.label}"
+        return ev
 
     def to_user_message(self) -> str:
-        return json.dumps(
-            {
-                "camera": self.camera,
-                "label": self.label,
-                "threat": self.threat,
-                "confidence": round(self.conf, 3),
-                "bbox": list(self.bbox),
-                "head_bbox": list(self.head_bbox) if self.head_bbox is not None else None,
-                "cameras": list(self.cameras),
-            }
-        )
+        msg: dict[str, Any] = {
+            "camera": self.camera,
+            "label": self.label,
+            "threat": self.threat,
+            "confidence": round(self.conf, 3),
+            "bbox": list(self.bbox),
+            "head_bbox": list(self.head_bbox) if self.head_bbox is not None else None,
+            "cameras": list(self.cameras),
+        }
+        if self.threat == "weapon":
+            msg["claim"] = "a pair of scissors" if self.label == "scissors" else f"a {self.label}"
+        return json.dumps(msg)
 
 
 SCENES: list[SceneSpec] = [

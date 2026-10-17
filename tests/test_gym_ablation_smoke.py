@@ -259,3 +259,36 @@ def test_ollama_reasoning_effort_and_director_model_env_override(
         == "qwen2.5:7b"
     )
 
+
+def test_ablation_artifacts_record_ollama_runtime_and_feed_numbers() -> None:
+    """Verify measured local Ollama ablation files record Ollama runtime (never vLLM) and feed /numbers."""
+    from sherlock.dashboard.numbers import read_numbers
+
+    repo_root = Path(__file__).resolve().parents[1]
+    results_dir = repo_root / "results"
+    expected_files = [
+        "ablation_prompt_v1.json",
+        "ablation_terse_tools.json",
+        "ablation_thinking_on.json",
+        "ablation_nemotron_lightning.json",
+        "ablation_summary.json",
+    ]
+    for fname in expected_files:
+        fpath = results_dir / fname
+        assert fpath.is_file(), f"Missing measured ablation result: {fpath}"
+        raw = fpath.read_text()
+        assert "vllm" not in raw.lower(), f"{fname} must not claim vLLM runtime"
+        payload = json.loads(raw)
+        assert payload["execution_mode"] == "live_endpoint"
+        assert payload["runtime"] == "local_ollama"
+        assert payload["model_server"]["name"] == "Ollama"
+        assert payload["model_server"]["host"] == "laptop"
+
+    nums = read_numbers(repo_root)
+    assert nums["ablation"] is not None
+    assert nums["ablation"]["config"] == "nemotron_lightning"
+    assert nums["ablation"]["tasks"] == 8
+    assert nums["ablation"]["task_success"] == 0.875
+    assert nums["ablation"]["tool_call_validity"] == 1.0
+
+

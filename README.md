@@ -373,8 +373,9 @@ uvx ruff@0.17.1 check .
 uv run --with-requirements requirements-bench.txt pytest -q
 ```
 
-With the test dependencies installed, bare `uv run pytest` also works:
-the root `pytest.ini` supplies the nested package path and test directory.
+With `requirements-dev.txt` installed (see Development), bare
+`uv run pytest` also works: the root `pytest.ini` supplies the nested
+package path and test directory.
 
 The tests start a tiny loopback OpenAI-compatible SSE server, run the
 benchmark CLI through both A/B legs and all concurrency levels, verify JSON
@@ -402,6 +403,13 @@ The lint gate is one command, and it must report zero findings:
 uvx ruff@0.17.1 check .
 ```
 `ruff.toml` pins this exact version (`required-version`; other versions refuse to run) and spells out its rule set, so every machine gets the same answer.
+
+The test gate runs from a clean environment. `requirements-dev.txt` pulls in the app, benchmark and test-only dependencies:
+```bash
+uv venv
+uv pip install -r requirements-dev.txt
+uv run pytest -q
+```
 
 ## NeMo Gym ablation
 

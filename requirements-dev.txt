@@ -1,0 +1,8 @@
+# Everything the lint and test gate needs: the app, the benchmark, and the
+# test-only packages. Install this file to run the full suite.
+-r requirements.txt
+-r requirements-bench.txt
+# fastapi.testclient (tests/test_weapon_flow.py). Declared here because
+# only ultralytics-platform pulls it in otherwise; openai 3.x uses httpx2.
+httpx>=0.27,<1
+pytest

@@ -8,6 +8,7 @@ from pathlib import Path
 import cv2
 import numpy as np
 import pytest
+from sherlock.dashboard.numbers import scout_result
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "scripts"))
@@ -207,4 +208,8 @@ def test_smoke_train_and_eval_on_cpu(tmp_path):
                               "--imgsz", "64", "--out", str(tmp_path / "eval.json")])
     assert set(report["images"]) == {"room", "coco"}
     assert {"room", "coco", "all"} <= set(report["after"]) and report["headline"].startswith("Scout weapon detection (room")
-    assert json.loads((tmp_path / "eval.json").read_text())["split"] == "test"
+    written = json.loads((tmp_path / "eval.json").read_text())
+    assert written["split"] == "test" and written["evidence_kind"] == "model_evaluation"
+    # The dashboard's reader must accept what the producer writes.
+    shown = scout_result(written)
+    assert shown is not None and shown["source"] == "room"

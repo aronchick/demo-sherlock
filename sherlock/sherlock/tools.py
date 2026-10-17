@@ -459,7 +459,8 @@ class ToolBox:
                 try:
                     if role == "analyst":
                         BUS.bump("vlm_calls")
-                        return self.analyst.describe(image, "Describe the object and its interaction with the person, "
+                        return self.analyst.describe(image, "First name the object in the labeled weapon/object crop (bottom-left tile). "
+                            "Then describe its interaction with the person, "
                             "using the labeled scene and close-ups. Respect differing capture times. "
                             "Do not infer identity or recognize the person.")
                     return self.verifier.check(image, claim)

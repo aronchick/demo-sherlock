@@ -126,7 +126,8 @@ class Verifier:
       text    the reply's first word"""
 
     PROMPT = ("Does this image support the claim that the object is {claim}? Use the labeled object, "
-              "scene and person context if provided; captures may have different times. "
+              "scene and person context if provided; the target is the labeled object crop, not nearby objects. "
+              "Captures may have different times. "
               "Do not identify any person or infer identity; facial recognition is prohibited. Answer yes or no.")
 
     def __init__(self, ep: Endpoint):

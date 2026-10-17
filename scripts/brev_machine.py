@@ -87,6 +87,33 @@ def wait_for_ssh(name, timeout=600):
     raise ValueError('Brev did not become SSH-ready within ten minutes')
 
 
+def down(name, timeout=180):
+    """Stop only the named GPU and require a terminal stopped-state readback."""
+    item = find_instance(name)
+    stopped = {'STOPPED', 'PAUSED', 'OFF'}
+    if item['status'] in stopped:
+        print(f"{name}: {item['status']}; already stopped.")
+        return
+    if item['status'] != 'STOPPING':
+        try:
+            run(['brev', 'stop', name])
+        except subprocess.CalledProcessError as exc:
+            raise ValueError(f'Brev could not stop {name}; GPU billing may continue. '
+                             'Some providers do not support stop. No machine was deleted.') from exc
+    deadline = time.monotonic() + timeout
+    while True:
+        observed = find_instance(name)
+        if observed['id'] != item['id']:
+            raise ValueError('Instance identity changed while stopping; inspect brev ls')
+        if observed['status'] in stopped:
+            print(f"{name}: {observed['status']}. GPU stopped; storage may still incur charges.")
+            return
+        if time.monotonic() >= deadline:
+            raise ValueError(f"Stop not confirmed ({observed['status']}); check brev ls --json")
+        print(f"Waiting for {name} to stop ({observed['status']})...", flush=True)
+        time.sleep(3)
+
+
 def up(name):
     item = find_instance(name)
     if 'H100' not in item.get('gpu', '').upper():
@@ -184,7 +211,18 @@ def live(args):
     env = {**os.environ, **model_env(state['name'])}
     if '--mock' in args:
         raise ValueError('brev-live requires the real model endpoints')
-    run(['uv', 'run', '--extra', 'yolo', 'python', 'run.py', *args], cwd=ROOT, env=env)
+    pidfile = ROOT / '.runtime' / 'sherlock.pid'
+    pidfile.parent.mkdir(parents=True, exist_ok=True)
+    with subprocess.Popen(['uv', 'run', '--extra', 'yolo', 'python', 'run.py', *args],
+                          cwd=ROOT, env=env) as presenter:
+        pidfile.write_text(f'{presenter.pid}\n')
+        try:
+            result = presenter.wait()
+            if result:
+                raise subprocess.CalledProcessError(result, 'run.py')
+        finally:
+            if pidfile.exists() and pidfile.read_text().strip() == str(presenter.pid):
+                pidfile.unlink()
 
 
 def retire(old, replacement):
@@ -207,7 +245,7 @@ def retire(old, replacement):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     sub = parser.add_subparsers(dest='command', required=True)
-    for command in ('up', 'connect'):
+    for command in ('up', 'connect', 'down'):
         child = sub.add_parser(command)
         child.add_argument('instance', nargs='?', default='sherlock-h100', type=instance_name)
     sub.add_parser('status')
@@ -222,6 +260,8 @@ def main():
             print(json.dumps(inventory(), indent=2))
         elif args.command == 'up':
             up(args.instance)
+        elif args.command == 'down':
+            down(args.instance)
         elif args.command == 'connect':
             connect(args.instance)
         elif args.command == 'live':

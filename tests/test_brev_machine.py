@@ -129,15 +129,35 @@ def test_ssh_disables_inherited_background_multiplexing():
     assert args[-1] == 'sherlock-h100'
 
 
-def test_live_checks_explicit_dashboard_port(monkeypatch):
+def test_live_checks_explicit_dashboard_port(monkeypatch, tmp_path):
     ports, commands = [], []
     monkeypatch.setattr(workflow, 'connection', lambda: {'name': 'new'})
     monkeypatch.setattr(workflow, 'require_free_ports', lambda values: ports.extend(values))
     monkeypatch.setattr(workflow, 'smoke', lambda *_: None)
-    monkeypatch.setattr(workflow, 'run', lambda args, **kw: commands.append(args))
+    monkeypatch.setattr(workflow, 'ROOT', tmp_path)
+
+    class Presenter:
+        pid = 123
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_):
+            return False
+
+        def wait(self):
+            assert (tmp_path / '.runtime/sherlock.pid').read_text() == '123\n'
+            return 0
+
+    def launch(args, **kw):
+        commands.append(args)
+        return Presenter()
+
+    monkeypatch.setattr(workflow.subprocess, 'Popen', launch)
     workflow.live(['--port', '8099'])
     assert ports == [8099]
     assert commands[0][-2:] == ['--port', '8099']
+    assert not (tmp_path / '.runtime/sherlock.pid').exists()
 
 
 def test_failed_tunnel_smoke_preserves_previous_receipt_and_stops_own_process(tmp_path, monkeypatch):
@@ -180,3 +200,44 @@ def test_failed_tunnel_smoke_preserves_previous_receipt_and_stops_own_process(tm
         workflow.connect('new')
     assert tunnel.stopped
     assert json.loads(receipt.read_text()) == previous
+
+
+def test_down_waits_for_stopped_readback(monkeypatch):
+    states = iter(['RUNNING', 'STOPPING', 'STOPPED'])
+    calls = []
+    monkeypatch.setattr(workflow, 'find_instance',
+                        lambda _: {'id': 'owned', 'status': next(states)})
+    monkeypatch.setattr(workflow, 'run', lambda args: calls.append(args))
+    monkeypatch.setattr(workflow.time, 'sleep', lambda _: None)
+    workflow.down('sherlock-h100')
+    assert calls == [['brev', 'stop', 'sherlock-h100']]
+
+
+def test_down_is_idempotent(monkeypatch):
+    monkeypatch.setattr(workflow, 'find_instance',
+                        lambda _: {'id': 'owned', 'status': 'STOPPED'})
+    monkeypatch.setattr(workflow, 'run', lambda _: pytest.fail('already stopped'))
+    workflow.down('sherlock-h100')
+
+
+def test_down_does_not_claim_success_when_still_running(monkeypatch):
+    monkeypatch.setattr(workflow, 'find_instance',
+                        lambda _: {'id': 'owned', 'status': 'STOPPING'})
+    monkeypatch.setattr(workflow, 'run', lambda _: pytest.fail('already stopping'))
+    with pytest.raises(ValueError, match='Stop not confirmed'):
+        workflow.down('sherlock-h100', timeout=0)
+
+
+def test_unsupported_stop_warns_about_billing_without_deleting(monkeypatch):
+    calls = []
+    monkeypatch.setattr(workflow, 'find_instance',
+                        lambda _: {'id': 'owned', 'status': 'RUNNING'})
+
+    def rejected(args):
+        calls.append(args)
+        raise subprocess.CalledProcessError(1, args)
+
+    monkeypatch.setattr(workflow, 'run', rejected)
+    with pytest.raises(ValueError, match='GPU billing may continue'):
+        workflow.down('sherlock-h100')
+    assert calls == [['brev', 'stop', 'sherlock-h100']]

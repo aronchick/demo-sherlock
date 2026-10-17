@@ -176,6 +176,25 @@ def test_capture_props_from_a_named_synthetic_camera(tmp_path):
     assert all(p.parent.parent.name == "badge" and cv2.imread(str(p)) is not None for p in saved)
 
 
+def test_capture_props_closes_a_real_frame_source(tmp_path):
+    video = tmp_path / "room.avi"
+    writer = cv2.VideoWriter(str(video), cv2.VideoWriter_fourcc(*"MJPG"), 10, (64, 48))
+    for _ in range(5):
+        writer.write(np.zeros((48, 64, 3), np.uint8))
+    writer.release()
+    opened = []
+    real_open = capture_props.open_camera
+    capture_props.open_camera = lambda name, source: opened.append(real_open(name, source)) or opened[-1]
+    try:
+        capture_props.main(["--source", str(video), "--prop", "coke", "--n", "2", "--interval", "0",
+                            "--countdown", "0", "--out", str(tmp_path / "props")])
+    finally:
+        capture_props.open_camera = real_open
+    src = opened[0].src
+    assert not src.running and not src._thread.is_alive(), "reader thread outlived the capture"
+    assert not src.cap.isOpened()
+
+
 def measured_evaluation():
     return {
         "evidence_kind": "model_evaluation", "execution_mode": "measured", "split": "test",

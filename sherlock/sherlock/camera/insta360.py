@@ -521,6 +521,8 @@ class Insta360Camera(Camera):
 
     def close(self) -> None:
         self._cancel_home()
+        if hasattr(self.src, "close"):  # injected test frame sources may have none
+            self.src.close()
         if self._stuck is not None and self._stuck.is_alive():
             log.warning("%s: leaving a hung gimbal call behind at shutdown", self.name)
             return

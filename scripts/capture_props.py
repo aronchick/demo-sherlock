@@ -68,7 +68,11 @@ def main(argv: list[str] | None = None) -> list[Path]:
     p.add_argument("--out", type=Path, default=ROOT / "data" / "props")
     a = p.parse_args(argv)
     session = f"{a.camera}-{time.strftime('%Y%m%d-%H%M%S')}"
-    saved = capture(open_camera(a.camera, a.source), a.out / a.prop / session, a.n, a.interval, a.countdown)
+    cam = open_camera(a.camera, a.source)
+    try:
+        saved = capture(cam, a.out / a.prop / session, a.n, a.interval, a.countdown)
+    finally:
+        cam.close()  # stop the reader thread, or Python segfaults on exit (macOS)
     print(f"{len(saved)} frames of {a.prop!r} in {a.out / a.prop / session}")
     print("next: uv run --extra yolo scripts/build_scout_dataset.py prelabel")
     return saved

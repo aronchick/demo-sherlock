@@ -465,7 +465,7 @@ function layout() {
 }
 addEventListener('resize', layout);
 const stageResize = new ResizeObserver(layout);
-for (const stage of Object.values(ST)) stageResize.observe(stage);
+for (const stage of Object.values(ST)) { if (stage) stageResize.observe(stage); }
 if (document.fonts) document.fonts.ready.then(layout);
 setTimeout(layout, 1200);
 

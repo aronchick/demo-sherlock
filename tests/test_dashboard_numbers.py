@@ -66,6 +66,8 @@ def benchmark():
 def ablation():
     return {
         "execution_mode": "live_endpoint",
+        "runtime": "local_ollama",
+        "model_server": {"label": "Ollama"},
         "ablation_id": "nemotron_lightning",
         "summary_metrics": {
             "num_tasks": 8,
@@ -207,7 +209,7 @@ def test_zero_values_are_preserved():
 
 
 def test_ablation_requires_live_mode_and_labels_reference(tmp_path):
-    write(tmp_path, "results/ablation_live.json", ablation(), 1)
+    write(tmp_path, "results/ablation_nemotron_lightning.json", ablation(), 1)
     write(
         tmp_path,
         "results/ablation_stub.json",
@@ -215,7 +217,7 @@ def test_ablation_requires_live_mode_and_labels_reference(tmp_path):
         2,
     )
     result = numbers.read_numbers(tmp_path)["ablation"]
-    assert result["file"] == "ablation_live.json" and result["tasks"] == 8
+    assert result["file"] == "ablation_nemotron_lightning.json" and result["tasks"] == 8
     assert result["task_success"] == 0.75
     assert numbers.ablation_result({**ablation(), "execution_mode": None}) is None
     other = {**ablation(), "ablation_id": "other"}
@@ -313,7 +315,7 @@ def test_api_reads_updated_files_and_returns_only_summary(tmp_path, monkeypatch)
         data = benchmark()
         data["director_base_url"] = "https://secret-host/private"
         write(tmp_path, "results/vllm_bench_live.json", data)
-        write(tmp_path, "results/ablation_live.json", ablation())
+        write(tmp_path, "results/ablation_nemotron_lightning.json", ablation())
         write(tmp_path, "runs/scout/eval.json", scout())
         response = client.get("/numbers")
         assert (
@@ -323,6 +325,8 @@ def test_api_reads_updated_files_and_returns_only_summary(tmp_path, monkeypatch)
         assert "secret-host" not in response.text
         assert response.json()["director"]["concurrency"] == 16
         assert response.json()["ablation"]["tasks"] == 8
+        assert response.json()["ablation"]["runtime"] == "local_ollama"
+        assert response.json()["ablation"]["model_server_label"] == "Ollama"
         assert response.json()["scout"]["boxes"] == 4
         assert client.get("/numbers.js").status_code == 200
         page = client.get("/log").text
@@ -359,3 +363,43 @@ def test_scout_partial_requires_explicit_baseline_scope(scope):
         assert numbers.scout_result(data) is None
     else:
         assert result is None
+
+
+@pytest.mark.parametrize("summary_age,reference_age,other_age", [(1, 1, 1), (1, 2, 3), (3, 2, 1)])
+def test_ablation_fixed_priority_ignores_mtimes(tmp_path, summary_age, reference_age, other_age):
+    reference = ablation()
+    reference["runtime"] = "local_ollama"
+    reference["model_server"] = {"label": "Ollama", "name": "ignored-name"}
+    summary = {"execution_mode": "live_endpoint", "results": [
+        {**ablation(), "ablation_id": "aaa"}, reference]}
+    write(tmp_path, "results/ablation_summary.json", summary, summary_age)
+    fallback = ablation()
+    fallback["summary_metrics"]["task_success"] = 0.5
+    write(tmp_path, "results/ablation_nemotron_lightning.json", fallback, reference_age)
+    write(tmp_path, "results/ablation_zzz.json", {**ablation(), "ablation_id": "zzz"}, other_age)
+    result = numbers.read_numbers(tmp_path)["ablation"]
+    assert result["file"] == "ablation_summary.json" and result["task_success"] == 0.75
+    assert result["runtime"] == "local_ollama" and result["model_server_label"] == "Ollama"
+
+
+@pytest.mark.parametrize("invalid", [None, {}, {"execution_mode": "local_stub"},
+    {"execution_mode": "live_endpoint", "results": [{"ablation_id": "other"}]}])
+def test_ablation_reference_file_fallback_only(tmp_path, invalid):
+    if invalid is not None:
+        write(tmp_path, "results/ablation_summary.json", invalid)
+    path = write(tmp_path, "results/ablation_nemotron_lightning.json", ablation())
+    write(tmp_path, "results/ablation_other.json", {**ablation(), "ablation_id": "other"}, 99)
+    assert numbers.read_numbers(tmp_path)["ablation"]["file"] == path.name
+    path.unlink()
+    assert numbers.read_numbers(tmp_path)["ablation"] is None
+
+
+def test_ablation_summary_inherits_server_metadata_and_rejects_stub_reference():
+    data = {"execution_mode": "live_endpoint", "runtime": "local_ollama",
+            "model_server": {"name": "Ollama"}, "results": [ablation()]}
+    data["results"][0].pop("runtime")
+    data["results"][0].pop("model_server")
+    result = numbers.ablation_result(data)
+    assert result["runtime"] == "local_ollama" and result["model_server_label"] == "Ollama"
+    data["results"][0]["execution_mode"] = "local_stub"
+    assert numbers.ablation_result(data) is None

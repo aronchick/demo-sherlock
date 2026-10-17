@@ -287,8 +287,14 @@ def test_ablation_artifacts_record_ollama_runtime_and_feed_numbers() -> None:
     nums = read_numbers(repo_root)
     assert nums["ablation"] is not None
     assert nums["ablation"]["config"] == "nemotron_lightning"
-    assert nums["ablation"]["tasks"] == 8
-    assert nums["ablation"]["task_success"] == 0.875
-    assert nums["ablation"]["tool_call_validity"] == 1.0
+    summary = json.loads((results_dir / "ablation_summary.json").read_text())
+    reference = next(row for row in summary["results"] if row["ablation_id"] == "nemotron_lightning")
+    metrics = reference["summary_metrics"]
+    assert nums["ablation"]["file"] == "ablation_summary.json"
+    assert nums["ablation"]["tasks"] == metrics["num_tasks"]
+    assert nums["ablation"]["task_success"] == metrics["task_success"]
+    assert nums["ablation"]["tool_call_validity"] == metrics["tool_call_validity"]
+    assert nums["ablation"]["runtime"] == "local_ollama"
+    assert nums["ablation"]["model_server_label"] == "Ollama"
 
 

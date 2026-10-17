@@ -45,19 +45,37 @@ if [[ -n "$REASONING_PARSER" && "$REASONING_PARSER" != "none" ]]; then
   REASONING_FLAGS=(--reasoning-parser "$REASONING_PARSER")
 fi
 
-docker run -d --name director --gpus all --ipc=host -p 8001:8000 \
-  -v ~/.cache/huggingface:/root/.cache/huggingface "$IMG" \
-  --model "$DIRECTOR" --served-model-name "$DIRECTOR" director \
-  --max-model-len 32768 --gpu-memory-utilization 0.60 --max-num-seqs 16 \
-  "${PREFIX_CACHE_FLAGS[@]}" \
-  --enable-auto-tool-choice --tool-call-parser "$TOOL_PARSER" "${REASONING_FLAGS[@]}"
-
 if [[ "$DIRECTOR_PRESET" != "qwen" ]] || ! docker container inspect vlm >/dev/null 2>&1; then
   docker run -d --name vlm --gpus all --ipc=host -p 8002:8000 \
     -v ~/.cache/huggingface:/root/.cache/huggingface "$IMG" \
     --model "$VLM" --served-model-name "$VLM" vlm \
     --max-model-len 8192 --gpu-memory-utilization 0.30 --max-num-seqs 8 --limit-mm-per-prompt '{"image": 1}'
 fi
+
+# Start the Director only after the VLM is serving. vLLM sizes its KV cache from the
+# GPU memory it sees in use while profiling; if the 30B Director loads at the same
+# time, the VLM counts that memory as its own and exits with "No available memory
+# for the cache blocks". The small VLM is up in about a minute, so it goes first.
+VLM_READY_TIMEOUT_S=${VLM_READY_TIMEOUT_S:-600}
+deadline=$((SECONDS + VLM_READY_TIMEOUT_S))
+until curl -sf http://127.0.0.1:8002/v1/models >/dev/null; do
+  if [[ "$(docker container inspect -f '{{.State.Running}}' vlm 2>/dev/null)" != "true" ]]; then
+    echo "vlm container is not running; see: docker logs vlm" >&2
+    exit 1
+  fi
+  if (( SECONDS >= deadline )); then
+    echo "vlm not ready after ${VLM_READY_TIMEOUT_S}s; see: docker logs vlm" >&2
+    exit 1
+  fi
+  sleep 5
+done
+
+docker run -d --name director --gpus all --ipc=host -p 8001:8000 \
+  -v ~/.cache/huggingface:/root/.cache/huggingface "$IMG" \
+  --model "$DIRECTOR" --served-model-name "$DIRECTOR" director \
+  --max-model-len 32768 --gpu-memory-utilization 0.60 --max-num-seqs 16 \
+  "${PREFIX_CACHE_FLAGS[@]}" \
+  --enable-auto-tool-choice --tool-call-parser "$TOOL_PARSER" "${REASONING_FLAGS[@]}"
 
 echo "director ($DIRECTOR_PRESET): http://<brev-host>:8001/v1   vlm: http://<brev-host>:8002/v1"
 if [[ "$DIRECTOR_PRESET" == "qwen" ]]; then

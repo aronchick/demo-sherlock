@@ -61,7 +61,7 @@ def test_investigation_finishes_on_the_cameras_that_opened(tmp_path, monkeypatch
         s.stop()
     alert = next((r for r in s.log if r.get("action") == "alert"), None)
     assert alert and alert["verified"] is True
-    assert alert["evidence"] == ["original_frame", "face_crop", "weapon_crop", "model_context"] and alert["evidence_camera"] == "hero"
+    assert alert["evidence"] == ["original_frame", "face_crop", "weapon_crop"] and alert["evidence_camera"] == "hero"
 
 
 def test_dashboard_marks_the_camera_and_refuses_to_cover_it(tmp_path):

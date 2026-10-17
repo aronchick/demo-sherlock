@@ -42,12 +42,12 @@ def spy_models(s: Sherlock) -> list[tuple[str, bool, bool]]:
 
     def mark(who, img):
         ev = s.tools.evidence
-        seen.append((who, np.array_equal(img, ev.get("model_context")), np.array_equal(img, ev.get("face_crop"))))
+        seen.append((who, np.array_equal(img, ev.get("weapon_crop")), np.array_equal(img, ev.get("face_crop"))))
 
     class A:
-        def assess(self, img, claim):
+        def describe(self, img, question):
             mark("analyst", img)
-            return analyst.assess(img, claim)
+            return analyst.describe(img, question)
 
     class V:
         def check(self, img, claim):
@@ -90,9 +90,9 @@ def test_alert_path_runs_full_chain_and_saves_evidence(tmp_path):
     assert chain(drain(q), r["incident"]) == ["look_at", "snapshot", "look_at", "snapshot", "report"]
     assert r["trigger"]["threat"] == "weapon" and r["trigger"]["person"] and r["trigger"]["head"]
     assert r["verified"] is True
-    assert r["evidence"] == ["original_frame", "face_crop", "weapon_crop", "model_context"]
+    assert r["evidence"] == ["original_frame", "face_crop", "weapon_crop"]
     for name in r["evidence"]:
-        assert (tmp_path / r["incident"] / f"{name}.{'png' if name == 'model_context' else 'jpg'}").is_file()
+        assert (tmp_path / r["incident"] / f"{name}.jpg").is_file()
     assert r["vlm_calls"] == 2, "analyst on the weapon crop + verifier; the face crop is never analyzed"
     assert BUS.stats["alerts"] >= 1 and BUS.stats["ignored"] >= 1
 
@@ -104,8 +104,8 @@ def test_rejected_weapon_claim_retains_linked_face_and_scene(tmp_path):
     s._investigate(_knife_det())
     r = s.log[-1]
     assert r["verified"] is False and r["action"] == "log"
-    assert set(r["evidence"]) == {"original_frame", "weapon_crop", "face_crop", "model_context"}
-    assert r["comparison"]["status"] == "disagreed"
+    assert set(r["evidence"]) == {"original_frame", "weapon_crop", "face_crop"}
+    assert r["comparison"]["status"] == "rejected"
     record = s.incidents.read(r["incident"])
     assert all(a["integrity"] == "verified" for a in record["artifacts"])
     for artifact in record["artifacts"]:
@@ -116,7 +116,7 @@ def test_rejected_weapon_claim_retains_linked_face_and_scene(tmp_path):
     assert record["notification"]["status"] == "not_sent"
 
 
-def test_models_share_scene_object_and_face_context(tmp_path):
+def test_models_never_see_the_face_crop(tmp_path):
     s = Sherlock(Config(), synthetic=True, evidence_dir=str(tmp_path))
     seen = spy_models(s)
     s.start()
@@ -125,7 +125,7 @@ def test_models_share_scene_object_and_face_context(tmp_path):
     assert r
     assert seen, "no model calls recorded"
     assert all(not face for _, _, face in seen)
-    assert all(weapon for who, weapon, _ in seen if who == "verifier"), "verifier must check the complete context"
+    assert all(weapon for _, weapon, _ in seen), "both models read the masked weapon crop and nothing else"
 
 
 def test_second_camera_does_not_duplicate_the_incident(tmp_path):
@@ -429,7 +429,7 @@ def test_final_report_rechecks_a_changed_claim_and_a_replaced_crop(tmp_path):
     s.director = SimpleNamespace(investigate=crop_swap)
     s._investigate(_knife_det())
     assert len(checked) == 2
-    assert np.array_equal(checked[1][1], t.evidence["model_context"])
+    assert np.array_equal(checked[1][1], t.evidence["weapon_crop"])
     assert checked[1][1] is not checked[0][1]
     assert s.log[-1]["verified"] is True and s.log[-1]["action"] == "alert"
 
@@ -469,8 +469,7 @@ def test_names_claim(said, claim, same):
 def _said(text: str, supported: bool, tmp_path) -> dict:
     """One incident through the orchestrator with a stubbed Analyst and Verifier."""
     s = _frozen_sherlock(tmp_path)
-    s.tools.analyst = SimpleNamespace(assess=lambda img, claim: {
-        "description": text, "claim": claim, "supported": text == "Knife."})
+    s.tools.analyst = SimpleNamespace(describe=lambda img, q: {"description": text})
     s.tools.verifier = SimpleNamespace(check=lambda img, c: {"supported": supported, "reason": "stub"})
     q = BUS.subscribe()
     s._investigate(_knife_det())
@@ -480,11 +479,14 @@ def _said(text: str, supported: bool, tmp_path) -> dict:
     return r
 
 
-def test_disagreement_preserves_both_results_and_routes_to_review(tmp_path):
-    """Conflicting assessments stay visible and never raise an alert."""
+def test_a_confirmed_weapon_never_carries_a_description_of_something_else(tmp_path):
+    """The 500M read a confirmed COCO knife as 'Cake.'. The alert stands on the Verifier's
+    yes; the board must not print 'Cake.' under it, and the words stay on file."""
     r = _said("Cake.", True, tmp_path)
-    assert r["action"] == "log" and r["verified"] is False
-    assert r["description"] == "Cake." and r["comparison"]["status"] == "disagreed"
+    assert r["action"] == "alert" and r["verified"] is True
+    assert r["description"] == "" and r["analyst_mismatch"] == "Cake."
+    assert r["comparison"] == {"status": "confirmed", "reason": "Verifier confirms the claim",
+                               "verifier_supports": True, "claim": "a knife", "analyst_names_claim": False}
     r = _said("Knife.", True, tmp_path)
     assert r["description"] == "Knife." and "analyst_mismatch" not in r
     r = _said("A white ceramic mug. No text.", False, tmp_path)  # dissent that agrees with the verdict
@@ -500,12 +502,12 @@ def test_evidence_write_failures_keep_the_report_and_the_loop(tmp_path, monkeypa
     r = s.log[-1]
     assert r["action"] == "alert" and r["evidence"] == []
     assert r["custody_saved"] is False and r["notification"]["status"] == "failed"
-    assert r["evidence_unsaved"] == ["original_frame", "face_crop", "weapon_crop", "model_context"] and "evidence_camera" not in r
+    assert r["evidence_unsaved"] == ["original_frame", "face_crop", "weapon_crop"] and "evidence_camera" not in r
     monkeypatch.setattr("sherlock.orchestrator.cv2.imwrite", lambda *a, **k: False)
     s.evidence_dir = tmp_path / "ok"
     s._investigate(_knife_det())
     assert len(s.log) == 2, "the next incident still runs"
-    assert s.log[-1]["evidence"] == [] and s.log[-1]["evidence_unsaved"] == ["original_frame", "face_crop", "weapon_crop", "model_context"]
+    assert s.log[-1]["evidence"] == [] and s.log[-1]["evidence_unsaved"] == ["original_frame", "face_crop", "weapon_crop"]
 
 
 def test_finetuned_scout_classes_route():

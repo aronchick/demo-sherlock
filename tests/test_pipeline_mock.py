@@ -39,7 +39,7 @@ def test_tool_failure_recovers_on_other_camera(tmp_path):
     s.start()
     r = wait_for(s, is_alert)
     s.stop()
-    assert r and r["done"] and r["evidence"] == ["original_frame", "face_crop", "weapon_crop", "model_context"]
+    assert r and r["done"] and r["evidence"] == ["original_frame", "face_crop", "weapon_crop"]
     assert {r["trigger"]["camera"], r["evidence_camera"]} == {"hero", "scout1"}
     assert s.tools.injected_failures == 0
     assert BUS.stats["tool_errors"] > before["tool_errors"]

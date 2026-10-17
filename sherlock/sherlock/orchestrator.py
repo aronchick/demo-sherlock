@@ -10,7 +10,7 @@ import time
 import cv2
 import numpy as np
 
-from .agents.director import Director, RuleDirector, weapon_claim
+from .agents.director import Director, RuleDirector, names_claim, weapon_claim
 from .agents.scout import Detection, Scout, classify
 from .agents.vision import Analyst, MockAnalyst, MockVerifier, Verifier
 from .camera import Camera, CameraError, build_camera
@@ -234,12 +234,19 @@ class Sherlock:
                     comparison = self.tools.assess_parallel(claim)
                     report["claim"] = claim
                     report["comparison"] = comparison
-                    report["verified"] = (not report.get("error") and comparison["analyst_supports"] is True and
-                                          comparison["verifier_supports"] is True)
+                    # The Verifier's yes/no margin on the masked object crop decides alone.
+                    report["verified"] = not report.get("error") and comparison["verifier_supports"] is True
                     report["action"] = "alert" if det.threat == "weapon" and report["verified"] else "log"
                     report["verifier_reason"] = (self.tools.verdict or {}).get("reason", "")
                     eid, _ = self.tools.model_crop()
-                    report["description"] = self.tools.descriptions.get(eid, "")
+                    said = self.tools.descriptions.get(eid, "")
+                    comparison["analyst_names_claim"] = names_claim(said, claim) if said else None
+                    if report["verified"] and said and not names_claim(said, claim):
+                        # A confirmed knife described as 'Cake.' reads as a broken system. The
+                        # claim stands on the Verifier's own yes; the Analyst's words stay on file.
+                        report["description"], report["analyst_mismatch"] = "", said
+                    else:
+                        report["description"] = said
                 report["incident"] = iid
                 report["t"] = time.time()
                 report["evidence"] = saved

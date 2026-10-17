@@ -254,8 +254,8 @@
         <div class="keep" aria-hidden="true"></div>
       </article>
       <article class="dest comparison" id="st-comparison" style="--c: var(--verifier)">
-        <div class="kind">Compare both checks</div><strong id="comparison-status">Waiting</strong>
-        <div class="sub" id="comparison-reason">Both must support the claim</div>
+        <div class="kind">Verifier decides</div><strong id="comparison-status">Waiting</strong>
+        <div class="sub" id="comparison-reason">The Analyst only describes</div>
       </article>
       <article class="dest" id="d-logged" style="--c: var(--analyst)">
         <div class="kind">Review needed</div><div class="num" id="n-logged">0</div><div class="sub">uncertain or conflicting checks</div>
@@ -636,7 +636,7 @@ function playScout(ev) {
     cellsReset();
     modelCards.reset();
     $('comparison-status').textContent = 'Waiting';
-    $('comparison-reason').textContent = 'Both must support the claim';
+    $('comparison-reason').textContent = 'The Analyst only describes';
     cellSet('scout', `${d.label || 'object'} · ${threat}${d.person ? ' · person nearby' : ''}`, ev.latency_ms ? fmtMs(ev.latency_ms) : '');
     flash($('wideFrame')); $('wideFrame').classList.remove('alert');
     setStamp($('stamp'), '', ''); setStamp($('wideStamp'), '', ''); caption('');
@@ -747,8 +747,8 @@ function onModelInput(ev) {
 
     flow('crop', 700, C.analyst);
     flow('judge', 700, C.verifier);
-    $('comparison-status').textContent = 'Checking in parallel';
-    $('comparison-reason').textContent = 'Same scene + crops, different prompts';
+    $('comparison-status').textContent = 'Checking';
+    $('comparison-reason').textContent = 'Same masked crop, two prompts';
     await wait(700);
   });
 }
@@ -776,9 +776,9 @@ function onComparison(ev) {
     const result = ev.data?.comparison || ev.data || {};
     modelCards.complete('analyst');
     modelCards.complete('verifier');
-    $('comparison-status').textContent = result.status === 'agreed' ? 'Both support the claim' : 'Review needed';
+    $('comparison-status').textContent = result.status === 'confirmed' ? 'Claim confirmed' : 'Review needed';
     $('comparison-reason').textContent = result.reason || ev.msg;
-    glow('comparison', 1, result.status === 'agreed' ? C.ok : C.bad);
+    glow('comparison', 1, result.status === 'confirmed' ? C.ok : C.bad);
     await wait(400);
   });
 }
@@ -831,7 +831,7 @@ function onReport(ev) {
     const verdict = d.verified === true ? ' · verified' : d.verified === false ? ' · not verified' : '';
     caption(`${d.claim || ''}${verdict}${calls ? ' · ' + calls : ''}`);
 
-    
+    if (ev.analyst) $('c-analyst').querySelector('.v').textContent = ev.analyst.msg;   // it played while still reading
     cellSet('decision', action === 'alert' ? 'ALERT, evidence kept' : 'review, evidence kept', calls + secs);
     if (S.docked) S.docked.fade = true;
     await wait(500);
@@ -841,10 +841,31 @@ function onReport(ev) {
 }
 
 // ---- SSE ------------------------------------------------------------------------------------------------
-// Both checks keep their own answers visible, including disagreements.
+// The Analyst's words wait for the report, which shows them or withholds them when they name
+// another object than the confirmed claim (a knife read as 'Cake.'). Beats read ev.msg when
+// they play, so a report that lands first is the only text the Analyst beat ever shows.
+const READING = 'reading the crop…', WITHHELD = 'named another object · not shown';
+
+let analystEv = null;
+
+function holdAnalyst(ev) {
+  analystEv = ev;
+  ev.said = ev.msg;
+  ev.msg = READING;
+}
+
+function settleAnalyst(report) {
+  if (!analystEv) return;
+  analystEv.msg = report.data && report.data.analyst_mismatch ? WITHHELD : analystEv.said;
+  report.analyst = analystEv;
+  analystEv = null;
+}
+
 const es = new EventSource('/events');
 es.onmessage = e => {
   const ev = JSON.parse(e.data), m = ev.msg || '';
+
+  if (ev.stage === 'analyst') holdAnalyst(ev);   // held now: the report may land before the beat plays
   switch (ev.stage) {
     case 'scout': return onScout(ev);
     case 'director': return afterScout(() => onDirector(ev));
@@ -855,7 +876,9 @@ es.onmessage = e => {
     case 'verifier': return afterScout(() => onVerifier(ev));
     case 'system':
       if (m.startsWith('REPORT')) {
-return afterScout(() => onReport(ev));
+        settleAnalyst(ev);
+
+        return afterScout(() => onReport(ev));
       }
       if (/covered$/.test(m) && /^hero /.test(m)) $('wideFrame').classList.toggle('covered', !/uncovered/.test(m));
       if (/will fail|corrupted arguments/.test(m)) { glow('camera', 1, C.bad); badge('camera', /fail/.test(m) ? 'armed: fail' : 'armed: garbage', C.bad, 1500); }

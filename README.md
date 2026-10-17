@@ -38,9 +38,9 @@ monitors those pipelines
  Director tool loop ── HTTP /v1 ─────────► :8001
    look_at / move ──► gimbal or crop
    snapshot ──► save scene/object/face
-      ├─ Analyst ── context PNG ─────────► :8002
-      └─ Verifier ─ context PNG ─────────► :8002
-   compare both results → report
+      ├─ Analyst ── masked crop JPEG ────► :8002
+      └─ Verifier ─ masked crop JPEG ────► :8002
+   Verifier margin decides → report
       │
       ▼
  snapshots/<incident>/
@@ -75,17 +75,22 @@ monitors those pipelines
 6. **`look_at` moves real hardware.** On the Insta360 Link 2 it sends UVC
    pan/tilt/zoom over USB with `link-ctl` (macOS only). Other cameras use a
    software crop (`FakePTZ`).
-7. **Analyst and Verifier run in parallel.** Both receive the same immutable
-   contact sheet: original scene, object detail and available face context.
-   The exact input is saved as lossless `model_context.png`. Separate prompts
-   ask for a description and a claim check; the endpoints may use the same
-   model. Neither receives the other's answer. Prompts allow person/object
-   context and prohibit identity recognition.
-8. **A deterministic comparison follows both answers.** Both must support
-   the weapon claim before the orchestrator can alert. Disagreement, an
-   inconclusive answer or a failed check goes to review (`log`). A failed
-   acquisition also prevents an alert. The comparison and both answers
-   appear in the custody record.
+7. **The VLM sees only the masked object crop.** After acquisition the
+   Analyst and Verifier run side by side on the same tight weapon (or
+   object) crop, with any face in it filled solid. No model ever receives
+   the face crop or the original frame: those are evidence for a human
+   reviewer. The Analyst describes the object; the Verifier asks a yes/no
+   question about the claim and decides on `log P(yes) - log P(no)` against
+   `VERIFIER_MARGIN` (0.0 by default; the demo runs -1.0), or on the reply's
+   first word when the server returns no usable logprobs
+   ([Verifier verdicts](#verifier-verdicts)).
+8. **The Verifier decides; the Analyst advises.** The orchestrator alerts
+   only on a weapon claim the Verifier confirms. A rejected or inconclusive
+   verdict, a failed check or a failed acquisition goes to review (`log`).
+   The Analyst never gates: when its description names another object than
+   a confirmed claim (a knife read as "Cake."), the card withholds the words
+   and the record keeps them as `analyst_mismatch`. The verdict and the
+   description appear in the custody record.
 9. **Evidence survives the outcome.** Captured scene, object, face and model
    input stay in `snapshots/<incident>/`, including rejected or interrupted
    investigations. SHA-256 hashes, camera, capture time and source relationships
@@ -134,7 +139,9 @@ signature, then verify Ed25519 over the canonical signature metadata with its
 `signature` field removed. Each `previous_sha256` hashes the preceding complete
 signed envelope. The repository tests perform this verification independently.
 
-The mock-only **Simulate disagreement** control demonstrates Review. The cloud
+The mock-only **Simulate disagreement** control makes the next Analyst
+description name a cup. The decision still follows the Verifier, so a
+confirmed knife alerts and its card withholds the Analyst's words. The cloud
 card says **Simulated destination · no upload** in mock mode. Edge acceptance
 can mean local spooling; it does not establish remote storage. The signing and
 responder checks described here are local. There is no per-incident cloud
@@ -568,8 +575,8 @@ stay out of the upload unless `--include-room-photos`, and that needs everyone p
 ## vLLM
 
 vLLM is the serving layer for Sherlock's investigation loop. The Director
-chooses camera tools; Analyst and Verifier independently assess a shared
-scene/object/person contact sheet. Scout gates these calls locally.
+chooses camera tools; the Analyst describes and the Verifier checks the
+claim on the masked object crop. Scout gates these calls locally.
 The planned Brev setup runs two vLLM **0.28.0** containers on one H100:
 
 | Role | Model | Served name | Port |

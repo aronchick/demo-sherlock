@@ -22,7 +22,7 @@ const SCOUT = {
 
 const LABELS = {
   mock: {
-    badge: ["MOCK", "synthetic scene · rule director · canned VLM"],
+    badge: ["MOCK", "rule director · canned VLM"],
     scout: SCOUT.scene,
     director: ["Rule director", "deterministic policy · no LLM"],
     vlm: ["Canned analyst + verifier", "recorded answers · no model"],
@@ -69,6 +69,9 @@ function applyMode(m) {
   L = { ...LABELS[MODE] };
 
   if (m && SCOUT[m.scout_backend]) L.scout = SCOUT[m.scout_backend];
+
+  // Only a run on the scripted scene (--synthetic) says so; plain --mock watches real cameras.
+  if (MODE === "mock" && m && m.synthetic) L.badge = [L.badge[0], "synthetic scene · " + L.badge[1]];
 
   if (MODE === "live") {
     // The table's names belong to the default models; a swapped model shows its own id.

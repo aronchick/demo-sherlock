@@ -25,14 +25,14 @@
         "tool_call_validity": 1.0,
         "task_success": 0.5,
         "steps_to_report": 4.5,
-        "time_to_report_ms": 65.86,
+        "time_to_report_ms": 61.27,
         "action_correct": 1.0,
         "recovery_score": 1.0,
         "benign_no_snapshot": 0.75,
         "weapon_protocol_score": 0.875,
         "avg_vlm_calls": 2.0,
         "reward": 0.6937,
-        "suite_wall_time_ms": 586.58
+        "suite_wall_time_ms": 536.31
       }
     },
     {
@@ -56,14 +56,14 @@
         "tool_call_validity": 0.9051,
         "task_success": 1.0,
         "steps_to_report": 4.88,
-        "time_to_report_ms": 71.81,
+        "time_to_report_ms": 62.8,
         "action_correct": 1.0,
         "recovery_score": 1.0,
         "benign_no_snapshot": 1.0,
         "weapon_protocol_score": 1.0,
         "avg_vlm_calls": 1.5,
         "reward": 0.9858,
-        "suite_wall_time_ms": 633.5
+        "suite_wall_time_ms": 540.26
       }
     },
     {
@@ -87,14 +87,14 @@
         "tool_call_validity": 1.0,
         "task_success": 0.875,
         "steps_to_report": 4.62,
-        "time_to_report_ms": 198.27,
+        "time_to_report_ms": 194.35,
         "action_correct": 1.0,
         "recovery_score": 1.0,
         "benign_no_snapshot": 0.875,
         "weapon_protocol_score": 1.0,
         "avg_vlm_calls": 1.75,
         "reward": 0.9187,
-        "suite_wall_time_ms": 1649.39
+        "suite_wall_time_ms": 1603.95
       }
     },
     {
@@ -118,14 +118,14 @@
         "tool_call_validity": 1.0,
         "task_success": 0.875,
         "steps_to_report": 4.12,
-        "time_to_report_ms": 86.18,
+        "time_to_report_ms": 79.53,
         "action_correct": 1.0,
         "recovery_score": 1.0,
         "benign_no_snapshot": 1.0,
         "weapon_protocol_score": 0.9375,
         "avg_vlm_calls": 1.5,
         "reward": 0.9281,
-        "suite_wall_time_ms": 739.11
+        "suite_wall_time_ms": 681.2
       }
     },
     {
@@ -149,14 +149,14 @@
         "tool_call_validity": 1.0,
         "task_success": 1.0,
         "steps_to_report": 4.25,
-        "time_to_report_ms": 65.88,
+        "time_to_report_ms": 54.4,
         "action_correct": 1.0,
         "recovery_score": 1.0,
         "benign_no_snapshot": 1.0,
         "weapon_protocol_score": 1.0,
         "avg_vlm_calls": 1.5,
         "reward": 1.0,
-        "suite_wall_time_ms": 592.27
+        "suite_wall_time_ms": 474.43
       }
     }
   ]

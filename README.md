@@ -39,7 +39,11 @@ pip install -r requirements.txt            # ultralytics optional for this mode
 CAMERAS=hero:fake:synthetic,scout1:fake:synthetic python run.py --mock --synthetic
 open http://localhost:8000
 ```
-Rule-based director, mock VLMs, generated video. Press **Break the next tool call** and **Cover hero lens** on the dashboard to see recovery.
+Rule-based director, mock VLMs, a scripted room on a 26 s loop: someone holds up a cup (ignored, 0 VLM calls),
+then someone holds up a knife (look_at → snapshot → look_at head → face snapshot → verify → alert with both crops).
+Press **Break the next tool call**, **Corrupt next tool args** or **Cover hero lens** on the dashboard to see recovery.
+Evidence lands in `snapshots/<incident>/` (`EVIDENCE_DIR` overrides). The face crop is stored for a human only:
+no model ever sees it, and nothing identifies or describes the person.
 
 ## vLLM on Brev (Config A default)
 1. On the Brev GPU box (1x H100/A100 80GB), start both vLLM containers:
@@ -63,9 +67,10 @@ If the endpoint is unreachable mid-pitch, the Director automatically drops to th
 sherlock/camera/     Camera interface, FakePTZ (crop/zoom), ObsbotCamera (UVC), SyntheticSource
 sherlock/agents/     scout.py (YOLO + motion fallback + dedupe/dwell), director.py (tool loop + RuleDirector), vision.py (Analyst, Verifier, mocks)
 sherlock/tools.py    Tool schemas + dispatcher + failure injection
-sherlock/orchestrator.py   Scout → investigate → verify loop, stats
+sherlock/orchestrator.py   Scout → investigate → verify loop, per-incident evidence, stats
+sherlock/scene.py    Scripted synthetic room (cup, then knife) for --synthetic
 sherlock/dashboard/  FastAPI SSE + MJPEG + the judge-facing UI
-tests/               End-to-end mock run incl. tool failure recovery and covered-lens fallback
+tests/               End-to-end mock run: alert chain, ignore path (zero VLM calls), evidence, recovery
 gym/                 Native NeMo Gym resources server, verifier, agent, and YAML ablation configs
 results/             Per-ablation JSON artifacts (results/ablation_*.json)
 ```
@@ -105,15 +110,78 @@ uv run python -m gym.run_ablation --all
 
 | Ablation Config | Swapped Component | Director Model | Total Gen Params | Prompt | Tools | Thinking | Tool-Call Validity | Task Success | Steps to Report | Time to Report (ms) |
 |---|---|---|---:|---|---|---|---:|---:|---:|---:|
-| `prompt_v1` | System prompt (`v1`) | `Nemotron-3.5-Lightning-30B-A3B-NVFP4` | 32.25B | `system_v1` | `verbose` | `off` | 100.0% | 50.0% | 3.50 | 49.5 *(stub)* |
-| `terse_tools` | Tool schemas (`terse`) | `Nemotron-3.5-Lightning-30B-A3B-NVFP4` | 32.25B | `system_v2` | `terse` | `off` | 88.7% | 100.0% | 4.12 | 57.0 *(stub)* |
-| `thinking_on` | Thinking (`on`) | `Nemotron-3.5-Lightning-30B-A3B-NVFP4` | 32.25B | `system_v2` | `verbose` | `on` | 100.0% | 87.5% | 3.75 | 151.1 *(stub)* |
-| `qwen_director` | Model (`Qwen2.5-7B`) | `Qwen2.5-7B-Instruct` | 9.85B | `system_v2` | `verbose` | `off` | 100.0% | 87.5% | 3.38 | 76.3 *(stub)* |
-| `nemotron_lightning` | Reference (`v2` + `verbose` + `off`) | `Nemotron-3.5-Lightning-30B-A3B-NVFP4` | 32.25B | `system_v2` | `verbose` | `off` | 100.0% | 100.0% | 3.50 | 60.9 *(stub)* |
+| `prompt_v1` | System prompt (`v1`) | `Nemotron-3.5-Lightning-30B-A3B-NVFP4` | 32.25B | `system_v1` | `verbose` | `off` | 100.0% | 50.0% | 4.50 | 65.9 *(stub)* |
+| `terse_tools` | Tool schemas (`terse`) | `Nemotron-3.5-Lightning-30B-A3B-NVFP4` | 32.25B | `system_v2` | `terse` | `off` | 90.5% | 100.0% | 4.88 | 71.8 *(stub)* |
+| `thinking_on` | Thinking (`on`) | `Nemotron-3.5-Lightning-30B-A3B-NVFP4` | 32.25B | `system_v2` | `verbose` | `on` | 100.0% | 87.5% | 4.62 | 198.3 *(stub)* |
+| `qwen_director` | Model (`Qwen2.5-7B`) | `Qwen2.5-7B-Instruct` | 9.85B | `system_v2` | `verbose` | `off` | 100.0% | 87.5% | 4.12 | 86.2 *(stub)* |
+| `nemotron_lightning` | Reference (`v2` + `verbose` + `off`) | `Nemotron-3.5-Lightning-30B-A3B-NVFP4` | 32.25B | `system_v2` | `verbose` | `off` | 100.0% | 100.0% | 4.25 | 65.9 *(stub)* |
 
 ## Demo script (3 min)
-1. Dashboard up, wide view showing the room, counter climbing with zero VLM calls.
-2. Judge holds up an object. Scout flags it, camera whirs over and zooms, Analyst reads the label, Verifier confirms. Point at latency per stage.
-3. Press **Break the next tool call** → Director gets an error, retries differently, still reports.
-4. Cover the hero lens → Director lists cameras, finishes on scout1.
-5. Close on the ratio: frames handled by a 10 ms model vs. VLM calls actually made.
+
+Use a red fedora with a black band and a black Red Hat / NVIDIA baseball cap.
+The fedora gives the audience an easy first object to recognize; the cap adds
+small lettering that gives the camera a reason to zoom.
+
+### Hat setup and rehearsal
+
+- Set `SCOUT_BACKEND=motion` for this sequence, with real Analyst and Verifier
+  endpoints. The default `yolov8n.pt` model has no hat class. The existing motion
+  scout can flag a newly introduced prop without knowing what it is; describe
+  its trigger as motion until the Analyst identifies the object.
+- Start with the props out of frame so the motion scout learns the background.
+  Introduce one hat at a time, hold it still through the investigation, and keep
+  the cap's lettering facing the camera. Between takes, remove the prop for at
+  least four seconds so the Scout's three-second tracking memory can expire.
+- Rehearse at the actual camera distance. Check that the crop contains the hat,
+  that the Analyst can read each name it reports, and that the Verifier checks
+  the resulting claim. Red fabric alone does not establish a Red Hat brand.
+  If the cap lettering is unreadable, report that uncertainty. Mock mode only
+  exercises the scripted cup-and-knife room and does not validate either hat.
+
+### Presenter sequence
+
+1. **0:00–0:20, wide view.** Show the quiet scene and the frame count before
+   introducing either prop. “Sherlock watches for a change before asking the
+   vision models to inspect a crop.”
+2. **0:20–1:00, red fedora.** Bring it into view and hold it still. Follow the
+   motion event, camera movement or software crop, Analyst description, and
+   Verifier verdict. A suitable claim, if supported by the crop, is “a red hat
+   with a black band.” Point at the per-stage latency.
+3. **1:00–1:40, black cap.** Remove the fedora, pause, then introduce the cap
+   with the lettering forward. “This hat is black. Let's see what the lettering
+   says.” Show the crop and actual result; name Red Hat and NVIDIA only if the
+   models read and verify them. Keep the expected names out of model prompts.
+4. **1:40–2:10, tool recovery.** Remove the cap, press **Break the next tool
+   call**, then reintroduce it after the tracking memory expires. Show the error
+   and the attempted recovery. With a second working camera, check whether the
+   Director finishes the investigation there.
+5. **2:10–2:40, camera fallback.** With both cameras able to see the prop, cover
+   the hero lens and introduce the fedora to scout1. Show which camera supplies
+   the evidence and whether its crop supports the report. Rehearse this step
+   only with a working second camera.
+6. **2:40–3:00, close.** Compare frames observed with VLM calls made. “The first
+   stage found a change. The vision models inspected the hat and checked the
+   claim.” Use the measured timings for this run; the YOLO timing above does
+   not describe the motion backend.
+
+If time allows, repeat the cap step with the lettering turned away. A fresh
+crop can support “black baseball cap”; it cannot establish hidden lettering.
+Inspect both the Analyst answer and Verifier verdict before calling that a
+successful uncertainty check.
+
+### Security sequence: cup, then knife
+
+The weapon flow, on the default YOLO Scout (`--mock --synthetic` plays the same
+beats in the scripted room, which is the B-roll). Knife, scissors and baseball
+bat escalate; everything else YOLO names is benign.
+
+1. **Cup.** Hold up a cup: Scout tags it benign, the Director ignores it,
+   0 VLM calls, no snapshot.
+2. **Knife (or scissors).** The camera zooms on the weapon, the Analyst
+   describes it, the camera zooms on the head for a face crop that no model
+   ever sees, the Verifier confirms the weapon itself on the weapon crop, and
+   the dashboard shows the alert with both crops. Point at latency per stage.
+3. **Recovery.** Press **Break the next tool call** or **Corrupt next tool
+   args**: the Director gets an error, recovers, still reports.
+4. **Fallback.** Cover the hero lens: the investigation finishes on scout1.
+5. **Close** on the ratio: frames handled by a 10 ms model vs. VLM calls made.

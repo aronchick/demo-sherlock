@@ -14,8 +14,10 @@ BBox = tuple[float, float, float, float]  # x1, y1, x2, y2 in pixels
 
 # Index = YOLO class id. Person stays a class so weapon events keep a person and a
 # head box to aim the evidence zoom at; dropping it would teach the model that
-# people are background.
-CLASSES = ("person", "weapon", "badge", "bottle")
+# people are background. Append new classes at the end so existing label ids keep
+# their meaning. The fedora and cap are the sponsor props (Red Hat fedora, Red Hat x
+# NVIDIA cap): no COCO class covers them, so they come only from in-room photos.
+CLASSES = ("person", "weapon", "badge", "bottle", "fedora", "cap")
 
 # Open COCO categories (and stock YOLOv8 names, which are the same) -> Scout class.
 # COCO has no badge and no firearm: badges come only from the in-room photos.
@@ -25,7 +27,8 @@ COCO_TARGETS = ("knife", "scissors", "baseball bat", "bottle")  # categories we 
 
 # In-room capture sessions. "none" = empty room or a person with no prop: hard negatives.
 PROP_CLASS = {"knife": "weapon", "bat": "weapon", "scissors": "weapon",
-              "badge": "badge", "bottle": "bottle", "none": None}
+              "badge": "badge", "bottle": "bottle", "fedora": "fedora", "cap": "cap",
+              "none": None}
 # Stock YOLO can't see a badge; these are what it usually calls one. Pre-label hints only.
 PROP_HINTS = {"badge": frozenset({"cell phone", "remote", "book"})}
 

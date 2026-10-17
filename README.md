@@ -71,6 +71,13 @@ sherlock/dashboard/  FastAPI SSE + MJPEG + the judge-facing UI
 tests/               End-to-end mock run incl. tool failure recovery and covered-lens fallback
 ```
 
+## Development
+The lint gate is one command, and it must report zero findings:
+```bash
+uvx ruff@0.17.1 check .
+```
+`ruff.toml` pins this exact version (`required-version`; other versions refuse to run) and spells out its rule set, so every machine gets the same answer.
+
 ## Demo script (3 min)
 1. Dashboard up, wide view showing the room, counter climbing with zero VLM calls.
 2. Judge holds up an object. Scout flags it, camera whirs over and zooms, Analyst reads the label, Verifier confirms. Point at latency per stage.

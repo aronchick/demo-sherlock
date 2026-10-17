@@ -7,6 +7,7 @@ gets ignored without a VLM call. People are context, never triggers: a weapon
 event carries the nearest person and a head box to aim the evidence zoom at."""
 from __future__ import annotations
 
+import os
 import time
 from collections.abc import Callable
 from dataclasses import dataclass
@@ -34,6 +35,18 @@ class Detection:
     threat: str = "unknown"  # weapon | benign | unknown
     person: BBox | None = None
     head: BBox | None = None
+    mislabeled_from: str | None = None  # set only by the SCOUT_MISLABEL test fault
+
+
+def parse_mislabel(spec: str) -> dict[str, str]:
+    """SCOUT_MISLABEL: comma-separated SRC=DST renames, e.g. "cup=knife". Empty means off."""
+    renames: dict[str, str] = {}
+    for part in filter(None, (p.strip() for p in spec.split(","))):
+        src, sep, dst = (s.strip() for s in part.partition("="))
+        if not (sep and src and dst):
+            raise ValueError(f"SCOUT_MISLABEL entry {part!r} is not SRC=DST (e.g. cup=knife)")
+        renames[src] = dst
+    return renames
 
 
 def classify(label: str) -> str:
@@ -158,7 +171,8 @@ class SceneScout:
 class Scout:
     def __init__(self, backend: str, model_path: str, dwell: float,
                  truth: Callable[[str], list[tuple[str, BBox]]] | None = None,
-                 measure: bool = False, handled_via: Callable[[Detection], str | None] | None = None):
+                 measure: bool = False, handled_via: Callable[[Detection], str | None] | None = None,
+                 mislabel: str | None = None):
         if backend == "scene" and truth is not None:
             self.impl: YoloScout | MotionScout | SceneScout = SceneScout(truth)
         else:
@@ -170,10 +184,20 @@ class Scout:
         # Which camera already handled this object, if any: the event says so, so a
         # viewer does not mistake the second camera's sighting for a new incident.
         self.handled_via = handled_via
+        # Test fault: a Scout false positive on demand. The raw detector class is renamed
+        # before anything classifies it, so the rest of the pipeline sees an ordinary
+        # mistake. Announced at startup and on every injected detection, so nobody
+        # watching takes it for a real one.
+        self.mislabel = parse_mislabel(os.environ.get("SCOUT_MISLABEL", "") if mislabel is None else mislabel)
+        for src, dst in self.mislabel.items():
+            BUS.emit("system", f"Scout mislabel injected: {src} -> {dst} (test fault, SCOUT_MISLABEL)")
 
     def step(self, frame: np.ndarray, camera: str) -> list[Detection]:
         t0 = time.perf_counter()
         dets = self.impl.detect(frame, camera)
+        for d in dets:
+            if d.label in self.mislabel:
+                d.mislabeled_from, d.label = d.label, self.mislabel[d.label]
         if self.measure:
             BUS.time_scout((time.perf_counter() - t0) * 1000)
         self.last_dets[camera] = dets
@@ -187,10 +211,15 @@ class Scout:
                 d.person = nearest_person(people, d.bbox)
                 d.head = head_region(d.person) if d.person else None
             BUS.bump("scout_hits")
+            if d.mislabeled_from:
+                BUS.emit("system", f"Scout mislabel injected: {d.mislabeled_from} -> {d.label} on {camera} "
+                         "(test fault, not a real detection)", mislabeled_from=d.mislabeled_from,
+                         label=d.label, camera=camera)
             near = " (person nearby)" if d.person else ""
             via = self.handled_via(d) if self.handled_via else None
             BUS.emit("scout", f"new {d.label} on {camera} at {d.bbox}: {d.threat}{near}",
                      (time.perf_counter() - t0) * 1000, bbox=d.bbox, label=d.label, camera=camera,
                      threat=d.threat, person=d.person, head=d.head,
-                     **({"handled_via": via} if via else {}))
+                     **({"handled_via": via} if via else {}),
+                     **({"mislabeled_from": d.mislabeled_from} if d.mislabeled_from else {}))
         return fresh

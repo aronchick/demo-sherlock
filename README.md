@@ -854,6 +854,30 @@ bat escalate; everything else YOLO names is benign.
 4. **Fallback.** Cover the hero lens: the investigation finishes on scout1.
 5. **Close** on the ratio: frames handled by a 10 ms model vs. VLM calls made.
 
+### Test fault: a Scout false positive (`SCOUT_MISLABEL`)
+
+`SCOUT_MISLABEL=cup=knife` renames a raw detector class before the Scout
+classifies it, so a cup reaches the Director as a knife, exactly as a real
+detector mistake would (nearest person and head attached). It is off unless
+set; separate several renames with commas (`cup=knife,bottle=scissors`). It
+works with every Scout backend, including the scripted scene. Use it for tests
+and demos only.
+
+Sherlock announces it so nobody watching takes it for a real detection: a
+`system` row `Scout mislabel injected: cup -> knife (test fault, SCOUT_MISLABEL)`
+at startup (console log; the board shows only events after it connects), and
+`Scout mislabel injected: cup -> knife on hero (test fault, not a real
+detection)` before each injected detection, in the console and the board's
+event feed.
+
+With real models, the scripted room shows the Verifier catching the Scout: the
+cup's "a knife" claim is rejected, the report becomes a log entry with no face
+crop kept, and seconds later the scene's real knife is confirmed.
+
+```bash
+SCOUT_MISLABEL=cup=knife uv run python run.py --synthetic
+```
+
 ## Open data and synthetic dataset provenance
 
 Sherlock incorporates both existing open datasets and openly published synthetic datasets built during the hackathon:

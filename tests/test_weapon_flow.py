@@ -4,7 +4,9 @@ import json
 import queue
 from types import SimpleNamespace
 
+import httpx
 import numpy as np
+import openai
 from sherlock.agents.director import Director, RuleDirector
 from sherlock.agents.scout import Detection, Scout, head_region
 from sherlock.agents.vision import Analyst, MockAnalyst, MockVerifier, Verifier
@@ -236,3 +238,21 @@ def test_llm_director_weapon_chain_reports_evidence():
     assert out["action"] == "alert" and out["evidence"] == ["weapon_crop", "face_crop"]
     first_user = json.loads(d.client.prompts[0][1]["content"])
     assert first_user["threat"] == "weapon" and first_user["head_bbox"] == list(head)
+
+
+def test_unreachable_director_falls_back_to_rules():
+    """Guards the deliberately broad except in Director.investigate: any endpoint
+    failure (connection error or something odd mid-pitch) must degrade, not crash."""
+    for err in (openai.APIConnectionError(request=httpx.Request("POST", "http://unused/v1")),
+                RuntimeError("proxy returned HTML")):
+        tools = _toolbox()
+        det = Detection("cup", 0.9, CUP, "hero", threat="benign")
+        tools.begin_incident(det, "x")
+        d = Director(Endpoint("http://unused/v1", "m"), tools)
+
+        def boom(*_, err=err, **__):
+            raise err
+
+        d.client = SimpleNamespace(chat=SimpleNamespace(completions=SimpleNamespace(create=boom)))
+        out = d.investigate(det)
+        assert out["done"] and out["action"] == "ignore", f"no rule-based fallback for {type(err).__name__}"

@@ -1,6 +1,7 @@
 """Scout precision and recall, before vs after the fine-tune, on the held-out test split.
 
-    uv run scripts/eval_scout.py --after runs/scout/weights/best.pt
+    uv run scripts/eval_scout.py --measured \\
+        --after runs/scout/weights/best.pt
 
 Before = stock YOLOv8n, its COCO names mapped onto the Scout classes (knife,
 scissors, baseball bat -> weapon; bottle; person). It has no badge class, so its
@@ -11,7 +12,8 @@ confidence the runtime Scout uses. In-room photos and COCO images are reported
 separately: the room is where the demo runs, COCO shows nothing else broke.
 Pass --smoke for pipeline checks or evaluations of smoke-trained weights; these
 reports are labelled smoke and excluded from the dashboard's measured results.
-Normal evaluations are labelled measured, including real CPU evaluations."""
+Use --measured explicitly for real evaluations, including real CPU evaluations.
+Smoke output defaults to eval_smoke.json, preserving the measured eval.json."""
 from __future__ import annotations
 
 import argparse
@@ -111,10 +113,16 @@ def main(argv: list[str] | None = None) -> dict:
     p.add_argument("--split", default="test")
     p.add_argument("--conf", type=float, default=RUNTIME_CONF)
     p.add_argument("--imgsz", type=int, default=640)
-    p.add_argument("--smoke", action="store_true",
-                   help="label a pipeline/test evaluation as smoke, never dashboard evidence")
-    p.add_argument("--out", type=Path, default=ROOT / "runs" / "scout" / "eval.json")
+    mode = p.add_mutually_exclusive_group(required=True)
+    mode.add_argument("--smoke", action="store_true",
+                      help="label a pipeline/test evaluation as smoke, never dashboard evidence")
+    mode.add_argument("--measured", action="store_true",
+                      help="declare real training/evaluation data, eligible as measured evidence")
+    p.add_argument("--out", type=Path,
+                   help="default: runs/scout/eval.json, or eval_smoke.json with --smoke")
     a = p.parse_args(argv)
+    if a.out is None:
+        a.out = ROOT / "runs" / "scout" / ("eval_smoke.json" if a.smoke else "eval.json")
     gts = ground_truth(a.dataset, a.split)
     if not gts:
         raise SystemExit(f"no images in {a.dataset / 'images' / a.split}")

@@ -125,7 +125,8 @@ python scripts/review_labels.py
 python scripts/build_scout_dataset.py build
 # train (cuda > mps > cpu, auto) and score before vs after
 python scripts/train_scout.py
-python scripts/eval_scout.py --after runs/scout/weights/best.pt
+uv run scripts/eval_scout.py --measured \
+  --after runs/scout/weights/best.pt
 YOLO_MODEL=runs/scout/weights/best.pt just live
 ```
 Aim for 100-200 prop photos in total. Move the prop, switch hands, change distance and angle while
@@ -143,6 +144,12 @@ mAP50 on the COCO validation images was already 0.45 after 3 epochs. On a CUDA b
 `eval_scout.py` prints precision and recall per class, before (stock YOLOv8n, COCO names mapped) vs after,
 on the held-out test photos, at the 0.35 confidence the runtime Scout uses. Its last line is the number for
 the video: `Scout weapon detection (room test photos, conf 0.35): recall X% -> Y%, precision ...`.
+Choose `--measured` only for real training and evaluation data. After
+`train_scout.py --smoke`, use `eval_scout.py --smoke` instead. The mode is required;
+an invocation without it stops before evaluation. Measured output defaults to
+`runs/scout/eval.json`; smoke output goes to `runs/scout/eval_smoke.json` so it
+does not replace measured results. The dashboard excludes smoke reports, and
+the publisher rejects smoke or unlabelled evaluation files before staging.
 Routing comes from the weapon flow in `agents/scout.py`: `weapon` escalates, `badge` and `bottle` are benign
 (ignored, no VLM call), `person` is context for the face crop.
 

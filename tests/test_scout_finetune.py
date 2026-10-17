@@ -157,7 +157,8 @@ def test_capture_props_from_a_named_synthetic_camera(tmp_path):
     assert all(p.parent.parent.name == "badge" and cv2.imread(str(p)) is not None for p in saved)
 
 
-def test_publish_is_a_dry_run_and_keeps_people_out(tmp_path, monkeypatch, capsys):
+@pytest.mark.parametrize("with_evaluation", [False, True])
+def test_publish_is_a_dry_run_and_keeps_people_out(tmp_path, monkeypatch, capsys, with_evaluation):
     monkeypatch.setitem(sys.modules, "huggingface_hub", None)  # any upload attempt would fail loudly
     coco, props = _fake_sources(tmp_path)
     for p in sd.room_images(props):
@@ -165,10 +166,14 @@ def test_publish_is_a_dry_run_and_keeps_people_out(tmp_path, monkeypatch, capsys
     bsd.main(["build", "--coco", str(coco), "--props", str(props), "--out", str(tmp_path / "scout")])
     weights = tmp_path / "best.pt"
     weights.write_bytes(b"weights")
+    eval_path = tmp_path / "eval.json"
+    if with_evaluation:
+        eval_path.write_text(json.dumps({"evidence_kind": "model_evaluation", "execution_mode": "measured",
+                                         "headline": "Measured evaluation fixture"}))
     staged = publish_scout_hf.main(["--model-repo", "o/sherlock-scout", "--dataset-repo", "o/sherlock-scout-data",
                                     "--weights", str(weights), "--dataset", str(tmp_path / "scout"),
                                     "--coco-manifest", str(coco / "manifest.jsonl"),
-                                    "--eval", str(tmp_path / "none.json"), "--out", str(tmp_path / "hf")])
+                                    "--eval", str(eval_path), "--out", str(tmp_path / "hf")])
     assert "nothing uploaded" in capsys.readouterr().out
     ds = staged["dataset"]
     assert not list(ds.glob("images/*/room_*")), "in-room photos show people: excluded by default"
@@ -176,6 +181,29 @@ def test_publish_is_a_dry_run_and_keeps_people_out(tmp_path, monkeypatch, capsys
     assert "license: cc-by-4.0" in (ds / "README.md").read_text()
     card = (staged["model"] / "README.md").read_text()
     assert "license: agpl-3.0" in card and "o/sherlock-scout-data" in card
+    assert (staged["model"] / "eval.json").exists() is with_evaluation
+    assert ("Measured evaluation fixture" in card) is with_evaluation
+
+
+@pytest.mark.parametrize("evaluation", [
+    {"evidence_kind": "model_evaluation", "execution_mode": "smoke"},
+    {"evidence_kind": "model_evaluation"},
+    {"execution_mode": "measured"},
+    {"evidence_kind": "model_evaluation", "execution_mode": "measured", "stub": True},
+    {}, None, [],
+])
+def test_publish_rejects_unmeasured_evidence_before_replacing_staging(tmp_path, evaluation):
+    eval_path = tmp_path / "eval.json"
+    eval_path.write_text(json.dumps(evaluation))
+    out = tmp_path / "staged"
+    out.mkdir()
+    previous = out / "previous.txt"
+    previous.write_text("preserve this staging")
+    with pytest.raises(ValueError, match="cannot be published"):
+        publish_scout_hf.stage(tmp_path / "weights.pt", tmp_path / "dataset", out,
+                              "org/model", "org/data", "agpl-3.0", False, eval_path,
+                              tmp_path / "manifest.jsonl")
+    assert previous.read_text() == "preserve this staging"
 
 
 def test_train_picks_cuda_then_mps_then_cpu(monkeypatch):
@@ -188,8 +216,8 @@ def test_train_picks_cuda_then_mps_then_cpu(monkeypatch):
 
 
 # --- evaluation evidence labels ------------------------------------------------------
-@pytest.mark.parametrize("smoke", [False, True])
-def test_eval_labels_persist_and_control_dashboard_evidence(tmp_path, monkeypatch, smoke):
+@pytest.fixture
+def eval_args(tmp_path, monkeypatch):
     ds = tmp_path / "scout"
     _img(ds / "images/test/room_knife.jpg", box=(20, 10, 44, 80))
     labels = ds / "labels/test/room_knife.txt"
@@ -202,9 +230,14 @@ def test_eval_labels_persist_and_control_dashboard_evidence(tmp_path, monkeypatc
         return dict.fromkeys(images, predictions)
 
     monkeypatch.setattr(eval_scout, "predict", predict)
+    monkeypatch.setattr(eval_scout, "ROOT", tmp_path)
+    return ["--after", "tuned.pt", "--before", "stock.pt", "--dataset", str(ds)]
+
+
+@pytest.mark.parametrize("smoke", [False, True])
+def test_eval_labels_persist_and_control_dashboard_evidence(tmp_path, eval_args, smoke):
     output = tmp_path / "runs/scout/eval.json"
-    args = ["--after", "tuned.pt", "--before", "stock.pt", "--dataset", str(ds), "--out", str(output)]
-    report = eval_scout.main([*args, "--smoke"] if smoke else args)
+    report = eval_scout.main([*eval_args, "--out", str(output), "--smoke" if smoke else "--measured"])
     saved = json.loads(output.read_text())
     assert saved == report
     assert saved["evidence_kind"] == "model_evaluation"
@@ -214,6 +247,25 @@ def test_eval_labels_persist_and_control_dashboard_evidence(tmp_path, monkeypatc
         assert result is None
     else:
         assert result["before_recall"] == 0 and result["after_recall"] == 1
+
+
+def test_eval_requires_explicit_mode_before_reading_data(tmp_path, monkeypatch):
+    monkeypatch.setattr(eval_scout, "ROOT", tmp_path)
+    with pytest.raises(SystemExit) as error:
+        eval_scout.main(["--after", "smoke-trained.pt"])
+    assert error.value.code == 2
+    assert not (tmp_path / "runs").exists()
+
+
+def test_smoke_default_preserves_measured_evidence(tmp_path, eval_args):
+    eval_scout.main([*eval_args, "--measured"])
+    measured = tmp_path / "runs/scout/eval.json"
+    saved = measured.read_bytes()
+    eval_scout.main([*eval_args, "--smoke"])
+    assert measured.read_bytes() == saved
+    smoke = json.loads((tmp_path / "runs/scout/eval_smoke.json").read_text())
+    assert smoke["execution_mode"] == "smoke"
+    assert read_numbers(tmp_path)["scout"]["file"] == "eval.json"
 
 
 # --- tiny CPU train + eval ------------------------------------------------------------

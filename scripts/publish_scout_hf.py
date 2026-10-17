@@ -94,13 +94,25 @@ Labels for COCO images are COCO's own boxes mapped onto the Scout classes (crowd
 
 def stage(weights: Path, dataset: Path, out: Path, model_repo: str, dataset_repo: str,
           license_id: str, include_rooms: bool, eval_json: Path | None, coco_manifest: Path) -> dict[str, Path]:
+    ev = None
+    if eval_json and eval_json.exists():
+        ev = json.loads(eval_json.read_text())
+        if (
+            not isinstance(ev, dict)
+            or ev.get("evidence_kind") != "model_evaluation"
+            or ev.get("execution_mode") != "measured"
+            or any(ev.get(flag) is True for flag in ("stub", "is_stub", "mock"))
+        ):
+            raise ValueError(
+                "Scout evaluation must be labelled model_evaluation and measured; "
+                "smoke/unlabelled scores cannot be published"
+            )
     if out.exists():
         shutil.rmtree(out)
     mdir, ddir = out / "model", out / "dataset"
     mdir.mkdir(parents=True)
     ddir.mkdir(parents=True)
 
-    ev = json.loads(eval_json.read_text()) if eval_json and eval_json.exists() else None
     shutil.copyfile(weights, mdir / "best.pt")
     if ev:
         shutil.copyfile(eval_json, mdir / "eval.json")

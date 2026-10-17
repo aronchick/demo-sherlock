@@ -22,9 +22,11 @@ def main():
     from sherlock.dashboard.server import make_app
     from sherlock.orchestrator import Sherlock
 
+    # Config loads .env; an unset or blank host must never expose camera feeds.
+    host = os.environ.get("DASHBOARD_HOST", "").strip() or "127.0.0.1"
     s = Sherlock(Config(), synthetic=a.synthetic)
     s.start()
-    uvicorn.run(make_app(s), host="0.0.0.0", port=a.port, log_level="warning")
+    uvicorn.run(make_app(s), host=host, port=a.port, log_level="warning")
 
 
 if __name__ == "__main__":

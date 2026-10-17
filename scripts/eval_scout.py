@@ -19,6 +19,7 @@ its default output is eval_baseline.json. --device mps selects local Apple GPU i
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 from collections import defaultdict
 from pathlib import Path
@@ -35,6 +36,21 @@ from scout_data import (
 
 ROOT = Path(__file__).resolve().parents[1]
 RUNTIME_CONF = 0.35  # YoloScout's default: the operating point that matters on stage
+
+
+def split_identity(dataset: Path, split: str, images: list[Path]) -> dict:
+    """Identify the exact ordered class map, images and labels used by both models."""
+    entries = []
+    for image in sorted(images):
+        label = dataset / "labels" / split / f"{image.stem}.txt"
+        entries.append({
+            "image": image.name,
+            "image_sha256": hashlib.sha256(image.read_bytes()).hexdigest(),
+            "label_sha256": hashlib.sha256(label.read_bytes() if label.exists() else b"").hexdigest(),
+        })
+    identity = {"classes": list(CLASSES), "split": split, "files": entries}
+    return {"classes": list(CLASSES), "image_count": len(images),
+            "dataset_fingerprint": hashlib.sha256(json.dumps(identity, sort_keys=True).encode()).hexdigest()}
 
 
 def source_of(image: Path) -> str:
@@ -146,6 +162,7 @@ def main(argv: list[str] | None = None) -> dict:
               "evaluation_scope": "baseline_only" if a.baseline_only else "before_after",
               "environment": a.environment, "device": a.device or "auto", "imgsz": a.imgsz,
               "split": a.split, "conf": a.conf, "iou": 0.5, "images": dict(sources),
+              **split_identity(a.dataset, a.split, images),
               "before": {"model": a.before, **before},
               "after": None if after is None else {"model": a.after, **after},
               "headline": "Scout baseline only; after not measured" if after is None else headline(before, after)}

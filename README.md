@@ -479,6 +479,45 @@ recall **18.27%** (19 TP, 2 FP, 85 FN; confidence 0.35, IoU 0.5). All selected
 images were evaluated as `val`; the report records their source URLs and hashes.
 The weapon mapping covers knives, scissors and baseball bats, not firearms.
 After remains unmeasured until the fine-tuned model is evaluated on the same data.
+Reports record the ordered class list, split, image count and a fingerprint of
+the exact images and labels. Match those plus confidence/IoU/image size before
+comparing separate runs. The current class list is person, weapon, badge, bottle,
+fedora and cap. Stock YOLOv8n has no badge, fedora or cap class: it scores zero
+recall on their annotated boxes. Zero-support rows in the COCO-only report
+are not measurements of those classes. This COCO subset is not the fine-tune's held-out room set. No reviewed room
+test data existed at measurement time. Once it is built, the paired evaluator
+will score stock and fine-tuned models on that same room test split.
+
+The [measured local MPS confidence sweep](results/scout_confidence_sweep_local_mps.json)
+uses the same 107 images, labels, weights, 640-pixel input and IoU 0.5. Its 0.35
+row exactly reproduces the baseline; the baseline scores were not overwritten.
+
+| Confidence | Weapon precision | Weapon recall | TP | FP | FN |
+|---|---:|---:|---:|---:|---:|
+| 0.05 | 27.78% | 33.65% | 35 | 91 | 69 |
+| 0.10 | 47.62% | 28.85% | 30 | 33 | 74 |
+| 0.15 | 52.94% | 25.96% | 27 | 24 | 77 |
+| 0.25 | 70.97% | 21.15% | 22 | 9 | 82 |
+| 0.35 | 90.48% | 18.27% | 19 | 2 | 85 |
+
+Recommend **0.10 for rehearsal**, subject to the owner's decision: it recovers
+11 more true boxes than 0.35. Going to 0.05 recovers only five more but adds 58
+false positives. Recall at 0.10 is still only 28.85%; this is not evidence that
+room detection is reliable. The 63 predicted weapon boxes at 0.10 are three
+times the 21 at 0.35, but temporal dwell and downstream Verifier traffic were
+not measured. Check those on the live scene before recording.
+
+The app still uses `YoloScout`'s **0.35** default; `Scout` passes only the model
+path, and `Config` has no confidence environment override. `DWELL_SECONDS`
+defaults to 0.6 and is a separate temporal gate. No app defaults changed.
+To repeat the measured sweep, choose a new output filename:
+
+```bash
+uv run --extra yolo scripts/sweep_scout.py --measured \
+  --baseline results/scout_eval_local_mps_baseline.json \
+  --dataset data/scout_baseline_eval --weights yolov8n.pt \
+  --device mps --out results/scout_confidence_sweep_repeat.json
+```
 
 `eval_scout.py` prints precision and recall per class, before (stock YOLOv8n, COCO names mapped) vs after,
 on the held-out test photos, at the 0.35 confidence the runtime Scout uses. Its last line is the number for

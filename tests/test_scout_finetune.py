@@ -310,6 +310,9 @@ def test_eval_labels_persist_and_control_dashboard_evidence(tmp_path, eval_args,
     saved = json.loads(output.read_text())
     assert saved == report
     assert saved["evidence_kind"] == "model_evaluation"
+    assert saved["classes"] == list(sd.CLASSES)
+    assert saved["image_count"] == 1
+    assert len(saved["dataset_fingerprint"]) == 64
     assert saved["execution_mode"] == ("smoke" if smoke else "measured")
     result = read_numbers(tmp_path)["scout"]
     if smoke:
@@ -380,3 +383,57 @@ def test_baseline_only_measured_has_no_after(tmp_path, eval_args):
     assert result["after_recall"] is None and result["device"] == "mps"
     with pytest.raises(ValueError, match="cannot be published"):
         publish_scout_hf.measured_headline(report)
+
+
+def test_eval_split_identity_tracks_labels_images_and_classes(tmp_path, eval_args, monkeypatch):
+    dataset = tmp_path / "scout"
+    images = sorted((dataset / "images/test").glob("*.jpg"))
+    original = eval_scout.split_identity(dataset, "test", images)
+    assert original == eval_scout.split_identity(dataset, "test", list(reversed(images)))
+    label = dataset / "labels/test/room_knife.txt"
+    label.write_text(label.read_text() + "2 0.5 0.5 0.2 0.2\n")
+    relabelled = eval_scout.split_identity(dataset, "test", images)
+    assert relabelled["dataset_fingerprint"] != original["dataset_fingerprint"]
+    images[0].write_bytes(images[0].read_bytes() + b"changed")
+    changed = eval_scout.split_identity(dataset, "test", images)
+    assert changed["dataset_fingerprint"] != relabelled["dataset_fingerprint"]
+    monkeypatch.setattr(eval_scout, "CLASSES", tuple(reversed(sd.CLASSES)))
+    assert eval_scout.split_identity(dataset, "test", images)["dataset_fingerprint"] != changed["dataset_fingerprint"]
+
+
+def test_sweep_preserves_baseline_and_rejects_changed_data(tmp_path, eval_args, monkeypatch):
+    import hashlib
+
+    import sweep_scout
+
+    dataset = tmp_path / "scout"
+    baseline = eval_scout.main([*eval_args[2:], "--baseline-only", "--smoke"])
+    weights = tmp_path / "stock.pt"
+    weights.write_bytes(b"test weights")
+    baseline["provenance"] = {"weights_sha256": hashlib.sha256(weights.read_bytes()).hexdigest()}
+    baseline_path = tmp_path / "baseline.json"
+    baseline_path.write_text(json.dumps(baseline))
+    original = baseline_path.read_bytes()
+    output = tmp_path / "curve.json"
+    calls = []
+
+    def predict(_model, images, conf, _imgsz, device):
+        calls.append((conf, device))
+        return {image: [] for image in images}
+
+    monkeypatch.setattr(sweep_scout, "predict", predict)
+    monkeypatch.setattr(sweep_scout.importlib.metadata, "version", lambda _: "test")
+    args = ["--baseline", str(baseline_path), "--dataset", str(dataset),
+            "--weights", str(weights), "--out", str(output), "--smoke", "--device", "cpu"]
+    report = sweep_scout.main(args)
+    assert calls == [(conf, "cpu") for conf in (0.05, 0.10, 0.15, 0.25, 0.35)]
+    assert report["execution_mode"] == "smoke" and report["evaluation_scope"] == "confidence_sweep"
+    assert baseline_path.read_bytes() == original
+    assert read_numbers(tmp_path)["scout"] is None
+    with pytest.raises(SystemExit):
+        sweep_scout.main(args)  # No overwrite of existing evidence.
+    output.unlink()
+    (dataset / "labels/test/room_knife.txt").write_text("")
+    with pytest.raises(SystemExit):
+        sweep_scout.main(args)  # Changed labels must fail before any new inference.
+    assert len(calls) == 5

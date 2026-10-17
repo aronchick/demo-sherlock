@@ -450,7 +450,11 @@ signal is lower TTFT; the size of any benefit remains unmeasured.
    ```
 
 The candidate JSON and Markdown include percent changes against baseline.
-Comparison rejects different workloads, settings, evidence types or models.
+Comparison rejects different workload hashes, settings, evidence types or models.
+The hash includes the runtime Verifier prompt: rerun both A/B arms after a
+prompt change. The numbers panel shows a cache delta only when the stored
+baseline and candidate hashes both match the run; older comparisons without
+these hashes show TBD for the delta.
 Use only Director rows to attribute improvement to this change; VLM rows
 are a control with unchanged server settings. Save the actual server flags,
 container image digest and model revisions alongside final submission

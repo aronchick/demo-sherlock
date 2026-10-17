@@ -85,6 +85,10 @@ def director_result(data):
     comparisons = comparison.get("results")
     if (
         data.get("prefix_caching") == "on"
+        and isinstance(data.get("workload_fingerprint"), str)
+        and bool(data["workload_fingerprint"])
+        and comparison.get("baseline_workload_fingerprint") == data["workload_fingerprint"]
+        and comparison.get("candidate_workload_fingerprint") == data["workload_fingerprint"]
         and isinstance(comparisons, list)
         and no_stub(comparison)
         and count(summary.get("failed")) == 0

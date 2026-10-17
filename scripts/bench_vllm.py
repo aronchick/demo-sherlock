@@ -227,7 +227,7 @@ def payload(workload: str, index: int, model: str, crop: str, max_calls: int) ->
     prompt = (
         Analyst.PROMPT.format(question="What is this object? Read any visible text.")
         if index % 2 == 0
-        else Verifier.PROMPT.format(claim="A white model spacecraft with dark windows.")
+        else Verifier.PROMPT.format(claim="a white model spacecraft with dark windows")
     )
     return {
         "model": model,
@@ -671,6 +671,8 @@ def compare_runs(baseline: dict, candidate: dict) -> dict:
         )
     return {
         "baseline_created_at": baseline["created_at"],
+        "baseline_workload_fingerprint": baseline["workload_fingerprint"],
+        "candidate_workload_fingerprint": candidate["workload_fingerprint"],
         "results": results,
         "caveat": "Server settings are operator-declared, not remotely verified. Repeat in reverse order.",
     }

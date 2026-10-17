@@ -32,12 +32,15 @@ def benchmark():
     return {
         "evidence_kind": "endpoint",
         "prefix_caching": "on",
+        "workload_fingerprint": "current-prompt",
         "runs": [
             row(1, 100, 200),
             row(16, 300, 400),
             {"workload": "vlm", "concurrency": 32},
         ],
         "comparison": {
+            "baseline_workload_fingerprint": "current-prompt",
+            "candidate_workload_fingerprint": "current-prompt",
             "results": [
                 {
                     "workload": "director",
@@ -331,3 +334,13 @@ def test_no_producer_objects_are_mutated():
     original = copy.deepcopy(data)
     numbers.director_result(data)
     assert data == original
+
+
+@pytest.mark.parametrize("field", ["baseline_workload_fingerprint", "candidate_workload_fingerprint"])
+@pytest.mark.parametrize("value", [None, "old-prompt", ""])
+def test_ab_delta_rejects_missing_or_different_workload_hash(field, value):
+    data = benchmark()
+    data["comparison"][field] = value
+    result = numbers.director_result(data)
+    assert result["prefix_cache_p95_change_pct"] is None
+    assert result["p95_ms"] == 400

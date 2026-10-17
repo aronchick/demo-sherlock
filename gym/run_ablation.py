@@ -321,6 +321,37 @@ async def run_single_ablation(
 
     enable_thinking = bool((model_block.get("chat_template_kwargs") or {}).get("enable_thinking", False))
 
+    if effective_use_stub:
+        model_server_meta: dict[str, Any] = {
+            "name": "local_stub",
+            "version": None,
+            "reachable": True,
+            "source": "stub",
+            "host": "laptop",
+            "label": "local_stub",
+        }
+        runtime_label = "local_stub"
+    else:
+        from sherlock.config import Endpoint
+        from sherlock.dashboard.model_servers import clear_cache, server
+
+        clear_cache()
+        model_server_meta = server(
+            "director",
+            Endpoint(
+                base_url=env_director_url,
+                model=str(model_block["model"]),
+                api_key=str(model_block.get("api_key") or "EMPTY"),
+            ),
+        )
+        detected_name = str(model_server_meta.get("name") or "").strip()
+        host_name = str(model_server_meta.get("host") or "laptop").strip()
+        if detected_name:
+            prefix = "local" if host_name == "laptop" else host_name
+            runtime_label = f"{prefix}_{detected_name.lower()}"
+        else:
+            runtime_label = f"{host_name}_endpoint"
+
     per_scene = [
         {
             "scene_id": r["scene_id"],
@@ -347,6 +378,8 @@ async def run_single_ablation(
         "ablation_description": agent_config.ablation_description,
         "endpoint_env_var": endpoint_env_var,
         "execution_mode": "local_stub" if effective_use_stub else "live_endpoint",
+        "runtime": runtime_label,
+        "model_server": model_server_meta,
         "director_base_url": "local_stub" if effective_use_stub else env_director_url,
         "agent_components": {
             "director_model": model_block["model"],
@@ -360,6 +393,7 @@ async def run_single_ablation(
             "tool_descriptions": agent_config.tool_descriptions,
             "max_steps": agent_config.max_steps,
             "endpoint_env_var": endpoint_env_var,
+            "model_server": model_server_meta.get("label"),
         },
         "summary_metrics": {
             "num_tasks": len(verify_results),
@@ -420,6 +454,8 @@ def _summary_row(r: dict[str, Any]) -> dict[str, Any]:
         "config_path": r["config_path"],
         "ablation_component": r["ablation_component"],
         "endpoint_env_var": r.get("endpoint_env_var", "DIRECTOR_BASE_URL"),
+        "runtime": r.get("runtime"),
+        "model_server": r.get("model_server"),
         "agent_components": r["agent_components"],
         "summary_metrics": r["summary_metrics"],
     }
@@ -461,8 +497,10 @@ def _write_summary_file(
     summary_path.write_text(
         json.dumps(
             {
-                "framework": "NeMo Gym v0.7.0 (native resources_server + responses_api_agent + vllm_model)",
+                "framework": "NeMo Gym v0.7.0 (native resources_server + responses_api_agent)",
                 "execution_mode": mode,
+                "runtime": results[0].get("runtime"),
+                "model_server": results[0].get("model_server"),
                 "num_configs": len(merged_results),
                 "num_skipped": len(skipped),
                 "skipped_configs": skipped,

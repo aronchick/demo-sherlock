@@ -15,7 +15,7 @@
 .model-preview img { width: 100%; height: 100%; min-height: 0; object-fit: contain; }
 .model-preview [hidden], .model-heading [hidden] { display: none; }
 .model-preview .empty { color: var(--dim); text-align: center; padding: 8px; font: 400 11px/1.25 var(--mono); }
-.model-preview figcaption { font: 400 10px/1.25 var(--mono); color: var(--dim); margin-top: 4px; }
+.model-preview figcaption { font: 400 11px/1.25 var(--mono); color: var(--dim); margin-top: 4px; }
 .stage[data-evaluating="true"] .model-preview-image { border: 2px solid var(--c); }
 .stage[data-evaluating="true"] .model-preview figcaption { color: var(--c); }
 .models .ms { right: auto; left: 16px; bottom: 6px; }
@@ -47,5 +47,5 @@
   .bar { align-items: flex-start; }
   .bar h1 { white-space: normal; font-size: 18px; }
   .ratio b { font-size: 26px; }
-  .ratio span { font-size: 9px; }
+  .ratio span { font-size: 11px; }
 }

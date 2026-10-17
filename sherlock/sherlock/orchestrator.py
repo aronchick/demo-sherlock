@@ -60,7 +60,8 @@ class Sherlock:
         backend = "scene" if self.scenes else ("mock" if cfg.mock else cfg.scout_backend)
         # Scout latency is measured only when a real detector runs in the live runtime.
         self.scout = Scout(backend, cfg.yolo_model, cfg.dwell_seconds, truth=self._scene_truth,
-                           measure=not cfg.mock and backend != "scene", handled_via=self._handled_via)
+                           measure=not cfg.mock and backend != "scene", handled_via=self._handled_via,
+                           conf=cfg.scout_conf)
         self.evidence_dir = pathlib.Path(evidence_dir or os.environ.get("EVIDENCE_DIR", "snapshots"))
         self.incidents = IncidentStore(self.evidence_dir)
         self.edge = EdgeSink.from_env(self.evidence_dir)  # None unless SHERLOCK_EDGE=1

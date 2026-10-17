@@ -167,7 +167,7 @@ def scout_backend(tmp_path, *, mock: bool, synthetic: bool, backend: str = "yolo
 
 def test_mode_names_the_scout_detector_that_runs(tmp_path, monkeypatch):
     class FakeYolo:  # ultralytics is not installed for mock runs or the test gate
-        def __init__(self, model_path):
+        def __init__(self, model_path, *, conf=0.35):
             pass
 
     monkeypatch.setattr(scout_module, "YoloScout", FakeYolo)

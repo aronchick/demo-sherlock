@@ -114,8 +114,69 @@ esac
     import os
     result = subprocess.run(['bash', str(ROOT / 'brev/setup.sh')],
                             env={**os.environ, 'PATH': f'{fake}:{os.environ["PATH"]}', 'CALLS': str(calls)},
-                            capture_output=True, text=True)
+                            capture_output=True, text=True, check=False)
     assert result.returncode == 1
     assert 'unrecognized director' in result.stderr
     assert 'stop' not in calls.read_text()
     assert 'rm' not in calls.read_text().split()
+
+
+def test_ssh_disables_inherited_background_multiplexing():
+    args = workflow.ssh('sherlock-h100', '-N')
+    assert 'ControlMaster=no' in args
+    assert 'ControlPath=none' in args
+    assert 'ForkAfterAuthentication=no' in args
+    assert args[-1] == 'sherlock-h100'
+
+
+def test_live_checks_explicit_dashboard_port(monkeypatch):
+    ports, commands = [], []
+    monkeypatch.setattr(workflow, 'connection', lambda: {'name': 'new'})
+    monkeypatch.setattr(workflow, 'require_free_ports', lambda values: ports.extend(values))
+    monkeypatch.setattr(workflow, 'smoke', lambda *_: None)
+    monkeypatch.setattr(workflow, 'run', lambda args, **kw: commands.append(args))
+    workflow.live(['--port', '8099'])
+    assert ports == [8099]
+    assert commands[0][-2:] == ['--port', '8099']
+
+
+def test_failed_tunnel_smoke_preserves_previous_receipt_and_stops_own_process(tmp_path, monkeypatch):
+    monkeypatch.setattr(workflow, 'RUNTIME', tmp_path)
+    receipt = tmp_path / 'connection.json'
+    previous = {'name': 'old', 'pid': 99}
+    receipt.write_text(json.dumps(previous))
+    monkeypatch.setattr(workflow, 'find_instance', lambda _: {'status': 'RUNNING', 'id': 'new-id'})
+    monkeypatch.setattr(workflow, 'require_free_ports', lambda _: None)
+    monkeypatch.setattr(workflow, 'run', lambda *a, **kw: None)
+    monkeypatch.setattr(workflow.time, 'sleep', lambda _: None)
+
+    class Tunnel:
+        pid = 100
+        stopped = False
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_):
+            return False
+
+        def poll(self):
+            return 0 if self.stopped else None
+
+        def terminate(self):
+            self.stopped = True
+
+        def wait(self, **_):
+            return 0
+
+    tunnel = Tunnel()
+    monkeypatch.setattr(workflow.subprocess, 'Popen', lambda *_: tunnel)
+
+    def fail(_):
+        raise ValueError('wrong model')
+
+    monkeypatch.setattr(workflow, 'smoke', fail)
+    with pytest.raises(ValueError, match='wrong model'):
+        workflow.connect('new')
+    assert tunnel.stopped
+    assert json.loads(receipt.read_text()) == previous

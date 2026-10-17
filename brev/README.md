@@ -1,5 +1,8 @@
 # Brev H100 preflight and evidence run
 
+For the Mac-driven setup, tunnel and camera workflow, use [CLI.md](CLI.md):
+`just brev-up`, `just brev-connect`, then `just brev-live`.
+
 Run this from the repository root on an existing Brev H100. The machine needs
 Docker with GPU access, uv, and access to the model repositories. This workflow
 does not create or provision a machine. The benchmark script and its JPEG fixture

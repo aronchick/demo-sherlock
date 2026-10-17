@@ -79,7 +79,8 @@ docker run -d --name director --gpus all --ipc=host -p "${MODEL_BIND_HOST}:8001:
   "${PREFIX_CACHE_FLAGS[@]}" \
   --enable-auto-tool-choice --tool-call-parser "$TOOL_PARSER" "${REASONING_FLAGS[@]}"
 
-echo "director ($DIRECTOR_PRESET): http://<brev-host>:8001/v1   vlm: http://<brev-host>:8002/v1"
+echo "director ($DIRECTOR_PRESET): ${MODEL_BIND_HOST}:8001   vlm: ${MODEL_BIND_HOST}:8002"
+echo "From the Mac: just brev-connect <instance>, then just brev-live"
 if [[ "$DIRECTOR_PRESET" == "qwen" ]]; then
   echo "For NeMo Gym Qwen ablation: set QWEN_DIRECTOR_BASE_URL=http://<brev-host>:8001/v1"
 else

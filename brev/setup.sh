@@ -40,6 +40,7 @@ for name in director vlm; do
   [[ "$image" == vllm/vllm-openai:* ]] || {
     echo "Refusing to replace $name from image $image" >&2; exit 1;
   }
+  if [[ "$args" == *--speculative* ]]; then reuse=0; fi
   running=$(docker inspect --format '{{.State.Running}}' "$name")
   if [[ "$model" != "$expected" || "$image" != "$IMG" || "$running" != true ]]; then
     reuse=0
@@ -49,11 +50,10 @@ done
 if [[ "$reuse" == 1 ]]; then
   echo 'Exact FP8 and VLM containers already running; checking readiness without restart.'
 else
-  # Download before disrupting working services. Record arguments, not credentials.
+  # Download before disrupting working services. Keep the shared model cache.
   docker pull "$IMG"
   for name in director vlm; do
     if docker container inspect "$name" >/dev/null 2>&1; then
-      docker inspect --format '{{json .Config.Cmd}}' "$name" > ".runtime/previous-$name-args.json"
       docker container stop --timeout 30 "$name"
       docker container rm "$name"
     fi

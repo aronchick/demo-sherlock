@@ -41,7 +41,8 @@ def find_instance(name):
 
 
 def ssh(name, *args):
-    return ['ssh', '-o', 'BatchMode=yes', '-o', 'ConnectTimeout=20',
+    return ['ssh', '-T', '-o', 'ControlMaster=no', '-o', 'ControlPath=none',
+            '-o', 'ForkAfterAuthentication=no', '-o', 'BatchMode=yes', '-o', 'ConnectTimeout=20',
             '-o', 'ServerAliveInterval=15', '-o', 'ServerAliveCountMax=3', *args, name]
 
 
@@ -57,7 +58,7 @@ def model_env(name):
 
 def smoke(name):
     run(['uv', 'run', 'scripts/brev_preflight.py', '--mode', 'smoke',
-         '--ready-timeout', '1800', '--instance', name,
+         '--ready-timeout', '1800', '--instance', name, '--no-instructions',
          '--output-dir', str(RUNTIME / 'checks')],
         cwd=ROOT, env={**os.environ, **model_env(name)})
 
@@ -71,6 +72,18 @@ def require_free_ports(ports):
                 raise ValueError(f'Local port {port} is occupied; no process was stopped') from exc
 
 
+def wait_for_ssh(name, timeout=600):
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        result = subprocess.run([*ssh(name), 'true'], check=False,
+                                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        if result.returncode == 0:
+            return
+        print(f'Waiting for SSH on {name}...', flush=True)
+        time.sleep(5)
+    raise ValueError('Brev did not become SSH-ready within ten minutes')
+
+
 def up(name):
     item = find_instance(name)
     if 'H100' not in item.get('gpu', '').upper():
@@ -82,6 +95,7 @@ def up(name):
     elif item['status'] != 'RUNNING':
         raise ValueError(f"Instance is {item['status']}; wait for Brev to finish")
     run(['brev', 'refresh'])
+    wait_for_ssh(name)
     # Only committed, selected source files travel. No .env, keys, camera files or results.
     revision = run(['git', 'rev-parse', 'HEAD'], cwd=ROOT,
                    capture_output=True, text=True).stdout.strip()
@@ -159,7 +173,10 @@ def connection():
 
 def live(args):
     state = connection()
-    require_free_ports([int(os.environ.get('DASHBOARD_PORT', '8000'))])
+    options = argparse.ArgumentParser(add_help=False)
+    options.add_argument('--port', type=int, default=int(os.environ.get('DASHBOARD_PORT', '8000')))
+    parsed, _ = options.parse_known_args(args)
+    require_free_ports([parsed.port])
     smoke(state['name'])
     env = {**os.environ, **model_env(state['name'])}
     if '--mock' in args:
@@ -175,6 +192,8 @@ def retire(old, replacement):
     if state['id'] != current['id'] or state['name'] != replacement:
         raise ValueError('Connect and verify the replacement before retiring the old machine')
     smoke(replacement)
+    if connection() != state or find_instance(replacement)['status'] != 'RUNNING':
+        raise ValueError('Replacement connection changed during verification')
     run(['brev', 'stop', old])
     observed = find_instance(old)
     print(f"{old}: {observed['status']}. No instance was deleted.")

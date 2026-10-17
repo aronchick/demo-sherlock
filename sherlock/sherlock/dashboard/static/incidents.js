@@ -1,9 +1,9 @@
 // @ts-check
 'use strict';
 
-/** @typedef {{name:string, sha256:string, url:string, integrity:string, camera?:string,captured_at?:number|null,source_artifact?:string|null,relationship?:string,bbox?:number[]|null}} Artifact */
+/** @typedef {{name:string, sha256:string, url:string, integrity:string, camera?:string,captured_at?:number|null,source_artifact?:string|null,relationship?:string,sources?:string[],missing_sources?:string[],bbox?:number[]|null}} Artifact */
 /** @typedef {{stage:string, t:number, detail:string}} CustodyEvent */
-/** @typedef {{incident:string, action:string, claim:string, t:number, verified?:boolean, comparison?:{status:string,reason:string,claim:string,analyst_supports:boolean,verifier_supports:boolean}, evidence_camera?:string, trigger?:{camera:string}, artifacts:Artifact[], custody:CustodyEvent[], models?:{mock?:boolean,scout?:string,director?:string,analyst?:string,verifier?:string}, notification:{simulated:boolean,status:string,delivered_at?:number,acknowledged_at?:number}}} Incident */
+/** @typedef {{incident:string, action:string, state?:string, claim:string, t:number, verified?:boolean, comparison?:{status:string,reason:string,claim:string,analyst_supports:boolean|null,verifier_supports:boolean|null}, evidence_camera?:string, trigger?:{camera:string}, artifacts:Artifact[], custody:CustodyEvent[], models?:{mock?:boolean,scout?:string,director?:string,analyst?:string,verifier?:string}, notification:{simulated:boolean,status:string,delivered_at?:number,acknowledged_at?:number}}} Incident */
 
 (() => {
   const phone = document.getElementById('phone-content');
@@ -178,12 +178,12 @@
     if (!custody) return;
     custody.replaceChildren();
     const summary = element('div', '', 'incident-summary');
-    summary.append(fact('Incident', record.incident), fact('Trigger camera', record.trigger?.camera || 'Not recorded'), fact('Evidence camera', record.evidence_camera || 'Not recorded'), fact('Analysis', record.models?.mock ? 'Mock run' : 'Live run'), fact('Decision', record.action), fact('Recorded', timestamp(record.t)));
+    summary.append(fact('Incident', record.incident), fact('Trigger camera', record.trigger?.camera || 'Not recorded'), fact('Evidence camera', record.evidence_camera || 'Not recorded'), fact('Analysis', record.models?.mock ? 'Mock run' : 'Live run'), fact('Decision', record.state === 'investigating' ? 'Investigating' : record.action), fact('Recorded', timestamp(record.t)));
     custody.append(summary, element('h2', record.claim || 'Incident evidence'));
 
     if (record.comparison) {
       const comparison = element('section', '', 'comparison-record');
-      comparison.append(element('h3', `Comparison: ${record.comparison.status}`), element('p', record.comparison.reason), element('p', `Analyst supports claim: ${record.comparison.analyst_supports ? 'yes' : 'no'} · Verifier supports claim: ${record.comparison.verifier_supports ? 'yes' : 'no'}`));
+      comparison.append(element('h3', `Comparison: ${record.comparison.status}`), element('p', record.comparison.reason), element('p', `Analyst supports claim: ${verdictLabel(record.comparison.analyst_supports)} · Verifier supports claim: ${verdictLabel(record.comparison.verifier_supports)}`));
       custody.append(comparison);
     }
 
@@ -205,6 +205,12 @@
       } else figure.append(img);
       figure.append(element('figcaption', `${artifact.name.replaceAll('_', ' ')} · ${artifact.camera || record.evidence_camera || 'camera not recorded'}`));
       figure.append(element('p', `Captured ${timestamp(artifact.captured_at)}`));
+
+      if (artifact.relationship === 'composite') {
+        figure.append(element('p', `Model input combines: ${(artifact.sources || []).join(', ')}`));
+
+        if (artifact.missing_sources?.length) figure.append(element('p', `Unavailable: ${artifact.missing_sources.join(', ')}`));
+      }
 
       if (artifact.source_artifact) {
         const association = element('p', `${artifact.relationship === 'subsequent_capture' ? 'Later camera capture, associated with' : 'Source image:'} `);
@@ -256,6 +262,11 @@
     custody.append(downloadParagraph);
   }
 
+  /** @param {boolean|null} verdict */
+  function verdictLabel(verdict) {
+    return verdict == null ? 'uncertain' : verdict ? 'yes' : 'no';
+  }
+
   async function loadCustody() {
     if (!custody) return;
 
@@ -281,7 +292,7 @@
           }
 
           const copy = element('div');
-          copy.append(element('h2', record.claim || record.action), element('p', `${record.incident} · ${record.trigger?.camera || 'Camera not recorded'} · ${timestamp(record.t)}`), element('p', `${record.action} · ${record.artifacts.length} saved images · View chain of custody`));
+          copy.append(element('h2', record.claim || record.action), element('p', `${record.incident} · ${record.trigger?.camera || 'Camera not recorded'} · ${timestamp(record.t)}`), element('p', `${record.state === 'investigating' ? 'Investigating' : record.action} · ${record.artifacts.length} saved images · View chain of custody`));
           link.append(copy);
           list.append(link);
         }

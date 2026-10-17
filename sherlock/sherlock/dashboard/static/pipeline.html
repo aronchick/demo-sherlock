@@ -227,7 +227,7 @@
         <div class="model-body">
           <div class="model-copy"><div class="kind">Read</div><div class="name">Analyst</div><div class="sub" id="analystSub">scene + object + person</div></div>
           <figure class="model-preview">
-            <div class="model-preview-image"><span class="empty" id="analystEmpty">No crop yet</span><img id="analystPreview" alt="Scene, object and face context sent to the Analyst" hidden></div>
+            <div class="model-preview-image"><span class="empty" id="analystEmpty">No context yet</span><img id="analystPreview" alt="Scene, object and face context sent to the Analyst" hidden></div>
             <figcaption id="analystPreviewState"></figcaption>
           </figure>
         </div>
@@ -239,7 +239,7 @@
         <div class="model-body">
           <div class="model-copy"><div class="kind">Check</div><div class="name">Verifier</div><div class="sub" id="verifierSub">parallel context check</div></div>
           <figure class="model-preview">
-            <div class="model-preview-image"><span class="empty" id="verifierEmpty">No crop yet</span><img id="verifierPreview" alt="Scene, object and face context sent to the Verifier" hidden></div>
+            <div class="model-preview-image"><span class="empty" id="verifierEmpty">No context yet</span><img id="verifierPreview" alt="Scene, object and face context sent to the Verifier" hidden></div>
             <figcaption id="verifierPreviewState"></figcaption>
           </figure>
         </div>
@@ -315,7 +315,7 @@
 // out from the stream. Stages and outcomes are DOM; the canvas only draws the
 // rails, the packets riding them, and the feed overlays. Pixels for the moving
 // cards come from the MJPEG <img> elements via drawImage, so what travels is
-// the real crop. The face crop is stored evidence: never analyzed, never labelled.
+// the captured input. Both checks receive the same scene/object/person context.
 // ---------------------------------------------------------------------------
 const CFG = __CFG_JSON__;
 
@@ -352,7 +352,7 @@ function expansoFooter(s) {
     ? 'Expanso Cloud deploys and monitors the pipelines'
     : 'local mode, not deployed from Expanso Cloud';
   const text = live
-    ? `connected · Expanso Edge carries events and alerts off the laptop; ${where} · face crops never leave`
+    ? `enabled · Expanso Edge accepts incident packages; ${where} · cloud receipt unconfirmed`
     : 'not connected in this run · start the Edge pipelines and set SHERLOCK_EDGE=1 to carry events and alerts';
   $('expanso').classList.toggle('live', live);
   $('expansoText').textContent = text;
@@ -442,9 +442,9 @@ function layout() {
   E.uplink = mk([P(s.r, s.cy), P(g3, s.cy), P(g3, d.cy), P(d.l, d.cy)], { label: 'ticket', color: C.scout });
   E.lookat = mk([P(d.cx, d.t), P(d.cx, railY), P(w.cx, railY), P(w.cx, w.t)], { label: 'look_at: pan, tilt, zoom', dash: true, color: C.director });
   E.crop = mk([P(c.r, c.cy - 7), P(g1 - 6, c.cy - 7), P(g1 - 6, lane), P(g3 - 7, lane), P(g3 - 7, an.cy), P(an.l, an.cy)],
-    { label: 'zoomed crop', color: C.analyst, lseg: 2 });
+    { label: 'scene + detail', color: C.analyst, lseg: 2 });
   E.seal = mk([P(c.r, c.cy + 7), P(g1 + 6, c.cy + 7), P(g1 + 6, bk.cy), P(bk.l, bk.cy)], { label: 'sealed', color: C.benign, lseg: 1 });
-  E.judge = mk([P(c.r, c.cy), P(g1, c.cy), P(g1, lane + 14), P(g3, lane + 14), P(g3, v.cy), P(v.l, v.cy)], { label: 'same crop', color: C.verifier, lseg: 2 });
+  E.judge = mk([P(c.r, c.cy), P(g1, c.cy), P(g1, lane + 14), P(g3, lane + 14), P(g3, v.cy), P(v.l, v.cy)], { label: 'same context', color: C.verifier, lseg: 2 });
   E.assessA = mk([P(an.r, an.cy), P(g5 - 7, an.cy), P(g5 - 7, R.comparison.cy - 8), P(R.comparison.l, R.comparison.cy - 8)], {color: C.analyst});
   E.assessV = mk([P(v.r, v.cy), P(g5 + 7, v.cy), P(g5 + 7, R.comparison.cy + 8), P(R.comparison.l, R.comparison.cy + 8)], {color: C.verifier});
   E.store = mk([P(c.r, c.cy + 7), P(g1 + 6, c.cy + 7), P(g1 + 6, bk.cy), P(bk.l, bk.cy)], { label: 'evidence', color: C.benign, lseg: 1 });

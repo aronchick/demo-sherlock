@@ -214,8 +214,8 @@ response. (An Expanso `catch` clears the error flag, so the jobs log
 failures with a `switch` on `errored()` instead; a test guards this.)
 
 **Decisions taken:** the core runs on the Brev box next to vLLM, so
-stopping Brev stops it; the face crop never leaves the laptop; E3 is off by
-default because room photos show real people.
+stopping Brev stops it. Enabled incident transport includes captured scene and
+face context. E3 remains off by default and accepts only object/weapon crops.
 
 **Dashboard.** The footer on `/` and `/topology` polls `/expanso`. It says
 "connected" only while the Edge pipelines accepted this run's events in the
@@ -507,8 +507,8 @@ stay out of the upload unless `--include-room-photos`, and that needs everyone p
 ## vLLM
 
 vLLM is the serving layer for Sherlock's investigation loop. The Director
-chooses camera tools; the Analyst reads a zoomed crop; the Verifier checks
-the resulting claim against that crop. Scout gates these calls locally.
+chooses camera tools; Analyst and Verifier independently assess a shared
+scene/object/person contact sheet. Scout gates these calls locally.
 The planned Brev setup runs two vLLM **0.28.0** containers on one H100:
 
 | Role | Model | Served name | Port |
@@ -693,7 +693,7 @@ tool schemas; no padding is added to inflate a caching benefit.
 VLM traffic alternates the imported Analyst and Verifier prompts using a
 [real JPEG object crop](tests/fixtures/vllm/README.md) of a model spacecraft,
 with no face in the image. Director face-tool results are text metadata;
-face crops are never sent to the VLM. Supply a representative object
+this benchmark does not send face crops to the VLM. Supply a representative object
 crop with `--image path/to/crop.jpg` for the final run. This fixed-image
 test includes repeated image/prompt cache reuse; it does not represent a
 stream of unique scenes. Workloads run sequentially, so results describe

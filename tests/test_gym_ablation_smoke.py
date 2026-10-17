@@ -260,7 +260,7 @@ def test_ollama_reasoning_effort_and_director_model_env_override(
     )
 
 
-def test_ablation_artifacts_record_ollama_runtime_and_feed_numbers() -> None:
+def test_ablation_artifacts_record_ollama_runtime_and_feed_numbers(tmp_path: Path) -> None:
     """Verify measured local Ollama ablation files record Ollama runtime (never vLLM) and feed /numbers."""
     from sherlock.dashboard.numbers import read_numbers
 
@@ -284,7 +284,13 @@ def test_ablation_artifacts_record_ollama_runtime_and_feed_numbers() -> None:
         assert payload["model_server"]["name"] == "Ollama"
         assert payload["model_server"]["host"] == "laptop"
 
-    nums = read_numbers(repo_root)
+    # Git checkout mtimes are not experiment chronology. Select the artifact
+    # whose metrics this assertion verifies in an isolated results directory.
+    isolated_results = tmp_path / "results"
+    isolated_results.mkdir()
+    selected = "ablation_nemotron_lightning.json"
+    (isolated_results / selected).write_bytes((results_dir / selected).read_bytes())
+    nums = read_numbers(tmp_path)
     assert nums["ablation"] is not None
     assert nums["ablation"]["config"] == "nemotron_lightning"
     summary = json.loads((results_dir / "ablation_summary.json").read_text())

@@ -540,6 +540,7 @@ def test_mac_commands_are_copyable_and_secret_free(capsys):
     assert "stub-secret" not in output
     assert "\n+" not in output
     assert "VERIFIER_BASE_URL=http://127.0.0.1:8002/v1" in output
+    assert "\nVERIFIER_MARGIN=-1.0\n" in output
     assert "brev port-forward sherlock-gpu --port 8001:8001" in output
     assert "brev port-forward sherlock-gpu --port 8002:8002" in output
     assert "-L 127.0.0.1:8002:127.0.0.1:8002 sherlock-gpu" in output

@@ -365,8 +365,10 @@ downloads it and the 500M weights (about 1 GB). On any other machine `local-up` 
 
 `local-live` exports `DIRECTOR_BASE_URL`, `ANALYST_BASE_URL`, `VERIFIER_BASE_URL`, the three `*_MODEL` names and
 `VERIFIER_MARGIN=-1.0`, which win over a `.env` that points at Brev; `eval "$(scripts/local.sh env)"` prints the same
-exports for running `run.py` yourself. -1.0 is the 500M's measured operating point on tight crops: 62 of 70 weapons
-confirmed against 57 at the code default of 0.0, and still 0 of 20 knife claims accepted on cups and bottles. Set
+exports for running `run.py` yourself. -1.0 is the demo's Verifier operating point for the 500M on tight crops (the
+code default stays 0.0): 62 of 70 weapons confirmed instead of 57, and still 0 of 20 knife claims accepted on cups and
+bottles, the closest at -2.6, 1.6 log-odds below the bar. The cost is more wrong-weapon claims accepted on a real
+weapon, 8 to 12 of 70. Twenty benign crops is a small sample: retune on the room's own props before the demo. Set
 `VERIFIER_MARGIN` in the shell to override it. If a port is taken (an SSH tunnel to Brev on 8002, say), `local-up`
 refuses; close the tunnel or set `LOCAL_DIRECTOR_PORT` / `LOCAL_VLM_PORT`. PIDs and logs are in `.runtime/local/`.
 Measured on an M5 Max with 64 GB and both models cached: `local-up` in 66 s, then a synthetic knife alert verified
@@ -544,7 +546,11 @@ How `Verifier.check` decides:
   exceeds `VERIFIER_MARGIN`, default **0.0** (whichever answer is likelier).
   Fitted on the bake-off: **-2.75** for SmolVLM-500M and **-1.88** for
   SmolVLM-Instruct, because the models lean "no" under this question.
-  Retune on room photos before using them.
+  Retune on room photos before using them. The demo runs **-1.0** on the
+  500M (`just local-live` and the `.env` lines `scripts/brev_preflight.py`
+  prints both set it): on tight crops it confirms 62 of 70 weapons against
+  57 at 0.0 and accepts no knife claim on 20 cups and bottles, where -2.75
+  accepts 1 of 20 and 26 of 70 wrong-weapon claims (12 at -1.0).
 - **Without logprobs** (the field refused with HTTP 400/422/501, which is
   remembered for the run, or ignored, as by some Ollama and MLX servers), it
   reads the reply's first word. A reply that opens with neither yes nor no

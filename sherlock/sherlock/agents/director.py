@@ -106,8 +106,7 @@ class RuleDirector:
         for cam in cams:
             if self._failed(cam, self.tools.call("look_at", {"camera": cam, "bbox": list(detection.bbox)})):
                 continue
-            r = self.tools.call("snapshot", {"camera": cam, "subject": subject,
-                                             "question": "What is this object? Read any text."})
+            r = self.tools.call("snapshot", {"camera": cam, "subject": subject, "question": "What is this object?"})
             if self._failed(cam, r):
                 continue
             claim = r["description"].split(".")[0]

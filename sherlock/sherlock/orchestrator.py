@@ -87,14 +87,20 @@ class Sherlock:
             self._thread.join(timeout=10)
 
     def _loop(self) -> None:
+        down: set[str] = set()  # loud once per outage, not every frame: keeps the tool chain readable
         while self.running:
             for name, cam in self.cameras.items():
                 try:
                     frame = cam.wide_frame()
                 except CameraError as e:
-                    BUS.emit("system", str(e))
+                    if name not in down:
+                        down.add(name)
+                        BUS.emit("system", str(e))
                     time.sleep(0.5)
                     continue
+                if name in down:
+                    down.discard(name)
+                    BUS.emit("system", f"{name}: back online")
                 self.latest_wide[name] = frame
                 for det in self.scout.step(frame, name):
                     self._investigate(det)
@@ -132,7 +138,10 @@ class Sherlock:
                 report["verified"] = bool(self.tools.verdict["supported"])
                 report["verifier_reason"] = self.tools.verdict["reason"]
             report["incident"] = iid
+            report["t"] = time.time()
             report["evidence"] = self._save_evidence(iid, ev)
+            if report["evidence"]:
+                report["evidence_camera"] = self.tools.evidence_camera[report["evidence"][0]]
             report["vlm_calls"] = BUS.stats["vlm_calls"] - vlm_before
             report["total_ms"] = (time.perf_counter() - t0) * 1000
             report["trigger"] = {"camera": det.camera, "label": det.label, "bbox": det.bbox,
@@ -185,7 +194,11 @@ class Sherlock:
             img = self.tools.last_crop  # live: follows the chain from weapon crop to face crop
         else:
             name, img = next(iter(self.latest_wide.items()), ("", None))
-            if img is not None:
+            if img is not None and self.cameras[name].covered:
+                img = (img * 0.15).astype(np.uint8)  # last frame is stale: say so instead of freezing
+                cv2.putText(img, f"{name.upper()}: LENS COVERED", (40, img.shape[0] // 2), cv2.FONT_HERSHEY_SIMPLEX,
+                            1.4, (90, 190, 235), 3, cv2.LINE_AA)
+            elif img is not None:
                 img = self._annotate(name, img)
         if img is None:
             return None

@@ -67,6 +67,12 @@ TOOL_SCHEMAS = [
 ]
 
 
+def _short(v, limit: int = 40) -> str:
+    """Keep each tool call on one log line; the full args are in the event data."""
+    r = repr(v)
+    return r if len(r) <= limit else r[:limit - 2] + "…" + r[-1]
+
+
 class ToolBox:
     def __init__(self, cameras: dict[str, Camera], analyst, snapshot_dir: str = "snapshots", verifier=None):
         self.cameras = cameras
@@ -94,6 +100,7 @@ class ToolBox:
         re-verify) the previous incident's crop."""
         self.incident = {"id": incident_id, "threat": getattr(detection, "threat", "unknown")}
         self.evidence: dict[str, np.ndarray] = {}
+        self.evidence_camera: dict[str, str] = {}  # which camera captured each crop (differs after recovery)
         self.verdict: dict | None = None
         self.steps = 0
 
@@ -124,7 +131,7 @@ class ToolBox:
             BUS.bump("tool_errors")
             BUS.emit("tool", f"{name} error: {e}", data=args, **tag)
             return {"error": str(e)}
-        shown = ", ".join(f"{k}={v!r}" for k, v in args.items())
+        shown = ", ".join(f"{k}={_short(v)}" for k, v in args.items())
         BUS.emit("tool", f"{name}({shown})", (time.perf_counter() - t0) * 1000, result=out, **tag)
         return out
 
@@ -151,6 +158,7 @@ class ToolBox:
         self.last_crop = img
         eid = f"{subject}_crop"
         self.evidence[eid] = img
+        self.evidence_camera[eid] = camera
         if subject == "face":
             # Evidence only. No model ever sees this crop: no recognition, no description.
             return {"evidence_id": eid, "stored": True, "analyzed": False}

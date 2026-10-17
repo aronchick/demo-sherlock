@@ -55,7 +55,7 @@ class Bus:
 
     def emit(self, stage: str, msg: str, latency_ms: float | None = None, **data) -> None:
         ev = Event(stage, msg, latency_ms, data)
-        print(f"[{stage:9}] {msg}" + (f"  ({latency_ms:.0f} ms)" if latency_ms else ""))
+        print(f"[{stage:9}] {msg}" + (f"  ({latency_ms:.0f} ms)" if latency_ms else ""), flush=True)  # live in redirected logs
         with self._lock:
             for q in self._subs:
                 try:

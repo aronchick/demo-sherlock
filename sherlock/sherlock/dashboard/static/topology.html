@@ -113,6 +113,11 @@ const CFG = __CFG_JSON__;
 const $ = id => document.getElementById(id);
 const M = CFG.models || {}, short = m => (m || '').split('/').pop();
 $('camNames').textContent = (CFG.cameras || []).map(c => `${c.name} (${c.backend})`).join(' · ') || 'none configured';
+fetch('/cameras').then(r => r.json()).then(({ unavailable = [] }) => {  // configured but did not open
+  const out = new Set(unavailable.map(c => c.name));
+
+  if (out.size) $('camNames').textContent = (CFG.cameras || []).map(c => `${c.name} (${out.has(c.name) ? 'unavailable' : c.backend})`).join(' · ');
+}).catch(() => {});
 $('m-scout').textContent = (M.scout || {}).model || '';
 $('m-director').textContent = (M.director || {}).model || '';
 $('m-analyst').textContent = (M.analyst || {}).model || '';

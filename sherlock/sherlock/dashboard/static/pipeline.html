@@ -163,7 +163,7 @@
   <section class="board" id="board">
     <div class="col cam" id="cCam">
       <article class="frame" id="wideFrame">
-        <div class="fh"><i></i>Hero camera<small>every frame</small></div>
+        <div class="fh"><i></i>Hero camera<small id="wideNote">every frame</small></div>
         <div class="view">
           <img id="wide" src="/stream/wide" alt="Live wide view">
           <div class="stamp" id="wideStamp">alert</div>
@@ -737,6 +737,16 @@ async function toggleCover() {
   await post(`/demo/cover/hero/${covered ? 'on' : 'off'}`);
   $('coverBtn').textContent = covered ? 'Uncover hero lens' : 'Cover hero lens';
 }
+// A camera that would not open at startup is left out; say so on the feed card.
+fetch('/cameras').then(r => r.json()).then(({ unavailable = [] }) => {
+  if (!unavailable.length) return;
+  const note = $('wideNote');
+  note.textContent = unavailable.map(c => `${c.name} unavailable`).join(' · ');
+  note.title = unavailable.map(c => `${c.name}: ${c.error}`).join('\n');
+  note.style.color = C.bad;
+
+  if (unavailable.some(c => c.name === 'hero')) $('coverBtn').disabled = true;
+}).catch(() => {});
 
 // ---- render loop -------------------------------------------------------------------------------------------
 function hexA(hex, a) {

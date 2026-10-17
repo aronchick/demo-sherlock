@@ -30,9 +30,19 @@ _BOX_COLORS = {"weapon": (70, 70, 240), "benign": (130, 200, 140), "unknown": (9
 class Sherlock:
     def __init__(self, cfg: Config = CONFIG, synthetic: bool = False, evidence_dir: str | None = None):
         self.cfg = cfg
-        self.cameras: dict[str, Camera] = {
-            c.name: build_camera(c.name, c.backend, "synthetic" if synthetic else c.source)
-            for c in cfg.cameras}
+        # A camera that will not open (unplugged, wrong index or name) is left out,
+        # loudly, so the demo carries on with the others. With none, stop.
+        self.cameras: dict[str, Camera] = {}
+        self.unavailable: dict[str, str] = {}  # camera -> why it did not open
+        for c in cfg.cameras:
+            try:
+                self.cameras[c.name] = build_camera(c.name, c.backend, "synthetic" if synthetic else c.source)
+            except CameraError as e:
+                self.unavailable[c.name] = str(e)
+                BUS.emit("system", f"{c.name} unavailable: {e}; continuing without it")
+        if self.unavailable and not self.cameras:
+            why = "; ".join(f"{name}: {err}" for name, err in self.unavailable.items())
+            raise CameraError(f"no camera opened ({why}); check CAMERAS")
         self.scenes: dict[str, ScriptedScene] = {}
         if synthetic:
             t0 = time.time()
@@ -64,9 +74,12 @@ class Sherlock:
         return scene.objects() if scene else []
 
     # --- control surface used by the dashboard --------------------------------
-    def cover(self, camera: str, covered: bool) -> None:
+    def cover(self, camera: str, covered: bool) -> bool:
+        if camera not in self.cameras:  # unavailable or unknown: nothing to cover
+            return False
         self.cameras[camera].covered = covered
         BUS.emit("system", f"{camera} {'covered' if covered else 'uncovered'}")
+        return True
 
     def inject_failure(self, n: int = 1) -> None:
         self.tools.inject_failure(n)
@@ -81,7 +94,8 @@ class Sherlock:
         self.running = True
         self._thread = threading.Thread(target=self._loop, daemon=True)
         self._thread.start()
-        BUS.emit("system", f"started with cameras {list(self.cameras)}, mock={self.cfg.mock}")
+        missing = f", unavailable {list(self.unavailable)}" if self.unavailable else ""
+        BUS.emit("system", f"started with cameras {list(self.cameras)}{missing}, mock={self.cfg.mock}")
 
     def stop(self) -> None:
         self.running = False

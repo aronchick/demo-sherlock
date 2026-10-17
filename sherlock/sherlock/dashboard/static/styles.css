@@ -74,6 +74,7 @@ body[data-mode="live"] .mode b { color: var(--ok); }
   color: var(--accent); font-size: 13px; letter-spacing: .06em; }
 .ctl:hover { background: rgba(242, 193, 78, .12); border-color: var(--accent); }
 .ctl[aria-pressed="true"] { color: var(--face); border-color: var(--face); background: rgba(180, 185, 255, .1); }
+.ctl:disabled { opacity: .4; cursor: not-allowed; background: transparent; border-color: rgba(242, 193, 78, .3); }
 .ctl-status { margin-left: auto; color: var(--text-dim); font-size: 13px; }
 .ctl-status[data-state="armed"] { color: var(--warn); }
 .ctl-status[data-state="fired"] { color: var(--ok); }
@@ -99,6 +100,8 @@ body[data-mode="live"] .mode b { color: var(--ok); }
 .cam figcaption em { font-style: normal; color: var(--text-dim); }
 .cam[data-looking="true"] { border-color: var(--accent); }
 .cam[data-covered="true"] { border-color: var(--warn); }
+.cam[data-unavailable="true"] { border-color: var(--err); }
+.cam[data-unavailable="true"] .empty { color: var(--err); }
 .cam[data-role="zoom"] figcaption .icon { color: var(--face); }
 .cam[data-role="zoom"][data-subject="face"] figcaption { color: var(--face); }
 .cam .reticle { position: absolute; inset: 0; pointer-events: none; opacity: 0; transition: opacity .2s; }

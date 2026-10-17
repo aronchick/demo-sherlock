@@ -5,6 +5,7 @@ from types import SimpleNamespace
 
 import numpy as np
 import pytest
+from sherlock.agents.scout import YoloScout
 from sherlock.config import CameraSpec, Config
 from sherlock.orchestrator import Sherlock
 
@@ -42,3 +43,23 @@ def test_invalid_scout_conf_is_rejected(monkeypatch, value):
     monkeypatch.setenv("SCOUT_CONF", value)
     with pytest.raises(ValueError):
         Config()
+
+
+def test_weapon_cutoff_does_not_lower_the_benign_cutoff(monkeypatch):
+    monkeypatch.setenv("SCOUT_WEAPON_CONF", "0.10")
+    calls = []
+    boxes = [SimpleNamespace(cls=c, conf=p, xyxy=np.array([[1, 2, 30, 40]]))
+             for c, p in [(0, .148), (1, .148), (1, .5), (0, .05)]]
+
+    class Model:
+        def __init__(self, _):
+            pass
+
+        def predict(self, frame, **kwargs):
+            calls.append(kwargs)
+            return [SimpleNamespace(boxes=boxes, names={0: "knife", 1: "cup"})]
+
+    monkeypatch.setitem(sys.modules, "ultralytics", SimpleNamespace(YOLO=Model))
+    detections = YoloScout().detect(np.zeros((50, 50, 3)), "hero")
+    assert [(d.label, d.conf) for d in detections] == [("knife", .148), ("cup", .5)]
+    assert calls == [{"conf": .10, "verbose": False}]

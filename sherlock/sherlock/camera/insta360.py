@@ -479,6 +479,11 @@ class Insta360Camera(Camera):
                 return f
         raise CameraError(f"{self.name}: gimbal never settled long enough for a frame")
 
+    def preview_frame(self) -> np.ndarray:
+        """Unsettled display frame; never changes aiming state or evidence timing."""
+        self._check()
+        return self._read(replace(self.pose))
+
     def snapshot(self) -> np.ndarray:
         self._check()
         wait = self._settle_until - time.monotonic()

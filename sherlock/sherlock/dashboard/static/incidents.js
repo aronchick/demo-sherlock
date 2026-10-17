@@ -193,7 +193,7 @@
     custody.append(grid, element('h2', 'Chain of custody'));
     const timeline = element('ol', '', 'custody-timeline');
 
-    for (const event of record.custody) {
+    for (const event of [...record.custody].sort((first, second) => first.t - second.t)) {
       const item = element('li');
       const time = document.createElement('time');
       time.textContent = timestamp(event.t);

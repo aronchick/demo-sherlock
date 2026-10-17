@@ -34,30 +34,73 @@ function modelIdentity(model) {
   return {name: shortName || 'Model not configured', brand: '', vendor: ''};
 }
 
+/**
+ * The Scout as /mode reports it (scout_backend), never from config alone: a
+ * synthetic run reads scene truth, and "mock" or unknown backends fall back to
+ * motion. The configured YOLO weights name the card only when YOLO really runs.
+ * @param {string | null | undefined} backend @param {string} model
+ */
+function scoutIdentity(backend, model) {
+  if (backend === 'yolo') {
+    const identity = modelIdentity(model || 'yolo');
+
+    return {...identity, tag: identity.name, runtime: 'Configured model', sub: 'YOLO, every frame'};
+  }
+
+  const none = {brand: '', vendor: ''};
+
+  if (backend === 'scene') {
+    return {...none, name: 'Scene truth', tag: 'scene truth', runtime: 'Synthetic scene · no detector runs', sub: 'scripted scene, every frame'};
+  }
+
+  if (backend === 'motion') {
+    return {...none, name: 'Motion detector', tag: 'motion', runtime: 'Background subtraction · no model', sub: 'motion, every frame'};
+  }
+
+  return {...none, name: 'Scout', tag: '', runtime: 'Detector not reported', sub: 'detector not reported'};
+}
+
+/** @param {string} role @param {{name: string, brand: string, vendor: string}} identity @param {string} title */
+function showIdentity(role, identity, title) {
+  const name = modelElement(`${role}Model`);
+  const logo = /** @type {HTMLImageElement} */ (modelElement(`${role}Logo`));
+
+  name.textContent = identity.name;
+  name.title = title;
+  logo.hidden = !identity.brand;
+
+  if (identity.brand) {
+    logo.src = `/pipeline/assets/brand-${identity.brand}.svg`;
+    logo.alt = identity.vendor;
+  }
+}
+
 class ModelCards {
   /** @param {ModelConfig} config */
   constructor(config) {
     this.roles = ['director', 'analyst', 'verifier'];
+    this.scoutModel = config.models.scout?.model || '';
 
-    for (const role of ['scout', ...this.roles]) {
+    for (const role of this.roles) {
       const model = config.models[role]?.model || '';
-      const identity = modelIdentity(model);
-      const name = modelElement(`${role}Model`);
-      const logo = /** @type {HTMLImageElement} */ (modelElement(`${role}Logo`));
 
-      name.textContent = identity.name;
-      name.title = model;
-      logo.hidden = !identity.brand;
-
-      if (identity.brand) {
-        logo.src = `/pipeline/assets/brand-${identity.brand}.svg`;
-        logo.alt = identity.vendor;
-      }
-
+      showIdentity(role, modelIdentity(model), model);
       modelElement(`${role}Runtime`).textContent = config.mock ? 'Configured model · mock run' : 'Configured model';
     }
 
+    this.scout(null);
     this.reset();
+  }
+
+  /** @param {string | null | undefined} backend what /mode reports as scout_backend */
+  scout(backend) {
+    const identity = scoutIdentity(backend, this.scoutModel);
+
+    showIdentity('scout', identity, backend === 'yolo' ? this.scoutModel : '');
+    modelElement('scoutRuntime').textContent = identity.runtime;
+    modelElement('scoutSub').textContent = identity.sub;
+
+    return identity;
   }
 
   reset() {

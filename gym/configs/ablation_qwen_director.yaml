@@ -17,8 +17,8 @@ policy_model:
   responses_api_models:
     vllm_model:
       entrypoint: app.py
-      base_url: ${oc.env:DIRECTOR_BASE_URL,http://127.0.0.1:18900/v1}
-      api_key: ${oc.env:DIRECTOR_API_KEY,EMPTY}
+      base_url: ${oc.env:QWEN_DIRECTOR_BASE_URL,http://127.0.0.1:18900/v1}
+      api_key: ${oc.env:QWEN_DIRECTOR_API_KEY,${oc.env:DIRECTOR_API_KEY,EMPTY}}
       model: Qwen/Qwen2.5-7B-Instruct
       return_token_id_information: false
       uses_reasoning_parser: false
@@ -45,6 +45,7 @@ sherlock_agent:
       ablation_id: qwen_director
       ablation_component: "Model (Qwen2.5-7B-Instruct vs Nemotron 3.5 Lightning)"
       ablation_description: "Swap Director model to Qwen/Qwen2.5-7B-Instruct; hold prompt (v2), tools (verbose), thinking (off) fixed"
+      endpoint_env_var: QWEN_DIRECTOR_BASE_URL
       director_model_name: Qwen/Qwen2.5-7B-Instruct
       director_params_b: 7.616
       vlm_model_name: HuggingFaceTB/SmolVLM-Instruct

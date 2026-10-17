@@ -92,9 +92,9 @@ down:
 live:
     uv run --extra yolo python run.py
 
-# Run the test suite
+# Run the test suite (includes the gym optional extra on Python >= 3.13.14)
 test:
-    uv run pytest
+    uv run --extra gym pytest
 
 # Ruff lint gate (ruff.toml pins ruff 0.17.1 and the rule set); must report zero findings
 lint:

@@ -46,6 +46,7 @@ sherlock_agent:
       ablation_id: nemotron_lightning
       ablation_component: "Model + Prompt v2 + Verbose Tools + Thinking Off (Reference)"
       ablation_description: "Nemotron 3.5 Lightning 30B-A3B (thinking off), system_v2 prompt, verbose tool schemas"
+      endpoint_env_var: DIRECTOR_BASE_URL
       director_model_name: nvidia/NVIDIA-Nemotron-3.5-Lightning-30B-A3B-NVFP4
       director_params_b: 30.0
       vlm_model_name: HuggingFaceTB/SmolVLM-Instruct

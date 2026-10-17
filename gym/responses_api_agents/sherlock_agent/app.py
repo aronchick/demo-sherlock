@@ -48,6 +48,7 @@ class SherlockAgentConfig(BaseResponsesAPIAgentConfig):
     ablation_id: str = "nemotron_lightning"
     ablation_component: str = "baseline"
     ablation_description: str = "Nemotron 3.5 Lightning (thinking off), system_v2, verbose tools"
+    endpoint_env_var: str = "DIRECTOR_BASE_URL"
     director_model_name: str = "nvidia/NVIDIA-Nemotron-3.5-Lightning-30B-A3B-NVFP4"
     director_params_b: float = 30.0
     vlm_model_name: str = "HuggingFaceTB/SmolVLM-Instruct"
@@ -157,7 +158,13 @@ class SherlockAgent(SimpleResponsesAPIAgent):
                 json=body,
                 cookies=cookies,
             )
-            model_response = NeMoGymResponse.model_validate(await res.json())
+            raw_model_payload = await res.json()
+            if getattr(res, "status", 200) >= 400 or not isinstance(raw_model_payload, dict):
+                raise RuntimeError(
+                    f"Model server {self.config.model_server.name!r} returned error "
+                    f"(HTTP {getattr(res, 'status', 'unknown')}): {raw_model_payload}"
+                )
+            model_response = NeMoGymResponse.model_validate(raw_model_payload)
             _merge_cookies(cookies, res.cookies)
 
             output = model_response.output

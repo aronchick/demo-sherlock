@@ -24,6 +24,9 @@ dependencies = [
 # Scout backend "yolo" (SCOUT_BACKEND=yolo, the default outside mock mode). Pulls in torch,
 # so mock mode and the tests leave it out.
 yolo = ["ultralytics"]
+gym = [
+    "nemo-gym==0.7.0 ; python_full_version >= '3.13.14'",
+]
 
 [dependency-groups]
 # Test and lint tooling; `uv sync` and `uv run` include it by default.

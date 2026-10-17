@@ -62,6 +62,226 @@ If the endpoint is unreachable mid-pitch, the Director automatically drops to th
 2. If yes: `CAMERAS=hero:obsbot:0,scout1:fake:1`. Nothing else changes.
 3. If no: Plan B is OSC via OBSBOT Center; implement `ObsbotCamera.move` against it.
 
+## vLLM
+
+vLLM is the serving layer for Sherlock's investigation loop. The Director
+chooses camera tools; the Analyst reads a zoomed crop; the Verifier checks
+the resulting claim against that crop. Scout gates these calls locally.
+The planned Brev setup runs two vLLM **0.28.0** containers on one H100:
+
+| Role | Model | Served name | Port |
+|---|---|---|---:|
+| Director | Nemotron 3.5 Lightning 30B, NVFP4 repository | `director` | 8001 |
+| Analyst + Verifier | `HuggingFaceTB/SmolVLM-Instruct`, 2.25B, shared | `vlm` | 8002 |
+
+The Director uses automatic tool selection and disables thinking in the
+request's chat-template kwargs. Analyst and Verifier share one VLM to avoid
+loading a third model. Separate context, sequence and memory budgets let
+both servers share the GPU. The initial `brev/serve.sh` budgets are 32,768
+tokens / 16 sequences / 0.60 GPU memory for Director and 8,192 / 8 / 0.30
+for VLM. These are starting settings, not measured capacity; the serving
+owner must confirm model revisions, parser, startup flags and available
+memory on the H100. This benchmark does not change `serve.sh`.
+
+**Live H100 measurements are pending.** The benchmark is validated against
+a local streaming stub. Stub results test the measurement code and must
+not be submitted as vLLM performance evidence.
+
+### Parameter budget and speculation
+
+Configuration A's model-card budget is approximately **32.25B** generative
+parameters: the 30B Director plus the shared 2.25B VLM, counted once.
+Speculative draft weights count toward the 33B cap. `brev/serve.sh` passes
+no `--speculative-config` / `-sc`, `--spec-method`, `--spec-model`,
+`--spec-tokens`, or other MTP/draft settings.
+
+The [vLLM v0.28.0 engine arguments](https://github.com/vllm-project/vllm/blob/v0.28.0/vllm/engine/arg_utils.py)
+default `speculative_config` to `None`; `create_speculative_config` returns
+`None` when no speculation options are supplied. The
+[automatic speculator detection](https://github.com/vllm-project/vllm/blob/v0.28.0/vllm/transformers_utils/config.py)
+only overrides this when the checkpoint has `speculators_config`. The
+[Lightning NVFP4 configuration](https://huggingface.co/nvidia/NVIDIA-Nemotron-3.5-Lightning-30B-A3B-NVFP4/raw/main/config.json)
+inspected for this build has no such key and selects `NemotronHForCausalLM`.
+
+Lightning includes embedded MTP tensors, but the
+[v0.28.0 NemotronH base-model loader](https://github.com/vllm-project/vllm/blob/v0.28.0/vllm/model_executor/models/nemotron_h.py)
+uses `AutoWeightsLoader(self, skip_prefixes=["mtp"])`. Those weights are
+skipped when loading the base model; their presence in the checkpoint does
+not enable MTP speculation. This is configuration and source-code evidence.
+Live container startup and its effective model configuration still need
+verification on the H100.
+
+### Run the benchmark
+
+Set `DIRECTOR_BASE_URL` and `ANALYST_BASE_URL` to the two OpenAI-compatible
+base URLs, including `/v1`. With those set, this is the complete command:
+
+```bash
+uv run scripts/bench_vllm.py --metrics
+```
+
+`uv` installs the script's declared dependencies. Served model names default
+to `director` and `vlm`; override with `DIRECTOR_MODEL` / `ANALYST_MODEL`.
+Use `DIRECTOR_API_KEY` / `ANALYST_API_KEY` when required, with
+`OPENAI_API_KEY` as fallback. Keep secrets out of commands and results.
+`--help` lists the other options. Endpoint URLs and response text are not
+saved in the results.
+
+The command tests concurrency **1, 4, 8, 16**, with 64 measured requests per
+cell and four excluded warmups. Director traffic imports `SYSTEM` from
+`sherlock/agents/director.py` and `TOOL_SCHEMAS` from `sherlock/tools.py`.
+It varies weapon, unknown and benign detections, including `threat` and
+`head_bbox`. Weapon traffic samples each step through verification and the
+final report, with and without face-evidence steps. Benign traffic has no
+prior camera calls. Weapon prompts add the application's four-call recovery
+budget. Fixture arguments are checked against the imported schemas before
+dispatch; older schemas omit unsupported fields and steps. Requests use
+the application's temperature and token limits.
+It does not execute camera tools. The shared prefix is the real prompt and
+tool schemas; no padding is added to inflate a caching benefit.
+
+VLM traffic alternates the imported Analyst and Verifier prompts using a
+[real JPEG object crop](tests/fixtures/vllm/README.md) of a model spacecraft,
+with no face in the image. Director face-tool results are text metadata;
+face crops are never sent to the VLM. Supply a representative object
+crop with `--image path/to/crop.jpg` for the final run. This fixed-image
+test includes repeated image/prompt cache reuse; it does not represent a
+stream of unique scenes. Workloads run sequentially, so results describe
+each server with both models resident, not simultaneous Director/VLM load.
+
+Each run writes `results/vllm_bench_<UTC timestamp>.json` and a matching
+Markdown table, and prints the table. JSON `schema_version: 1` contains:
+
+- `evidence_kind` (`endpoint` or `stub`), operator-declared `environment`
+  and `prefix_caching`, Git commit, settings, workload hash and JPEG hashes.
+- `runs[]`, keyed by `workload`, `model`, `concurrency`, with `summary`,
+  excluded `warmup` failure counts, optional `metrics`, and per-request
+  `samples`. A dashboard can read these files without scraping Markdown.
+  Filter to `evidence_kind: endpoint` before displaying model performance;
+  the checked-in `stub` example is only a protocol smoke test.
+- `summary.ttft_ms` and `e2e_ms` with `p50`, `p95`, `p99`,
+  `output_tokens_per_s`, `requests_per_s`, and `tool_call_validity_rate`.
+
+TTFT starts at HTTP dispatch and ends at the first text or tool name/argument
+delta, excluding empty role/ID events. It includes network delay, server
+queueing and tool-parser buffering. Latency percentiles cover successful,
+complete streams. Output tokens/s is server-reported successful completion
+tokens divided by cell wall time; requests/s uses successful requests over
+the same interval. Missing token usage stays `null`, never estimated from
+text or SSE chunk counts. No automatic retries hide failures. A timeout,
+HTTP error, incomplete stream or token-limit finish is counted as failure;
+the command writes the evidence and exits nonzero.
+
+Director validity is the fraction of **all attempted requests** that return
+at least one complete, named tool call with JSON arguments matching the
+imported schema. Every call in that response must pass, including required
+fields, types, enums, bounds and no unknown arguments. This tests call
+structure, not whether the model chose the right investigation action.
+Individual-call validity is also saved separately.
+
+With `--metrics`, optional `/metrics` snapshots record KV cache usage and
+prefix-cache counter deltas, excluding warmup. Missing metrics stay
+unavailable. KV snapshots are not peak memory usage. A reverse proxy can
+override the scrape path with `DIRECTOR_METRICS_URL` / `ANALYST_METRICS_URL`.
+If metrics use the repository ID instead of the requested served alias,
+the benchmark matches a single labelled model and records that choice in
+`matched_model_name` / `model_match`. It leaves ambiguous models unmatched.
+Avoid unrelated endpoint traffic during measurement because counters are
+server-wide.
+
+### Prefix-cache A/B
+
+The chosen optimization is automatic prefix caching: Director requests
+repeat the same system prompt and tool definitions. The
+[vLLM 0.28.0 CLI](https://docs.vllm.ai/en/v0.28.0/cli/serve/#cacheconfig)
+documents `--enable-prefix-caching`, `--no-enable-prefix-caching`, and
+`--prefix-caching-hash-algo sha256`. The
+[APC guide](https://docs.vllm.ai/en/v0.28.0/features/automatic_prefix_caching/)
+explains that reuse reduces prefill work, not decoding work. The expected
+signal is lower TTFT; the size of any benefit remains unmeasured.
+
+1. On the Brev host, the serving owner starts the baseline with:
+
+   ```bash
+   PREFIX_CACHING=0 bash brev/serve.sh
+   ```
+
+   `PREFIX_CACHING=0` selects `--no-enable-prefix-caching` for Director.
+   The script creates both containers; the serving owner must stop/remove
+   previous experiment containers before each launch. Keep the model
+   revision, parser, context, sequence/memory budgets, VLM settings and
+   hardware fixed. Wait for both models to be ready.
+2. Record the baseline. Use a nonsecret environment label identifying the
+   GPU and exact model/config revisions; reuse it for the candidate:
+
+   ```bash
+   uv run scripts/bench_vllm.py --metrics --requests 200 \
+     --prefix-caching off --environment h100-config-1
+   ```
+
+3. On the Brev host, the serving owner recreates the containers with:
+
+   ```bash
+   PREFIX_CACHING=1 bash brev/serve.sh
+   ```
+
+   This selects `--enable-prefix-caching --prefix-caching-hash-algo sha256`
+   for Director and preserves the VLM settings. Wait for readiness again.
+   The benchmark's `--prefix-caching` only labels a run; set it to `off`
+   for `PREFIX_CACHING=0` and `on` for `PREFIX_CACHING=1`.
+4. Run the candidate against the printed baseline JSON path:
+
+   ```bash
+   uv run scripts/bench_vllm.py --metrics --requests 200 \
+     --prefix-caching on --environment h100-config-1 \
+     --compare results/vllm_bench_<baseline_timestamp>.json
+   ```
+
+The candidate JSON and Markdown include percent changes against baseline.
+Comparison rejects different workloads, settings, evidence types or models.
+Use only Director rows to attribute improvement to this change; VLM rows
+are a control with unchanged server settings. Save the actual server flags,
+container image digest and model revisions alongside final submission
+evidence. Repeat the experiment in reverse order to check warmup/load drift.
+Use at least 200 requests per cell; p99 from the default 64 is exploratory.
+For Nemotron's hybrid layers, confirm startup's effective cache mode with
+the serving owner; the 0.28.0 CLI documents `align` when prefix caching is
+enabled and `none` when disabled. Do not add other optimizations to this A/B.
+
+### Results pending live endpoint
+
+| Workload | Concurrency | TTFT p50/p95/p99 ms | E2E p50/p95/p99 ms | Output tok/s | Req/s | Tool validity |
+|---|---:|---|---|---|---|---|
+| Director | 1 | pending | pending | pending | pending | pending |
+| Director | 4 | pending | pending | pending | pending | pending |
+| Director | 8 | pending | pending | pending | pending | pending |
+| Director | 16 | pending | pending | pending | pending | pending |
+| VLM | 1 | pending | pending | pending | pending | n/a |
+| VLM | 4 | pending | pending | pending | pending | n/a |
+| VLM | 8 | pending | pending | pending | pending | n/a |
+| VLM | 16 | pending | pending | pending | pending | n/a |
+
+Prefix-cache on/off TTFT change: **pending**. Cache hit rate: **pending**.
+KV usage: **pending**. Failure rates: **pending**.
+Replace these placeholders with the real endpoint tables before submitting
+the Red Hat vLLM bounty explanation.
+
+### Local validation
+
+```bash
+uvx ruff@0.17.1 check .
+uv run --with-requirements requirements-bench.txt pytest -q
+```
+
+With the test dependencies installed, bare `uv run pytest` also works:
+the root `pytest.ini` supplies the nested package path and test directory.
+
+The tests start a tiny loopback OpenAI-compatible SSE server, run the
+benchmark CLI through both A/B legs and all concurrency levels, verify JSON
+and Markdown, stop the server and rebind its port to prove cleanup. They
+also check HTTP errors, timeouts, truncated streams, missing usage,
+invalid tool calls and counter resets. No Brev endpoint is needed.
+
 ## Layout
 ```
 sherlock/camera/     Camera interface, FakePTZ (crop/zoom), ObsbotCamera (UVC), SyntheticSource

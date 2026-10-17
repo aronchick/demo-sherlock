@@ -256,3 +256,134 @@ def test_unreachable_director_falls_back_to_rules():
         d.client = SimpleNamespace(chat=SimpleNamespace(completions=SimpleNamespace(create=boom)))
         out = d.investigate(det)
         assert out["done"] and out["action"] == "ignore", f"no rule-based fallback for {type(err).__name__}"
+
+
+# --- review fixes: face guard, bound verdicts, weapon claims, evidence writes ---
+def _knife_det():
+    return Detection("knife", 0.9, KNIFE, "hero", threat="weapon", person=PERSON, head=head_region(PERSON))
+
+
+def _knife_raised(src):
+    src.clock = lambda: 17.0  # the knife is held up at this point in the script
+    return src
+
+
+def _frozen_sherlock(evidence_dir) -> Sherlock:
+    s = Sherlock(Config(), synthetic=True, evidence_dir=str(evidence_dir))
+    for scene in s.scenes.values():
+        _knife_raised(scene)
+    return s
+
+
+def test_head_zoom_never_reaches_a_model_whatever_the_subject():
+    tools = _toolbox()
+    _knife_raised(tools.cameras["hero"].src)
+    seen = []
+    tools.analyst = SimpleNamespace(describe=lambda img, q: seen.append("analyst") or {"description": "x"})
+    tools.verifier = SimpleNamespace(check=lambda img, c: seen.append("verifier") or {"supported": True})
+    tools.begin_incident(_knife_det(), "x")
+    assert "error" in tools.call("snapshot", {"camera": "hero", "subject": "weapon"}), "no aim yet"
+    tools.call("look_at", {"camera": "hero", "bbox": list(head_region(PERSON))})
+    for args in ({"camera": "hero"}, {"camera": "hero", "subject": "weapon"},
+                 {"camera": "hero", "subject": "object"}):
+        assert "error" in tools.call("snapshot", args), f"head zoom reached a model via {args}"
+    tools.call("move", {"camera": "hero", "pan": 10})
+    assert "error" in tools.call("snapshot", {"camera": "hero", "subject": "weapon"}), "aim unknown after move"
+    assert "error" in tools.call("verify", {"claim": "a knife"})
+    assert seen == [] and not {"weapon_crop", "object_crop"} & set(tools.evidence)
+    tools.call("look_at", {"camera": "hero", "bbox": list(KNIFE)})
+    assert "error" not in tools.call("snapshot", {"camera": "hero"})
+    assert seen == ["analyst"], "aimed back at the weapon, the Analyst gets its crop"
+
+
+def test_verdict_is_bound_to_claim_and_crop():
+    tools = _toolbox()
+    _knife_raised(tools.cameras["hero"].src)
+    tools.begin_incident(_knife_det(), "x")
+    tools.call("look_at", {"camera": "hero", "bbox": list(KNIFE)})
+    tools.call("snapshot", {"camera": "hero", "subject": "weapon"})
+    tools.call("verify", {"claim": "a knife"})
+    assert tools.verdict_for("A knife.") is not None, "same claim, same crop"
+    assert tools.verdict_for("a cup") is None, "changed claim"
+    tools.call("snapshot", {"camera": "hero", "subject": "weapon"})
+    assert tools.verdict_for("a knife") is None, "replaced crop"
+
+
+def test_final_report_rechecks_a_changed_claim_and_a_replaced_crop(tmp_path):
+    checked = []
+
+    def check(img, claim):
+        checked.append((claim, img))
+        ok = "cup" in claim or "knife" in claim and len(checked) > 2
+        return {"supported": ok, "confidence": 0.9, "reason": "stub"}
+
+    s = _frozen_sherlock(tmp_path)
+    s.tools.verifier = SimpleNamespace(check=check)
+    t = s.tools
+    look = {"camera": "hero", "bbox": list(KNIFE)}
+    knife_alert = {"claim": "a kitchen knife", "confidence": 0.9, "action": "alert"}
+
+    def claim_swap(det):  # verifies a cup, then reports a knife
+        t.call("look_at", look)
+        t.call("snapshot", {"camera": "hero", "subject": "weapon"})
+        t.call("verify", {"claim": "a white cup"})
+        return t.call("report", knife_alert)
+
+    s.director = SimpleNamespace(investigate=claim_swap)
+    s._investigate(_knife_det())
+    r = s.log[-1]
+    assert [c for c, _ in checked] == ["a white cup", "a kitchen knife"]
+    assert r["verified"] is False and r["action"] == "log", "a cup verdict must not verify a knife alert"
+
+    def crop_swap(det):  # verifies the knife, then replaces the crop before reporting
+        t.call("look_at", look)
+        t.call("snapshot", {"camera": "hero", "subject": "weapon"})
+        t.call("verify", {"claim": "a kitchen knife"})
+        t.call("snapshot", {"camera": "hero", "subject": "weapon"})
+        return t.call("report", knife_alert)
+
+    s.director = SimpleNamespace(investigate=crop_swap)
+    s._investigate(_knife_det())
+    assert len(checked) == 4 and checked[3][1] is t.evidence["weapon_crop"] is not checked[2][1]
+    assert s.log[-1]["verified"] is True and s.log[-1]["action"] == "alert"
+
+
+def test_weapon_tag_on_a_benign_object_does_not_alert():
+    """YOLO calls a mug a knife; the Analyst correctly sees a mug. Alerting needs the
+    weapon itself verified, not just the Analyst's description."""
+    tools = _toolbox()
+    claims = []
+    tools.analyst = SimpleNamespace(describe=lambda img, q: {"description": "A white ceramic mug. No text."})
+    tools.verifier = SimpleNamespace(check=lambda img, c: claims.append(c) or {
+        "supported": "mug" in c, "confidence": 0.9, "reason": "stub"})
+    det = _knife_det()
+    tools.begin_incident(det, "x")
+    out = RuleDirector(tools).investigate(det)
+    assert claims == ["a knife"] and out["action"] == "log"
+
+
+def test_evidence_write_failures_keep_the_report_and_the_loop(tmp_path, monkeypatch):
+    blocker = tmp_path / "evidence"
+    blocker.write_text("a file where the evidence folder should be")
+    s = _frozen_sherlock(blocker)
+    s._investigate(_knife_det())
+    r = s.log[-1]
+    assert r["action"] == "alert" and r["evidence"] == []
+    assert r["evidence_unsaved"] == ["weapon_crop", "face_crop"] and "evidence_camera" not in r
+    monkeypatch.setattr("sherlock.orchestrator.cv2.imwrite", lambda *a, **k: False)
+    s.evidence_dir = tmp_path / "ok"
+    s._investigate(_knife_det())
+    assert len(s.log) == 2, "the next incident still runs"
+    assert s.log[-1]["evidence"] == [] and s.log[-1]["evidence_unsaved"] == ["weapon_crop", "face_crop"]
+
+
+def test_finetuned_scout_classes_route():
+    """YOLO_MODEL swap to the fine-tuned Scout: person/weapon/badge/bottle."""
+    badge = (300, 400, 340, 430)
+    scout = Scout("scene", "", dwell=0.0,
+                  truth=lambda cam: [("person", PERSON), ("weapon", KNIFE), ("badge", badge), ("bottle", CUP)])
+    frame = np.zeros((720, 1280, 3), np.uint8)
+    scout.step(frame, "hero")
+    fresh = {d.label: d for d in scout.step(frame, "hero")}
+    assert fresh["weapon"].threat == "weapon" and fresh["weapon"].head == head_region(PERSON)
+    assert fresh["badge"].threat == fresh["bottle"].threat == "benign"

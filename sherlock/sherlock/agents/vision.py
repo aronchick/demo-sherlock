@@ -102,7 +102,7 @@ def _mock_classify(img: np.ndarray) -> str | None:
 
 _MOCK_TEXT = {"knife": "A kitchen knife with a bright steel blade and a dark handle. No readable text.",
               "cola": "A blue can or box with white lettering reading ACME COLA."}
-_CLAIM_WORDS = {"knife": ("knife", "blade"), "cola": ("cola", "can")}
+_CLAIM_WORDS = {"knife": ("knife", "blade", "weapon"), "cola": ("cola", "can")}
 
 
 class MockAnalyst:

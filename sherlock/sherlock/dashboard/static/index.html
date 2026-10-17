@@ -193,7 +193,7 @@
 
     $('incident').dataset.state = d.action === 'alert' ? 'alert' : 'log';
     $('inc-title').textContent = (d.action === 'alert' ? 'Weapon alert · ' : 'Logged · ') + d.label;
-    $('inc-claim').textContent = d.claim;
+    $('inc-claim').textContent = d.description || d.claim;
     $('inc-meta').textContent = `seen on ${d.camera}${via} · ${verified} · ${d.vlm_calls} VLM calls · ${(d.total_ms / 1000).toFixed(1)} s`;
 
     for (const name of ['weapon', 'face']) {

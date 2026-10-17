@@ -27,7 +27,8 @@ class Bus:
         self.stats = {"frames": 0, "scout_hits": 0, "investigations": 0,
                       "vlm_calls": 0, "vlm_calls_avoided": 0, "tool_errors": 0,
                       "recoveries": 0, "confirmed": 0, "rejected": 0,
-                      "alerts": 0, "ignored": 0, "logged": 0, "duplicates": 0, "dropped_busy": 0}
+                      "alerts": 0, "ignored": 0, "logged": 0, "duplicates": 0, "dropped_busy": 0,
+                      "evidence_unsaved": 0}
 
     def snapshot(self) -> dict:
         """Stats for display. 'Avoided' = frames the Scout handled that a VLM-per-frame

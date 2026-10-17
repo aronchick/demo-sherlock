@@ -17,8 +17,9 @@ A cheap detector just flagged something new. The event's "threat" field decides 
 - "benign" (cup, bottle, phone...): call report with action="ignore" right away. No look_at, no snapshot.
 - "weapon": call, in this order: look_at(camera, weapon bbox) -> snapshot(camera, subject="weapon",
   question about the object) -> look_at(camera, head_bbox) -> snapshot(camera, subject="face")
-  -> verify(claim about the weapon) -> report(action="alert" if verified else "log",
-  evidence=["weapon_crop", "face_crop"]). Skip the two face steps if head_bbox is null.
+  -> verify(claim naming the weapon, e.g. "a knife") -> report(the same claim you verified,
+  action="alert" if verified else "log", evidence=["weapon_crop", "face_crop"]).
+  Skip the two face steps if head_bbox is null.
 - "unknown": look_at -> snapshot(subject="object") -> verify -> report(action="log").
 Never ask about, describe or identify a person. The face crop is evidence for a human only.
 If a tool returns an error, do not repeat the identical call:
@@ -27,6 +28,15 @@ Be decisive. Use at most {max_calls} tool calls. Always finish with report."""
 
 # The weapon chain alone is six calls; leave room to recover from a fault.
 WEAPON_EXTRA_CALLS = 4
+
+_WEAPON_CLAIMS = {"scissors": "a pair of scissors"}
+
+
+def weapon_claim(label: str) -> str:
+    """What the Verifier must confirm before an alert: that this is the weapon, not
+    just that the Analyst's description fits the crop (a cup described as a cup
+    is a supported claim, and still no reason to alert)."""
+    return _WEAPON_CLAIMS.get(label, f"a {label}")
 
 
 class Director:
@@ -109,7 +119,7 @@ class RuleDirector:
             r = self.tools.call("snapshot", {"camera": cam, "subject": subject, "question": "What is this object?"})
             if self._failed(cam, r):
                 continue
-            claim = r["description"].split(".")[0]
+            claim = weapon_claim(detection.label) if threat == "weapon" else r["description"].split(".")[0]
             evidence = [r["evidence_id"]]
             # Face evidence is best effort: a failed zoom must not cost us the weapon alert.
             if threat == "weapon" and head and not self._failed(
@@ -119,7 +129,7 @@ class RuleDirector:
                     evidence.append(f["evidence_id"])
             v = self.tools.call("verify", {"claim": claim})
             supported = bool(v.get("supported"))
-            action = ("alert" if supported else "log") if threat == "weapon" else "log"
+            action = "alert" if threat == "weapon" and supported else "log"
             return self.tools.call("report", {"claim": claim,
                                               "confidence": v.get("confidence", 0.4) if supported else 0.4,
                                               "action": action, "evidence": evidence})

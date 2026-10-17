@@ -18,8 +18,9 @@ from ..events import BUS
 
 BBox = tuple[int, int, int, int]
 
-# COCO classes that escalate. No firearms: COCO has none, and we don't fake it.
-WEAPON_CLASSES = frozenset({"knife", "baseball bat", "scissors"})
+# Classes that escalate. No firearms: COCO has none, and we don't fake it.
+# "weapon" is the fine-tuned Scout's merged class (YOLO_MODEL swap; badge, bottle stay benign).
+WEAPON_CLASSES = frozenset({"knife", "baseball bat", "scissors", "weapon"})
 CONTEXT_CLASSES = frozenset({"person"})
 UNKNOWN_LABELS = frozenset({"motion"})  # MotionScout can't name things; investigate the old way
 

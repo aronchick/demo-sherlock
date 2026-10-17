@@ -129,17 +129,26 @@ class Sherlock:
             vlm_before = BUS.stats["vlm_calls"]
             t0 = time.perf_counter()
             report = self.director.investigate(det)
-            ev = self.tools.evidence
-            crop = ev.get("weapon_crop", ev.get("object_crop"))
-            if self.tools.verdict is None and crop is not None and report.get("action") != "ignore":
-                # Safety net for an LLM Director that skipped verify: weapon crop only, never the face.
-                self.tools.verdict = self.verifier.check(crop, report.get("claim", ""))
-            if self.tools.verdict is not None:
-                report["verified"] = bool(self.tools.verdict["supported"])
-                report["verifier_reason"] = self.tools.verdict["reason"]
+            claim = report.get("claim", "")
+            eid, _ = self.tools.model_crop()
+            verdict = self.tools.verdict_for(claim)
+            if verdict is None and eid is not None and report.get("action") != "ignore":
+                # The final claim against the current weapon crop (never the face). A verdict on
+                # another claim, or on a crop since replaced, says nothing about this report.
+                verdict = self.tools.check_claim(claim)
+            if verdict is not None:
+                report["verified"] = bool(verdict["supported"])
+                report["verifier_reason"] = verdict["reason"]
+            if report.get("action") == "alert" and not report.get("verified"):
+                report["action"] = "log"
+                report["downgraded"] = "alert without a verified weapon claim"
+            if eid is not None:
+                report["description"] = self.tools.descriptions.get(eid, "")
             report["incident"] = iid
             report["t"] = time.time()
-            report["evidence"] = self._save_evidence(iid, ev)
+            report["evidence"], unsaved = self._save_evidence(iid, self.tools.evidence)
+            if unsaved:
+                report["evidence_unsaved"] = unsaved
             if report["evidence"]:
                 report["evidence_camera"] = self.tools.evidence_camera[report["evidence"][0]]
             report["vlm_calls"] = BUS.stats["vlm_calls"] - vlm_before
@@ -158,15 +167,26 @@ class Sherlock:
             self.active = None
             self._busy.release()
 
-    def _save_evidence(self, iid: str, evidence: dict[str, np.ndarray]) -> list[str]:
-        """One folder per incident: <evidence_dir>/<incident>/<weapon_crop|face_crop|object_crop>.jpg"""
+    def _save_evidence(self, iid: str, evidence: dict[str, np.ndarray]) -> tuple[list[str], list[str]]:
+        """One folder per incident: <evidence_dir>/<incident>/<weapon_crop|face_crop|object_crop>.jpg.
+        Returns (saved, unsaved). A full or read-only disk loses the crops, never the
+        report, and never the Scout loop."""
         if not evidence:
-            return []
+            return [], []
         folder = self.evidence_dir / iid
-        folder.mkdir(parents=True, exist_ok=True)
-        for name, img in evidence.items():
-            cv2.imwrite(str(folder / f"{name}.jpg"), img)
-        return list(evidence)
+        saved: list[str] = []
+        try:
+            folder.mkdir(parents=True, exist_ok=True)
+            for name, img in evidence.items():
+                if cv2.imwrite(str(folder / f"{name}.jpg"), img):
+                    saved.append(name)
+        except (OSError, cv2.error) as e:
+            BUS.emit("system", f"evidence write failed in {folder}: {e}")
+        unsaved = [n for n in evidence if n not in saved]
+        if unsaved:
+            BUS.bump("evidence_unsaved")
+            BUS.emit("system", f"evidence NOT saved for {iid}: {', '.join(unsaved)}")
+        return saved, unsaved
 
     def evidence_path(self, iid: str, name: str) -> pathlib.Path:
         return self.evidence_dir / iid / f"{name}.jpg"

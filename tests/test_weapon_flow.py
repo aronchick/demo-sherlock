@@ -71,7 +71,11 @@ def test_ignore_path_makes_zero_vlm_calls(tmp_path):
     assert r["vlm_calls"] == 0
     assert r["evidence"] == ["original_frame"] and "verified" not in r
     assert chain(drain(q), r["incident"]) == ["report"], "benign path must not look, snapshot or verify"
-    assert [p.name for p in (tmp_path / r["incident"]).glob("*.jpg")] == ["original_frame.jpg"]
+    record = s.incidents.read(r["incident"])
+    assert [artifact["name"] for artifact in record["artifacts"]] == ["original_frame"]
+    assert {p.name for p in (tmp_path / r["incident"]).glob("*.jpg")} == {
+        "original_frame.jpg", record["artifacts"][0]["filename"]}
+    assert record["verification"]["signature"] == "verified"
     assert s.incidents.read(r["incident"])["artifacts"][0]["integrity"] == "verified"
     assert s.incidents.read(r["incident"])["notification"]["status"] == "not_sent"
 

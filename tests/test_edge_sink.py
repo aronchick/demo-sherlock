@@ -13,12 +13,14 @@ import time
 from types import SimpleNamespace
 from typing import ClassVar
 
+import numpy as np
 import pytest
 from fastapi.testclient import TestClient
 from sherlock.dashboard import server as dashboard
 from sherlock.dashboard.server import make_app
-from sherlock.edge import EdgeSink, example_record, incident_record
-from sherlock.events import BUS
+from sherlock.edge import EdgeSink, example_record, incident_record, telemetry_record
+from sherlock.events import BUS, Event
+from sherlock.tools import _preview
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 WEAPON = b"\xff\xd8weapon-jpeg-bytes"
@@ -129,6 +131,7 @@ def test_sink_batches_events_and_posts_reports(tmp_path, capture):
     sink.start()
     try:
         BUS.emit("scout", "new knife on hero")
+        _preview("face", np.full((40, 30, 3), 200, np.uint8), "evidence_preview", incident=iid)
         BUS.emit("system", "REPORT: a knife (alert, verified)", 12.0, **_report(iid))
         assert _wait(lambda: any(p == "/incident" for p, _ in got))
         assert _wait(lambda: any(p == "/events" for p, _ in got))
@@ -138,12 +141,45 @@ def test_sink_batches_events_and_posts_reports(tmp_path, capture):
     assert all(isinstance(b, list) for b in batches)
     events = [e for b in batches for e in b]
     assert any(e["stage"] == "scout" and e["msg"] == "new knife on hero" for e in events)
+    assert any(e["stage"] == "evidence_preview" for e in events), "the event travels, as text"
+    assert "data:" not in json.dumps(batches), "no face thumbnail reaches the core"
     incident = next(b for p, b in got if p == "/incident")
     assert incident["incident"] == iid and set(incident["crops"]) == {"weapon_crop"}
     assert base64.b64decode(incident["crops"]["weapon_crop"]["b64"]) == WEAPON and _no_face_or_scene(incident)
     assert not any(p == "/example" for p, _ in got)  # verified: not a hard example
     status = sink.status()
     assert status["edge"] is True and status["sent"]["incidents"] == 1 and status["sent"]["failed"] == 0
+
+
+def _drain(q) -> list:
+    out = []
+    while not q.empty():
+        out.append(q.get_nowait())
+    return out
+
+
+def test_telemetry_carries_no_face_or_crop_preview():
+    """The dashboard's preview events carry PNG thumbnails, a face on evidence_preview. E1 is text."""
+    q = BUS.subscribe()
+    img = np.full((40, 30, 3), 200, np.uint8)
+    _preview("face", img, "evidence_preview", incident="20261017-120000-001")
+    _preview("verifier", img, incident="20261017-120000-001", evidence="weapon_crop")
+    previews = [e for e in _drain(q) if e.stage in ("evidence_preview", "model_input")]
+    assert len(previews) == 2 and all(e.data["image"].startswith("data:image/png;base64,") for e in previews)
+    for e in previews:
+        rec = telemetry_record(e)
+        assert "image" not in rec["data"] and "data:" not in json.dumps(rec)
+        assert rec["stage"] == e.stage and rec["data"]["role"] == e.data["role"] and rec["msg"] == e.msg
+    nested = telemetry_record(Event("system", "x", data={
+        "report": {"crop_b64": "QUFB", "image": "data:image/png;base64,QUFB", "claim": "a knife"},
+        "urls": ["data:image/jpeg;base64,QUFB", "ok"]}))
+    assert nested["data"] == {"report": {"claim": "a knife"}, "urls": ["ok"]}
+
+
+def test_telemetry_job_drops_every_image_field():
+    """The second line, on the Edge: whatever a sender includes, telemetry carries no pixels."""
+    text = (ROOT / "jobs" / "sherlock-telemetry.yaml").read_text()
+    assert '!kv.key.has_suffix("_b64") && kv.key != "image"' in text and 'has_prefix("data:")' in text
 
 
 def test_an_unreachable_edge_never_blocks_the_bus(tmp_path):

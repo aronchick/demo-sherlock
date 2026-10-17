@@ -5,7 +5,8 @@ Edge jobs (jobs/sherlock-*.yaml); nothing here can slow the camera loop:
 the bus already drops events for a subscriber that falls behind, and every
 POST has a short timeout and is dropped on failure.
 
-- E1 telemetry: every bus event, sent in small JSON-array batches.
+- E1 telemetry: every bus event, sent in small JSON-array batches, as text only: the
+  dashboard's face and crop preview thumbnails (and any other image payload) are removed.
 - E2 incidents: one message per report: its metadata and the masked weapon or
   object crop. The face crop and the original frame never leave the laptop; the
   custody metadata carries their hashes, so a reviewer opens them on this device.
@@ -143,8 +144,22 @@ def is_report(ev: Event) -> bool:
     return ev.stage == "system" and "incident" in ev.data and "action" in ev.data
 
 
+def _is_image(key: str, value) -> bool:
+    return key == "image" or key.endswith("_b64") or (isinstance(value, str) and value.startswith("data:"))
+
+
+def _text_only(value):
+    """Telemetry carries no pixels: drop preview thumbnails (`image`, a face on evidence_preview),
+    `*_b64` fields and data URLs, at any depth."""
+    if isinstance(value, dict):
+        return {k: _text_only(v) for k, v in value.items() if not _is_image(str(k), v)}
+    if isinstance(value, list):
+        return [_text_only(v) for v in value if not (isinstance(v, str) and v.startswith("data:"))]
+    return value
+
+
 def telemetry_record(ev: Event) -> dict:
-    return {"stage": ev.stage, "msg": ev.msg, "latency_ms": ev.latency_ms, "t": ev.t, "data": ev.data}
+    return {"stage": ev.stage, "msg": ev.msg, "latency_ms": ev.latency_ms, "t": ev.t, "data": _text_only(ev.data)}
 
 
 def _evidence_file(evidence_dir: pathlib.Path, incident: str, filename: str) -> pathlib.Path:

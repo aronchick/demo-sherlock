@@ -40,4 +40,4 @@ def test_dashboard_cli_bind_host(monkeypatch, host, expected):
     sherlock.start.assert_called_once_with()
     make_app.assert_called_once_with(sherlock)
     serve.assert_called_once_with(app, host=expected, port=8123, log_level="warning")
-    assert TestClient(app).get("/pipeline").status_code == 200  # the data-flow view is on the served app
+    assert TestClient(app).get("/").status_code == 200  # the data-flow view is the served default

@@ -56,9 +56,13 @@ Press **Break the next tool call**, **Corrupt next tool args** or **Cover hero l
 Evidence lands in `snapshots/<incident>/` (`EVIDENCE_DIR` overrides). The face crop is stored for a human only:
 no model ever sees it, and nothing identifies or describes the person.
 
-**Data flow view.** `http://localhost:8000/pipeline` shows each investigation as it moves: the camera feeds
+**Data flow view (the default page).** `http://localhost:8000/` shows each investigation as it moves: the camera feeds
 into the Scout, only a ticket and then a crop cross to the models, and the decision lands in Ignored, Logged
-or Alert while an incident record fills in stage by stage. It only reads the existing `/events` and `/stream`
+or Alert (benign objects are archived with their picture) while an incident record fills in stage by stage.
+`/topology` is the simpler page for explaining what runs where: the laptop (cameras, YOLO Scout, orchestrator,
+evidence) and the Brev GPU box (vLLM serving the Director and the shared Analyst/Verifier), with the configured
+model names; set `BREV_HOST=<name>` when the endpoints are reached over an SSH tunnel so the page names the box.
+The original event log lives at `/log`. It only reads the existing `/events` and `/stream`
 endpoints and loads no network resources (its fonts are vendored under `dashboard/static/fonts/`, SIL OFL).
 The footer notes that Expanso Edge processes this data and Expanso Cloud deploys and monitors it, and says
 "not connected" until you set `SHERLOCK_EXPANSO=connected` for a run where an Edge pipeline really is doing so.

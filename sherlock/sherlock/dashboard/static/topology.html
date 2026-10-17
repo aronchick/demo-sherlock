@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sherlock · topology</title>
+<style>
+  @font-face { font-family: "IBM Plex Mono"; font-weight: 400; font-display: swap; src: url(/pipeline/fonts/plex-mono-400.woff2) format("woff2"); }
+  @font-face { font-family: "IBM Plex Mono"; font-weight: 500; font-display: swap; src: url(/pipeline/fonts/plex-mono-500.woff2) format("woff2"); }
+  @font-face { font-family: "Schibsted Grotesk"; font-weight: 400 700; font-display: swap; src: url(/pipeline/fonts/schibsted-grotesk.woff2) format("woff2"); }
+  :root {
+    --paper: #ebe7de; --card: #f5f2ea; --card-hi: #fbf9f4; --line: #cdc7b8; --rail: #b9b2a0;
+    --ink: #1b1e22; --dim: #6f695d; --faint: #a39d8d;
+    --scout: #2d5f90; --director: #b4690e; --analyst: #2a7a78; --verifier: #94456a; --ok: #2f7d4f;
+    --nvidia: #76b900; --brev: #1b1e22; --vllm: #3b6ea8;
+    --sans: "Schibsted Grotesk", "Helvetica Neue", sans-serif; --mono: "IBM Plex Mono", ui-monospace, monospace;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; overflow: hidden; background: var(--paper); color: var(--ink); font: 15px/1.4 var(--sans); }
+  .app { height: 100dvh; display: grid; grid-template-rows: auto minmax(0,1fr) auto; gap: clamp(10px, 2vh, 20px); padding: clamp(12px, 2vh, 22px) clamp(18px, 2.4vw, 40px); }
+  .eyebrow { font: 500 11px var(--mono); letter-spacing: .16em; text-transform: uppercase; color: var(--dim); }
+  h1 { margin: 2px 0 0; font: 500 clamp(18px, 2.4vw, 28px)/1.15 var(--sans); }
+  header { display: flex; align-items: flex-end; gap: 20px; }
+  header .mode { margin-left: auto; font: 500 11px var(--mono); letter-spacing: .12em; text-transform: uppercase; color: var(--dim); text-align: right; }
+
+  .board { display: grid; grid-template-columns: minmax(0,1fr) clamp(150px, 14vw, 230px) minmax(0,1fr); gap: 0; min-height: 0; }
+  .site { position: relative; display: grid; grid-template-rows: auto minmax(0,1fr); min-height: 0; border: 2px solid var(--ink); border-radius: 14px; background: var(--card); padding: clamp(14px, 2vh, 22px) clamp(14px, 1.6vw, 24px); }
+  .site.off { border-color: var(--rail); border-style: dashed; background: transparent; }
+  .site.off .logo, .site.off .site-sub { color: var(--faint); }
+  .site .top { display: flex; align-items: baseline; flex-wrap: wrap; gap: 6px 14px; margin-bottom: clamp(10px, 2vh, 18px); }
+  .logo { font: 700 clamp(30px, 3.6vw, 48px)/1 var(--sans); letter-spacing: -.02em; }
+  .logo.nvidia { color: var(--nvidia); }
+  .logo .mark { display: inline-block; width: .55em; height: .55em; border-radius: 3px; background: currentColor; margin-right: .22em; vertical-align: -.02em; }
+  .site-sub { font: 500 11px var(--mono); letter-spacing: .12em; text-transform: uppercase; color: var(--dim); }
+  .site .body { display: grid; min-height: 0; gap: clamp(10px, 1.8vh, 18px); grid-auto-rows: minmax(0, 1fr); }
+  .unit { position: relative; display: flex; flex-direction: column; justify-content: center; gap: 2px; min-height: 0; border: 1px solid var(--line); border-radius: 9px; background: var(--card-hi); padding: 10px 14px 10px 16px; transition: box-shadow .25s, border-color .25s; }
+  .unit::before { content: ""; position: absolute; left: 0; top: 10px; bottom: 10px; width: 3px; border-radius: 0 3px 3px 0; background: var(--c, var(--rail)); }
+  .unit.hot { border-color: var(--c); box-shadow: 0 0 0 1px var(--c), 0 10px 22px -14px var(--c); }
+  .unit .role { font: 500 10px var(--mono); letter-spacing: .14em; text-transform: uppercase; color: var(--dim); }
+  .unit .name { font: 700 clamp(15px, 1.4vw, 19px)/1.25 var(--sans); }
+  .unit .model { font: 500 clamp(11px, 1vw, 13px) var(--mono); color: var(--c, var(--ink)); word-break: break-all; }
+  .unit .what { font-size: clamp(12px, 1.05vw, 14px); color: var(--dim); }
+  .unit .ms { position: absolute; right: 12px; top: 10px; font: 500 10.5px var(--mono); color: var(--c); opacity: 0; transition: opacity .4s; }
+  .unit .ms.on { opacity: 1; }
+  .group { border: 1px solid var(--line); border-radius: 11px; padding: 12px; display: grid; grid-template-rows: auto minmax(0,1fr) minmax(0,1fr); gap: 12px; min-height: 0; }
+  .group > .ghead { display: flex; align-items: baseline; gap: 10px; }
+  .group > .ghead .glogo { font: 700 clamp(18px, 1.8vw, 24px)/1 var(--sans); color: var(--vllm); letter-spacing: -.01em; }
+  .group > .ghead small { font: 500 10.5px var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--dim); }
+  .gap { display: grid; grid-template-rows: repeat(3, 1fr); align-items: center; padding: 0 6px; }
+  .arrow { position: relative; height: 2px; background: var(--rail); }
+  .arrow.back::before { content: ""; position: absolute; left: -1px; top: -5px; border: 6px solid transparent; border-right-color: var(--rail); border-left: 0; }
+  .arrow:not(.back)::after { content: ""; position: absolute; right: -1px; top: -5px; border: 6px solid transparent; border-left-color: var(--rail); border-right: 0; }
+  .arrow span { position: absolute; left: 50%; top: -20px; transform: translateX(-50%); padding: 1px 8px; background: var(--paper); font: 500 10.5px var(--mono); color: var(--dim); white-space: nowrap; }
+  .arrow.dash { background: repeating-linear-gradient(90deg, var(--rail) 0 6px, transparent 6px 11px); }
+  .arrow.hot { background: var(--c); } .arrow.hot span { color: var(--c); }
+  .arrow.hot::after { border-left-color: var(--c); } .arrow.hot::before { border-right-color: var(--c); }
+  .noline { text-align: center; font: 500 10.5px var(--mono); letter-spacing: .08em; color: var(--faint); align-self: end; padding-bottom: 6px; }
+
+  footer { display: flex; align-items: center; gap: 16px; font: 400 11.5px var(--mono); color: var(--dim); white-space: nowrap; min-width: 0; }
+  footer .expanso { display: flex; align-items: center; gap: 7px; flex: 1; min-width: 0; color: var(--faint); font-size: 10.5px; }
+  footer .expanso i { flex: none; width: 7px; height: 7px; border-radius: 50%; border: 1.5px solid var(--faint); }
+  footer .expanso.live i { background: var(--ok); border-color: var(--ok); }
+  footer .expanso span { overflow: hidden; text-overflow: ellipsis; }
+  footer a { color: var(--dim); text-decoration: none; border-bottom: 1px solid var(--line); }
+  footer a:hover, footer a:focus-visible { color: var(--ink); border-color: var(--ink); outline: none; }
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <div><div class="eyebrow">Sherlock / topology</div><h1>What runs where</h1></div>
+    <div class="mode" id="mode"></div>
+  </header>
+
+  <section class="board">
+    <div class="site" id="laptop">
+      <div class="top"><div class="logo"><span class="mark"></span>Laptop</div><div class="site-sub" id="laptopSub">the camera is here; every frame stays here</div></div>
+      <div class="body" id="laptopBody">
+        <div class="unit" id="u-cameras" style="--c: var(--scout)"><div class="role">Cameras</div><div class="name" id="camNames"></div><div class="what">hero PTZ gimbal + scout webcam, every frame</div></div>
+        <div class="unit" id="u-scout" style="--c: var(--scout)"><div class="role">Detect · Scout</div><div class="name">YOLO nano</div><div class="model" id="m-scout"></div><div class="what">watches every frame in ~10 ms, decides when a model is worth calling</div><span class="ms"></span></div>
+        <div class="unit" id="u-orch" style="--c: var(--ink)"><div class="role">Orchestrator + evidence</div><div class="name">Sherlock</div><div class="what">tool loop, camera control, snapshots/ on this disk, this dashboard</div></div>
+      </div>
+    </div>
+
+    <div class="gap">
+      <div class="arrow" id="a-ticket" style="--c: var(--scout)"><span>ticket · crop</span></div>
+      <div class="arrow back dash" id="a-look" style="--c: var(--director)"><span>look_at · verdict</span></div>
+      <div class="noline">no frame ever crosses</div>
+    </div>
+
+    <div class="site" id="brev">
+      <div class="top"><div class="logo nvidia"><span class="mark"></span>Brev</div><div class="site-sub" id="brevSub">1x GPU box · models behind OpenAI-compatible URLs</div></div>
+      <div class="body">
+        <div class="group">
+          <div class="ghead"><div class="glogo">vLLM</div><small id="vllmSub">v0.28.0 · two servers</small></div>
+          <div class="unit" id="u-director" style="--c: var(--director)"><div class="role">Decide · Director · :8001</div><div class="name">Nemotron 3.5 Lightning</div><div class="model" id="m-director"></div><div class="what">reads the Scout's ticket, picks the next camera tool</div><span class="ms"></span></div>
+          <div class="unit" id="u-vlm" style="--c: var(--analyst)"><div class="role">Read + Check · Analyst and Verifier · :8002</div><div class="name">SmolVLM, shared</div><div class="model" id="m-analyst"></div><div class="what">describes the zoomed crop, then a second pass checks the claim</div><span class="ms"></span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <div class="expanso" id="expanso"><i></i><span id="expansoText"></span></div>
+    <a href="/">data flow</a>
+    <a href="/log">event log</a>
+  </footer>
+</div>
+
+<script>
+'use strict';
+const CFG = __CFG_JSON__;
+const $ = id => document.getElementById(id);
+const M = CFG.models || {}, short = m => (m || '').split('/').pop();
+$('camNames').textContent = (CFG.cameras || []).map(c => `${c.name} (${c.backend})`).join(' · ') || 'none configured';
+$('m-scout').textContent = (M.scout || {}).model || '';
+$('m-director').textContent = (M.director || {}).model || '';
+$('m-analyst').textContent = (M.analyst || {}).model || '';
+if (M.verifier && M.analyst && M.verifier.model !== M.analyst.model) $('m-analyst').textContent += ' / ' + M.verifier.model;
+const hosts = [...new Set(['director', 'analyst', 'verifier'].map(r => (M[r] || {}).where).filter(Boolean))];
+if (CFG.mock) {
+  $('mode').textContent = 'mock run · everything on this laptop';
+  $('brev').classList.add('off');
+  $('brevSub').textContent = 'not in this run: the Director, Analyst and Verifier are in-process mocks on the laptop';
+  $('vllmSub').textContent = 'what the live run uses';
+} else {
+  $('mode').textContent = 'live · models on ' + hosts.join(', ');
+  $('brevSub').textContent = hosts.join(', ') + ' · models behind OpenAI-compatible URLs';
+}
+$('expanso').classList.toggle('live', CFG.expanso);
+$('expansoText').textContent = (CFG.expanso ? 'connected · ' : 'not connected in this run · ') + 'Expanso Edge processes this data on the laptop; Expanso Cloud deploys and monitors it, no image data';
+
+const timers = {};
+function hot(id, ms = 1200) { const el = $(id); if (!el) return; el.classList.add('hot'); clearTimeout(timers[id]); timers[id] = setTimeout(() => el.classList.remove('hot'), ms); }
+function lat(id, v) { const el = $(id) && $(id).querySelector('.ms'); if (!el || !v) return; el.textContent = (v < 1 ? '<1' : Math.round(v)) + ' ms'; el.classList.add('on'); clearTimeout(timers[id + 'ms']); timers[id + 'ms'] = setTimeout(() => el.classList.remove('on'), 3500); }
+const es = new EventSource('/events');
+es.onmessage = e => {
+  const ev = JSON.parse(e.data);
+  switch (ev.stage) {
+    case 'scout': hot('u-scout'); hot('u-cameras'); lat('u-scout', ev.latency_ms); hot('a-ticket'); break;
+    case 'director': hot('u-director'); lat('u-director', ev.latency_ms); if (/look_at|snapshot|->/.test(ev.msg || '')) hot('a-look'); break;
+    case 'tool': hot('u-orch'); if (/^(look_at|snapshot)/.test(ev.msg || '')) { hot('u-cameras'); hot('a-ticket'); } break;
+    case 'analyst': case 'verifier': hot('u-vlm'); lat('u-vlm', ev.latency_ms); break;
+  }
+};
+</script>
+</body>
+</html>

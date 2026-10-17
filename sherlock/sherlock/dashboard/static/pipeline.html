@@ -115,6 +115,7 @@
   .dest .sub { font-size: 12px; color: var(--dim); }
   .dest.ping { border-color: var(--c); background: var(--card-hi); box-shadow: 0 0 0 1px var(--c), 0 10px 22px -14px var(--c); }
   #d-alert.ping { animation: alertpulse 1.2s ease-in-out 2; }
+  .dest .keep { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); width: clamp(40px, 3.6vw, 52px); aspect-ratio: 1; border: 1px dashed var(--rail); border-radius: 4px; }
 
   /* ---- incident record: the signature -------------------------------------------- */
   .record { display: grid; grid-template-columns: clamp(92px, 9vw, 120px) repeat(5, minmax(0,1fr)); gap: 8px; align-items: stretch; min-width: 0; }
@@ -181,12 +182,12 @@
     </div>
 
     <div class="col zone laptop" id="zLaptop">
-      <div class="zhead">The laptop<small>local</small></div>
+      <div class="zhead">The laptop<small id="laptopTag"></small></div>
       <article class="stage" id="st-scout" style="--c: var(--scout)">
         <div class="txt">
           <div class="kind">Detect</div>
           <div class="name">Scout</div>
-          <div class="sub">YOLO nano, every frame</div>
+          <div class="sub" id="scoutSub">YOLO nano, every frame</div>
           <div class="count">seen <b id="frames">0</b></div>
         </div>
         <div class="spec" aria-hidden="true"></div>
@@ -202,24 +203,25 @@
     </div>
 
     <div class="col zone models" id="zModels">
-      <div class="zhead">Models<small id="modeTag">vLLM endpoints</small></div>
+      <div class="zhead" id="modelsHead">Models<small id="modeTag"></small></div>
       <article class="stage" id="st-director" style="--c: var(--director)">
-        <div class="kind">Decide</div><div class="name">Director</div><div class="sub">Nemotron picks the next tool</div>
+        <div class="kind">Decide</div><div class="name">Director</div><div class="sub" id="directorSub">picks the next tool</div>
         <span class="ms"></span><span class="badge"></span>
       </article>
       <article class="stage" id="st-analyst" style="--c: var(--analyst)">
-        <div class="kind">Read</div><div class="name">Analyst</div><div class="sub">VLM describes the crop</div>
+        <div class="kind">Read</div><div class="name">Analyst</div><div class="sub" id="analystSub">describes the crop</div>
         <span class="ms"></span><span class="badge"></span>
       </article>
       <article class="stage" id="st-verifier" style="--c: var(--verifier)">
-        <div class="kind">Check</div><div class="name">Verifier</div><div class="sub">second look at the same crop</div>
+        <div class="kind">Check</div><div class="name">Verifier</div><div class="sub" id="verifierSub">second look at the same crop</div>
         <span class="ms"></span><span class="badge"></span>
       </article>
     </div>
 
     <div class="col out" id="cOut">
       <article class="dest" id="d-ignored" style="--c: var(--benign)">
-        <div class="kind">Ignored</div><div class="num" id="n-ignored">0</div><div class="sub">benign, no VLM call</div>
+        <div class="kind">Archived</div><div class="num" id="n-ignored">0</div><div class="sub">benign, no VLM call</div>
+        <div class="keep" aria-hidden="true"></div>
       </article>
       <article class="dest" id="d-logged" style="--c: var(--analyst)">
         <div class="kind">Logged</div><div class="num" id="n-logged">0</div><div class="sub">looked at, kept as evidence</div>
@@ -245,7 +247,8 @@
     <span class="stat">recovered <b id="recoveries">0</b></span>
     <span class="stat">verified <b id="confirmed">0</b> / <b id="rejected">0</b></span>
     <div class="expanso" id="expanso"><i></i><span id="expansoText"></span></div>
-    <a href="/">event log</a>
+    <a href="/topology">topology</a>
+    <a href="/log">event log</a>
     <button type="button" onclick="post('/demo/fail/1')">Break next tool call</button>
     <button type="button" id="coverBtn" onclick="toggleCover()">Cover hero lens</button>
   </footer>
@@ -278,7 +281,15 @@ const REDUCED = matchMedia('(prefers-reduced-motion: reduce)').matches;
 const FONT = { mono: '"IBM Plex Mono", ui-monospace, monospace', sans: '"Schibsted Grotesk", "Helvetica Neue", sans-serif' };
 
 // ---- config echoed from the server ------------------------------------------------
-$('modeTag').textContent = CFG.mock ? 'mock, runs on this laptop' : 'vLLM endpoints';
+const M = CFG.models || {}, short = m => (m || '').split('/').pop();
+const hosts = [...new Set(['director', 'analyst', 'verifier'].map(r => (M[r] || {}).where).filter(Boolean))];
+$('modeTag').textContent = CFG.mock ? 'mock, in-process on this laptop' : 'vLLM on ' + hosts.join(', ');
+$('laptopTag').textContent = 'scout ' + short((M.scout || {}).model);
+for (const r of ['director', 'analyst', 'verifier']) {
+  const el = $(r + 'Sub'), base = el.textContent;
+  el.textContent = CFG.mock ? 'mock · ' + base : short((M[r] || {}).model) + ' · ' + base;
+  el.title = CFG.mock ? 'mock, no model server' : `${(M[r] || {}).model} at ${(M[r] || {}).url}`;
+}
 $('expanso').classList.toggle('live', CFG.expanso);
 const EXPANSO_DETAIL = 'Expanso Edge processes this data; Expanso Cloud deploys and monitors it, no image data';
 $('expansoText').textContent = (CFG.expanso ? 'connected · ' : 'not connected in this run · ') + EXPANSO_DETAIL;
@@ -349,7 +360,7 @@ function layout() {
   for (const k in ST) R[k] = rectOf(ST[k]);
   R.wide = R.camera; R.crop = rectOf($('cropFrame'));
   R.cam = rectOf($('cCam')); R.zl = rectOf($('zLaptop')); R.zm = rectOf($('zModels')); R.out = rectOf($('cOut')); R.board = rectOf($('board'));
-  R.spec = rectOf(ST.scout.querySelector('.spec')); R.slots = rectOf(ST.bucket.querySelector('.slots'));
+  R.spec = rectOf(ST.scout.querySelector('.spec')); R.keep = rectOf(ST.ignored.querySelector('.keep')); R.slots = rectOf(ST.bucket.querySelector('.slots'));
   const g1 = (R.cam.r + R.zl.l) / 2, g3 = (R.zl.r + R.zm.l) / 2, g5 = (R.zm.r + R.out.l) / 2;
   L.g3 = g3;
   const w = R.wide, c = R.crop, s = R.scout, bk = R.bucket, d = R.director, an = R.analyst, v = R.verifier;
@@ -422,7 +433,7 @@ function grab(img, bb, size = 160) {
 const S = {
   particles: [], cards: [], bursts: [], shelf: [],
   boxes: [],        // [{ bb, color, alpha, dash, label }] on the wide feed
-  zoom: null, docked: null, frames: 0, ambient: 0.6,
+  zoom: null, docked: null, archived: null, frames: 0, ambient: 0.6,
 };
 const now = () => performance.now();
 const ease = t => t < .5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
@@ -641,11 +652,13 @@ function onReport(ev) {
     const secs = ev.latency_ms ? ` · ${(ev.latency_ms / 1000).toFixed(1)} s` : '';
     if (action === 'ignore') {                                          // nothing stored, nothing analyzed
       flow('toIgnore', 700, C.benign); glow('scout', .8, C.benign);
-      await ride('toIgnore', 800, { text: `${d.label || cur.label || 'object'} · ignored`, color: C.benign });
+      const keep = R.keep;
+      await ride('toIgnore', 800, { bmp: cur.card, w: 44, color: C.benign }, { x: keep.cx, y: keep.cy });
+      S.archived = { bmp: cur.card, x: keep.cx, y: keep.cy, color: C.benign };   // the picture lands in Archived
       ping('ignored', C.benign);
-      setStamp($('wideStamp'), 'ignored', 'quiet');
-      caption(`${d.label || cur.label || 'object'} · benign · ignored${calls ? ' · ' + calls : ''}`);
-      cellSet('decision', 'ignored', calls + secs);
+      setStamp($('wideStamp'), 'archived', 'quiet');
+      caption(`${d.label || cur.label || 'object'} · benign · archived${calls ? ' · ' + calls : ''}`);
+      cellSet('decision', 'archived', calls + secs);
       if (S.docked) S.docked.fade = true;
       for (const b of S.boxes) b.alpha = 0.99;
       await wait(900);
@@ -814,6 +827,7 @@ function drawRails(t) {
   ctx.globalAlpha = 1;
 }
 function drawStageArt(t) {
+  if (S.archived) drawCard({ bmp: S.archived.bmp, color: S.archived.color }, S.archived.x, S.archived.y, Math.min(R.keep.w, R.keep.h) - 8, 1);
   if (S.docked) {                                                        // the specimen the Scout is holding
     drawCard({ bmp: S.docked.bmp, color: S.docked.color }, S.docked.x, S.docked.y, Math.min(R.spec.w, R.spec.h) - 8, S.docked.alpha);
     if (S.docked.fade) { S.docked.alpha *= 0.93; if (S.docked.alpha < 0.03) S.docked = null; }

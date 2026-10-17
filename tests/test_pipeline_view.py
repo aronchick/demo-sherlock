@@ -24,8 +24,8 @@ def test_pipeline_page_mounts_and_uses_existing_streams():
     for needle in ("/events", "/stream/wide", "/stream/crop", "/demo/fail/1", "/demo/cover/hero/"):
         assert needle in body, needle
     # Selected incidents carry scene and person context across the model boundary
-    assert "selected incidents" in body
-    assert "scene + object + face" in body
+    assert "Camera control · pan / tilt / zoom" in body
+    assert "Scene + object + person" in body
     # the template token is always replaced, never served raw
     assert "__CFG_JSON__" not in body
 

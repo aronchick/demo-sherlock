@@ -275,7 +275,7 @@ body[data-mode="live"] .mode b { color: var(--ok); }
 .measured dt { display: flex; margin-top: 4px; white-space: nowrap; }
 .measured dt b { flex: none; font-weight: 600; }
 .measured dt span { flex: 0 1 auto; min-width: 0; font-weight: 600; white-space: pre; overflow: hidden; text-overflow: ellipsis; }
-.measured dt small { flex: none; max-width: 70%; margin-left: auto; padding-left: 10px; color: var(--text-dim); font-size: 13px;
+.measured dt small { flex: none; max-width: 70%; margin-left: auto; padding-left: 8px; color: var(--text-dim); font-size: 13px;
   overflow: hidden; text-overflow: ellipsis; }
 .measured dt:first-child { margin-top: 0; }
 .measured dd { display: flex; gap: 10px; margin: 0; white-space: nowrap; }

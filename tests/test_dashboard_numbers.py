@@ -242,7 +242,7 @@ def test_results_say_where_they_were_measured():
     assert numbers.director_result({**benchmark(), "environment": "brev-l40s"})["measured_on"] == "brev-l40s"
     assert numbers.director_result({**benchmark(), "environment": "unspecified"})["measured_on"] is None
     assert numbers.director_result(benchmark())["measured_on"] is None
-    assert numbers.scout_result({**scout(), "environment": "local", "device": "mps"})["measured_on"] == "local · mps"
+    assert numbers.scout_result({**scout(), "environment": "local", "device": "mps"})["measured_on"] == "local · MPS"
 
 
 def test_scout_provenance_split_and_matched_ground_truth():

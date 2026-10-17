@@ -10,7 +10,7 @@ def main():
     p = argparse.ArgumentParser()
     p.add_argument("--mock", action="store_true", help="rule-based director + mock VLMs, no model server")
     p.add_argument("--synthetic", action="store_true", help="generated video instead of real cameras")
-    p.add_argument("--port", type=int, default=int(os.environ.get("DASHBOARD_PORT", 8000)))
+    p.add_argument("--port", type=int, default=int(os.environ.get("DASHBOARD_PORT", "8000")))
     a = p.parse_args()
     if a.mock:
         os.environ["SHERLOCK_MOCK"] = "1"

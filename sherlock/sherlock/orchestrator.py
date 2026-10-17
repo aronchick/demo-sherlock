@@ -92,5 +92,5 @@ class Sherlock:
         img = self.latest_crop if which == "crop" else next(iter(self.latest_wide.values()), None)
         if img is None:
             return None
-        ok, buf = cv2.imencode(".jpg", img, [cv2.IMWRITE_JPEG_QUALITY, 70])
+        _, buf = cv2.imencode(".jpg", img, [cv2.IMWRITE_JPEG_QUALITY, 70])
         return buf.tobytes()

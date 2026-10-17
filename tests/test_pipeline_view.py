@@ -2,7 +2,6 @@
 so the test only checks that it mounts next to make_app() and points at them."""
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
-
 from sherlock.dashboard.pipeline import mount_pipeline
 
 

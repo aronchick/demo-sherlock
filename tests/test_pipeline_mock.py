@@ -1,50 +1,66 @@
-"""End-to-end in mock mode: synthetic video -> scout -> rule director -> tools ->
-mock analyst/verifier. Also checks the failure-injection + camera-fallback path."""
-import os
+"""End-to-end in mock mode: scripted synthetic scene -> scout -> rule director ->
+tools -> mock analyst/verifier. Also checks the failure-injection + camera-fallback path."""
 import time
-
-os.environ["SHERLOCK_MOCK"] = "1"
-os.environ["CAMERAS"] = "hero:fake:synthetic,scout1:fake:synthetic"
-os.environ["DWELL_SECONDS"] = "0.3"
 
 from sherlock.config import Config
 from sherlock.events import BUS
 from sherlock.orchestrator import Sherlock
 
 
-def _wait_reports(s, n, timeout=25):
+def wait_for(s, pred, timeout=25):
     t0 = time.time()
-    while len(s.log) < n and time.time() - t0 < timeout:
-        time.sleep(0.2)
-    return s.log
+    while time.time() - t0 < timeout:
+        hits = [r for r in s.log if pred(r)]
+        if hits:
+            return hits[0]
+        time.sleep(0.1)
+    return None
 
 
-def test_cascade_produces_verified_report():
-    s = Sherlock(Config(), synthetic=True)
+def is_alert(r):
+    return r.get("action") == "alert"
+
+
+def test_cascade_produces_verified_alert(tmp_path):
+    s = Sherlock(Config(), synthetic=True, evidence_dir=str(tmp_path))
     s.start()
-    log = _wait_reports(s, 1)
-    s.running = False
-    assert log, "no investigation happened"
-    r = log[0]
-    assert r["done"] and "ACME" in r["claim"] or "blue" in r["claim"].lower()
+    r = wait_for(s, is_alert)
+    s.stop()
+    assert r, "no alert happened"
+    assert "knife" in r["claim"].lower()
     assert r["verified"] is True
     assert BUS.stats["frames"] > BUS.stats["vlm_calls"] * 5, "cascade should gate the VLM"
 
 
-def test_tool_failure_recovers_on_other_camera():
-    s = Sherlock(Config(), synthetic=True)
+def test_tool_failure_recovers_on_other_camera(tmp_path):
+    before = dict(BUS.stats)
+    s = Sherlock(Config(), synthetic=True, evidence_dir=str(tmp_path))
     s.inject_failure(1)
     s.start()
-    log = _wait_reports(s, 1)
-    s.running = False
-    assert log and log[0]["done"]
-    assert BUS.stats["tool_errors"] >= 1 and BUS.stats["recoveries"] >= 1
+    r = wait_for(s, is_alert)
+    s.stop()
+    assert r and r["done"] and r["evidence"] == ["weapon_crop", "face_crop"]
+    assert s.tools.injected_failures == 0
+    assert BUS.stats["tool_errors"] > before["tool_errors"]
+    assert BUS.stats["recoveries"] > before["recoveries"]
 
 
-def test_covered_lens_is_loud_not_silent():
-    s = Sherlock(Config(), synthetic=True)
+def test_corrupted_args_are_rejected_and_recovered(tmp_path):
+    before = dict(BUS.stats)
+    s = Sherlock(Config(), synthetic=True, evidence_dir=str(tmp_path))
+    s.inject_corruption(1)
+    s.start()
+    r = wait_for(s, is_alert)
+    s.stop()
+    assert r and r["verified"] is True
+    assert s.tools.injected_corruptions == 0
+    assert BUS.stats["tool_errors"] > before["tool_errors"]
+
+
+def test_covered_lens_is_loud_not_silent(tmp_path):
+    s = Sherlock(Config(), synthetic=True, evidence_dir=str(tmp_path))
     s.cover("hero", True)
     s.start()
-    log = _wait_reports(s, 1)
-    s.running = False
-    assert log and log[0]["trigger"]["camera"] == "scout1"
+    r = wait_for(s, is_alert)
+    s.stop()
+    assert r and r["trigger"]["camera"] == "scout1"

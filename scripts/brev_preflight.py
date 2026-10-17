@@ -413,6 +413,8 @@ def mac_instructions(args, eps):
         print(f"{prefix}_BASE_URL=http://{args.mac_host}:{port}/v1")
         print(f"{prefix}_MODEL={json.dumps(eps[role]['model'])}")
     print("DIRECTOR_THINKING=0")
+    # The demo's Verifier operating point for SmolVLM-500M (README, Verifier verdicts); the code default is 0.0.
+    print("VERIFIER_MARGIN=-1.0")
     print("SHERLOCK_MOCK=0")
     if all(ep["key"] in {"EMPTY", "ollama", ""} for ep in eps.values()):
         print("OPENAI_API_KEY=EMPTY")

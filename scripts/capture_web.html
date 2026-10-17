@@ -1,0 +1,206 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Scout capture</title>
+<style>
+@font-face { font-family: 'Schibsted Grotesk'; src: url('/fonts/schibsted-grotesk.woff2') format('woff2'); font-weight: 100 900; }
+@font-face { font-family: 'IBM Plex Mono'; src: url('/fonts/plex-mono-400.woff2') format('woff2'); font-weight: 400; }
+@font-face { font-family: 'IBM Plex Mono'; src: url('/fonts/plex-mono-500.woff2') format('woff2'); font-weight: 500; }
+:root {
+  color-scheme: dark;
+  --bg: #0c0d10; --surface: #14161b; --surface-2: #1b1e25; --line: #2b3039;
+  --text: #eceef2; --text-dim: #a3aab6;
+  --accent: #f2c14e;  /* countdown and the next action */
+  --ok: #8fe0a4;      /* saved, done */
+  --rec: #ff6f6a;     /* recording */
+  --sans: 'Schibsted Grotesk', sans-serif;
+  --mono: 'IBM Plex Mono', monospace;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html, body { margin: 0; }
+body {
+  min-height: 100vh; background: var(--bg); color: var(--text);
+  font: 15px/1.45 var(--sans); font-variant-numeric: tabular-nums;
+  display: grid; grid-template-rows: auto minmax(0, 1fr);
+}
+header {
+  display: flex; gap: 16px; align-items: baseline; flex-wrap: wrap;
+  padding: 14px 20px; border-bottom: 1px solid var(--line);
+}
+header h1 { margin: 0; font-size: 20px; font-weight: 700; letter-spacing: -0.01em; }
+header .meta { font: 13px var(--mono); color: var(--text-dim); }
+main {
+  display: grid; grid-template-columns: minmax(0, 1fr) 380px; gap: 20px;
+  padding: 20px; min-height: 0;
+}
+.stage { position: relative; min-width: 0; align-self: start; }
+.stage img.live {
+  display: block; width: 100%; aspect-ratio: 16 / 9; object-fit: contain;
+  background: var(--surface); border-radius: 10px; border: 3px solid var(--line);
+  transform: scaleX(-1); transition: border-color 0.15s;
+}
+.stage.capturing img.live { border-color: var(--rec); }
+.stage.flash img.live { border-color: var(--ok); }
+.overlay {
+  position: absolute; inset: 3px; display: grid; place-items: center; pointer-events: none;
+  border-radius: 8px;
+}
+.count {
+  font: 500 min(28vw, 220px)/1 var(--mono); color: var(--accent);
+  text-shadow: 0 0 40px rgba(0, 0, 0, 0.6);
+}
+.badge {
+  position: absolute; top: 14px; left: 14px; display: flex; align-items: center; gap: 8px;
+  padding: 6px 12px; border-radius: 6px; background: rgba(12, 13, 16, 0.78);
+  font: 500 15px var(--mono);
+}
+.badge .dot { width: 12px; height: 12px; border-radius: 50%; background: var(--rec); animation: blink 1s infinite; }
+@keyframes blink { 50% { opacity: 0.25; } }
+.bar { height: 10px; margin-top: 12px; border-radius: 5px; background: var(--surface-2); overflow: hidden; }
+.bar > div { height: 100%; width: 0; background: var(--rec); transition: width 0.3s; }
+.caption { margin-top: 8px; font: 13px var(--mono); color: var(--text-dim); }
+.hint { margin-top: 10px; font: 16px/1.45 var(--mono); min-height: 1.45em; }  /* the grotesk subset has no , or . */
+aside { display: flex; flex-direction: column; gap: 18px; min-width: 0; }
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 14px; }
+.panel h2 {
+  margin: 0 0 10px; font: 500 12px var(--mono); letter-spacing: 0.08em;
+  text-transform: uppercase; color: var(--text-dim);
+}
+button {
+  font: inherit; color: inherit; cursor: pointer; border-radius: 8px;
+  border: 1px solid var(--line); background: var(--surface-2); padding: 10px 12px;
+}
+button:disabled { cursor: default; opacity: 0.45; }
+button.go { width: 100%; padding: 16px; font-size: 20px; font-weight: 700; background: var(--accent); color: #17140a; border-color: var(--accent); }
+button.stop { width: 100%; margin-top: 10px; }
+.plan { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
+.plan span { font: 13px var(--mono); padding: 4px 9px; border-radius: 5px; border: 1px solid var(--line); color: var(--text-dim); }
+.plan span.done { color: var(--ok); border-color: var(--ok); }
+.plan span.next { color: var(--accent); border-color: var(--accent); }
+.props { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.props button { text-align: left; padding: 8px 10px; min-width: 0; }
+.props b { display: block; font-size: 15px; }
+.props small { font: 12px var(--mono); color: var(--text-dim); }
+.thumbs { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
+.thumbs img { width: 100%; aspect-ratio: 16 / 9; object-fit: cover; border-radius: 4px; background: var(--surface-2); }
+.thumbs .empty { aspect-ratio: 16 / 9; border-radius: 4px; background: var(--surface-2); }
+.error { color: var(--rec); font: 13px var(--mono); }
+@media (max-width: 900px) { main { grid-template-columns: minmax(0, 1fr); padding: 16px; } }
+</style>
+</head>
+<body>
+<header>
+  <h1>Scout capture</h1>
+  <span class="meta" id="meta">connecting</span>
+</header>
+<main>
+  <section class="stage" id="stage">
+    <img class="live" src="/stream" alt="Live camera preview">
+    <div class="overlay"><div class="count" id="count"></div></div>
+    <div class="badge" id="badge" hidden><span class="dot"></span><span id="badgeText"></span></div>
+    <div class="bar"><div id="bar"></div></div>
+    <div class="caption">Preview is mirrored like a mirror; saved photos are not.</div>
+    <div class="hint" id="hint"></div>
+    <div class="error" id="error"></div>
+  </section>
+  <aside>
+    <div class="panel">
+      <button class="go" id="go">Start</button>
+      <button class="stop" id="stop" hidden>Stop this session</button>
+      <div class="plan" id="plan"></div>
+    </div>
+    <div class="panel">
+      <h2>Any prop</h2>
+      <div class="props" id="props"></div>
+    </div>
+    <div class="panel">
+      <h2>Last frames saved</h2>
+      <div class="thumbs" id="thumbs"></div>
+    </div>
+  </aside>
+</main>
+<script>
+const HINTS = {
+  fedora: 'Wear it for half, hold it for half. Turn your head, step closer and back.',
+  cap: 'Wear it for half, hold it for half. Brim forward, sideways, back.',
+  coke: 'Hold the can: each hand, near and far, label toward and away.',
+  none: 'Empty hands. Walk, turn, sit, stand. Nothing to find here.',
+  knife: 'Each hand, near and far, flat and edge-on.',
+  bat: 'Each hand, resting and raised.',
+  scissors: 'Each hand, open and closed.',
+  badge: 'Clipped on, then held up, near and far.',
+  bottle: 'Each hand, near and far.',
+};
+const $ = (id) => document.getElementById(id);
+let last = null, lastSaved = 0;
+
+async function post(path, body) {
+  const r = await fetch(path, { method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: body ? JSON.stringify(body) : undefined });
+  if (!r.ok) $('error').textContent = (await r.json()).detail || r.statusText;
+}
+const nextUp = (s) => (s.plan.find((p) => !p.done) || {}).prop;
+function startNext() {
+  if (!last || last.state !== 'idle') return;
+  const p = nextUp(last);
+  if (p) post('/api/start', { prop: p });
+}
+$('go').onclick = startNext;
+$('stop').onclick = () => post('/api/stop');
+document.addEventListener('keydown', (e) => {
+  if (e.code === 'Space') { e.preventDefault(); startNext(); }
+  if (e.code === 'Escape') post('/api/stop');
+});
+
+function render(s) {
+  const busy = s.state !== 'idle', next = nextUp(s);
+  $('meta').textContent = `camera ${s.camera} · data/props/${s.session || ''}`;
+  $('stage').classList.toggle('capturing', s.state === 'capturing');
+  $('count').textContent = s.state === 'countdown' ? Math.ceil(s.countdown_left) : '';
+  $('badge').hidden = !busy;
+  $('badgeText').textContent = s.state === 'countdown' ? `get ready: ${s.prop}`
+    : `REC ${s.prop} ${s.saved}/${s.n}`;
+  $('bar').style.width = `${busy ? (100 * s.saved) / s.n : 0}%`;
+  $('hint').textContent = busy ? HINTS[s.prop] || '' : next ? `Next: ${next}. ${HINTS[next] || ''}` : 'Plan done. Any prop below adds more.';
+  $('go').disabled = busy || !next;
+  $('go').textContent = next ? `Start ${next}  (space)` : 'Plan done';
+  $('stop').hidden = !busy;
+  $('error').textContent = s.error || '';
+  let marked = false;
+  $('plan').innerHTML = s.plan.map((p) => {
+    let cls = p.done ? 'done' : '';
+    if (!p.done && !marked) { cls = 'next'; marked = true; }
+    return `<span class="${cls}">${p.done ? '✓ ' : ''}${p.prop}</span>`;
+  }).join('');
+  $('props').innerHTML = s.props.map((p) => {
+    const c = s.counts[p];
+    return `<button data-prop="${p}" ${busy ? 'disabled' : ''}><b>${p}</b><small>${c.frames} photos</small></button>`;
+  }).join('');
+  const thumbs = s.recent.map((u) => `<img src="${u}" alt="">`);
+  while (thumbs.length < 8) thumbs.push('<div class="empty"></div>');
+  $('thumbs').innerHTML = thumbs.join('');
+  if (s.saved > lastSaved && s.state === 'capturing') {
+    $('stage').classList.add('flash');
+    setTimeout(() => $('stage').classList.remove('flash'), 150);
+  }
+  lastSaved = s.saved;
+}
+$('props').onclick = (e) => {
+  const b = e.target.closest('button[data-prop]');
+  if (b && !b.disabled) post('/api/start', { prop: b.dataset.prop });
+};
+async function poll() {
+  try {
+    const r = await fetch('/api/status');
+    last = await r.json();
+    render(last);
+  } catch { $('meta').textContent = 'capture server not reachable'; }
+  setTimeout(poll, 250);
+}
+poll();
+</script>
+</body>
+</html>

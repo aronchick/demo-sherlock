@@ -3,6 +3,8 @@
 Read the newest eligible artifact by modification time (filename breaks ties).
 The Director headline uses the highest measured concurrency, never the fastest
 row. A/B deltas must match that same model/concurrency and have no failed calls.
+Every result carries measured_on, the runtime its producer recorded, so local
+numbers never read as vLLM ones.
 """
 
 from __future__ import annotations
@@ -38,6 +40,20 @@ def text(value):
 
 def mapping(value):
     return value if isinstance(value, dict) else {}
+
+
+def measured_on(data):
+    """Where the evidence was measured, as its producer recorded it: "local · Ollama"
+    from a model_server entry, else the runtime or environment and device it named
+    ("local · mps"). None when it recorded nothing."""
+    server = mapping(data.get("model_server"))
+    host, name = text(server.get("host")), text(server.get("name") or server.get("label"))
+    if host or name:
+        parts = ["local" if host == "laptop" else host, name]
+    else:
+        environment = text(data.get("environment"))
+        parts = [text(data.get("runtime")), "" if environment == "unspecified" else environment, text(data.get("device"))]
+    return " · ".join(part for part in parts if part) or None
 
 
 def no_stub(data):
@@ -115,6 +131,7 @@ def director_result(data):
         "output_tokens_per_s": number(summary.get("output_tokens_per_s")),
         "requests_per_s": number(summary.get("requests_per_s")),
         "prefix_cache_p95_change_pct": delta,
+        "measured_on": measured_on(data),
     }
 
 
@@ -139,6 +156,7 @@ def ablation_result(data):
             "tasks": tasks,
             "task_success": number(metrics.get("task_success"), maximum=1),
             "tool_call_validity": number(metrics.get("tool_call_validity"), maximum=1),
+            "measured_on": measured_on(row) or measured_on(data),
         }
     return None
 
@@ -179,6 +197,7 @@ def scout_result(data):
             "after_precision": number(a.get("precision"), maximum=1),
             "before_recall": number(b.get("recall"), maximum=1),
             "after_recall": number(a.get("recall"), maximum=1),
+            "measured_on": measured_on(data),
         }
     return None
 

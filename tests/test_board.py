@@ -88,41 +88,74 @@ def empty_results(tmp_path, monkeypatch) -> tuple[str, dict]:
         return client.get("/log").text, client.get("/numbers").json()
 
 
-def test_board_mounts_every_measured_result_as_tbd(tmp_path, monkeypatch):
+def test_board_mounts_every_measured_result_as_not_measured(tmp_path, monkeypatch):
     page, data = empty_results(tmp_path, monkeypatch)
     assert data == {"director": None, "ablation": None, "scout": None}
     assert '<script src="numbers.js"' in page
     ids = measured_ids()
     assert len(ids) == 12 and all(f'id="{i}"' in page for i in ids), "numbers.js writes to an element the board lacks"
     outputs = re.findall(r'<output id="(number-[a-z-]+)">([^<]*)</output>', page)
-    assert len(outputs) == 8 and {text for _, text in outputs} == {"TBD"}
+    assert len(outputs) == 8 and {text for _, text in outputs} == {"not measured"}
+    assert "TBD" not in page
 
 
-# numbers.js against a stand-in DOM holding the board's ids, fed the real /numbers body.
+# numbers.js against a stand-in DOM holding the board's ids, fed a /numbers body.
+# A heading prints as its parts: [name, detail, runtime].
 RUN_NUMBERS_JS = """
 const {script, data, ids} = JSON.parse(process.argv[1]);
 const shown = {};
-globalThis.document = {getElementById: id => ids.includes(id) ? (shown[id] ??= {textContent: ''}) : null};
+const node = () => ({textContent: '', replaceChildren(...kids) { this.parts = kids.map(k => k.textContent); }});
+globalThis.document = {getElementById: id => ids.includes(id) ? (shown[id] ??= node()) : null, createElement: node};
 globalThis.fetch = async () => ({ok: true, json: async () => data});
 globalThis.setInterval = () => 0;
 require(script);
 setTimeout(() => console.log(JSON.stringify(Object.fromEntries(
-  Object.entries(shown).map(([id, el]) => [id, el.textContent])))), 0);
+  Object.entries(shown).map(([id, el]) => [id, el.parts || el.textContent])))), 0);
 """
 
 
-@pytest.mark.skipif(shutil.which("node") is None, reason="needs node to run numbers.js")
-def test_numbers_js_renders_tbd_from_an_empty_results_dir(tmp_path, monkeypatch):
-    page, data = empty_results(tmp_path, monkeypatch)
+def run_numbers_js(page: str, data: dict) -> dict:
     arg = {"script": str(pathlib.Path(STATIC) / "numbers.js"), "data": data, "ids": re.findall(r'id="([^"]+)"', page)}
     run = subprocess.run(["node", "-e", RUN_NUMBERS_JS, json.dumps(arg)], capture_output=True, text=True,
                          timeout=30, check=True)
-    shown = json.loads(run.stdout)
+    return json.loads(run.stdout)
+
+
+needs_node = pytest.mark.skipif(shutil.which("node") is None, reason="needs node to run numbers.js")
+
+
+@needs_node
+def test_numbers_js_renders_not_measured_from_an_empty_results_dir(tmp_path, monkeypatch):
+    page, data = empty_results(tmp_path, monkeypatch)
+    shown = run_numbers_js(page, data)
     assert set(shown) == measured_ids()
     assert shown.pop("numbers-status") == "No measured results yet"
-    labels = {i: shown.pop(i) for i in ("number-director", "number-ablation", "number-scout")}
-    assert labels == {"number-director": "Director", "number-ablation": "NeMo Gym", "number-scout": "Scout · weapon"}
-    assert set(shown.values()) == {"TBD"} and len(shown) == 8
+    headings = {i: shown.pop(i) for i in ("number-director", "number-ablation", "number-scout")}
+    assert headings == {"number-director": ["Director", "", ""], "number-ablation": ["NeMo Gym", "", ""],
+                        "number-scout": ["Scout", " · weapon", ""]}
+    assert set(shown.values()) == {"not measured"} and len(shown) == 8
+
+
+@needs_node
+def test_every_measured_group_names_its_runtime(tmp_path, monkeypatch):
+    page, _ = empty_results(tmp_path, monkeypatch)
+    director = {"concurrency": 8, "succeeded": 8, "attempted": 8, "p50_ms": 900, "p95_ms": 1500,
+                "output_tokens_per_s": 40, "requests_per_s": 2, "prefix_cache_p95_change_pct": None, "file": "b.json"}
+    local = {
+        "director": {**director, "measured_on": None},  # a bench that recorded no server
+        "ablation": {"config": "nemotron_lightning", "tasks": 8, "task_success": 0.875, "tool_call_validity": 1.0,
+                     "measured_on": "local · Ollama", "file": "a.json"},
+        "scout": {"source": "coco", "split": "val", "boxes": 104, "before_precision": 0.9048, "after_precision": None,
+                  "before_recall": 0.1827, "after_recall": None, "measured_on": "local · mps", "file": "s.json"},
+    }
+    shown = run_numbers_js(page, local)
+    assert shown["number-director"] == ["Director", " · C8 · 8/8 OK", "runtime not recorded"]
+    assert shown["number-ablation"] == ["NeMo Gym", " · 8 tasks", "local · Ollama"]
+    assert shown["number-scout"] == ["Scout", " · weapon · coco val n=104", "local · mps"]
+    assert shown["number-precision"] == "90.5% → not measured"
+    assert "vLLM" not in json.dumps(shown)
+    brev = run_numbers_js(page, {"director": {**director, "measured_on": "brev-l40s · vLLM"}, "ablation": None, "scout": None})
+    assert brev["number-director"][2] == "brev-l40s · vLLM"
 
 
 def scout_backend(tmp_path, *, mock: bool, synthetic: bool, backend: str = "yolo") -> str:

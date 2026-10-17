@@ -1,4 +1,6 @@
 /* Saved measurements are separate from the live event counters. */
+const NOT_MEASURED = 'not measured';
+
 function measurementText(id, value) {
   const element = document.getElementById(id);
 
@@ -8,11 +10,11 @@ function measurementText(id, value) {
 function measuredNumber(value, suffix = '') {
   return Number.isFinite(value)
     ? value.toLocaleString(undefined, {maximumFractionDigits: 1}) + suffix
-    : 'TBD';
+    : NOT_MEASURED;
 }
 
 function measuredPair(before, after, suffix) {
-  if (before == null && after == null) return 'TBD';
+  if (before == null && after == null) return NOT_MEASURED;
 
   return measuredNumber(before, suffix) + ' → ' + measuredNumber(after, suffix);
 }
@@ -21,13 +23,22 @@ function measuredPercent(value) {
   return Number.isFinite(value) ? value * 100 : null;
 }
 
-function resultLabel(id, label, source) {
+/* A result heading names where it was measured, as the artifact recorded it, so a
+   local run never reads as a vLLM one. */
+function resultHeading(id, name, detail, result) {
   const element = document.getElementById(id);
 
   if (!element) return;
 
-  element.textContent = label;
-  element.title = source || '';
+  const label = document.createElement('b');
+  const more = document.createElement('span');
+  const where = document.createElement('small');
+
+  label.textContent = name;
+  more.textContent = detail ? ' · ' + detail : '';
+  where.textContent = result ? result.measured_on || 'runtime not recorded' : '';
+  element.replaceChildren(label, more, where);
+  element.title = result?.file || '';
 }
 
 function renderMeasurements(data) {
@@ -35,36 +46,32 @@ function renderMeasurements(data) {
   const ablation = data.ablation;
   const scout = data.scout;
 
-  resultLabel('number-director', director
-    ? `Director · C${director.concurrency} · ${director.succeeded}/${director.attempted} OK`
-    : 'Director', director?.file);
+  resultHeading('number-director', 'Director', director
+    ? `C${director.concurrency} · ${director.succeeded}/${director.attempted} OK` : '', director);
   measurementText('number-latency', director
     ? measuredNumber(director.p50_ms) + ' / ' + measuredNumber(director.p95_ms, ' ms')
-    : 'TBD');
+    : NOT_MEASURED);
   measurementText('number-throughput', director
     ? measuredNumber(director.output_tokens_per_s, ' tok/s') + ' · ' + measuredNumber(director.requests_per_s, ' req/s')
-    : 'TBD');
+    : NOT_MEASURED);
 
   const delta = director?.prefix_cache_p95_change_pct;
 
   measurementText('number-cache', Number.isFinite(delta)
-    ? (delta > 0 ? '+' : '') + measuredNumber(delta, '%') : 'TBD');
-  resultLabel('number-ablation', ablation
-    ? `NeMo Gym · ${ablation.tasks} tasks` : 'NeMo Gym', ablation
-    ? `${ablation.config} · ${ablation.file}` : '');
+    ? (delta > 0 ? '+' : '') + measuredNumber(delta, '%') : NOT_MEASURED);
+  resultHeading('number-ablation', 'NeMo Gym', ablation ? `${ablation.tasks} tasks` : '', ablation);
   measurementText('number-ablation-config', ablation?.config
-    ? ablation.config.slice(0, 32) : 'TBD');
+    ? ablation.config.slice(0, 32) : NOT_MEASURED);
   measurementText('number-success', measuredNumber(measuredPercent(ablation?.task_success), '%'));
   measurementText('number-validity', measuredNumber(measuredPercent(ablation?.tool_call_validity), '%'));
-  resultLabel('number-scout', scout
-    ? `Scout · ${scout.source} ${scout.split} · ${scout.boxes} weapon boxes`
-    : 'Scout · weapon', scout?.file);
+  resultHeading('number-scout', 'Scout', scout
+    ? `weapon · ${scout.source} ${scout.split} n=${scout.boxes}` : 'weapon', scout);
   measurementText('number-precision', measuredPair(
     measuredPercent(scout?.before_precision), measuredPercent(scout?.after_precision), '%'));
   measurementText('number-recall', measuredPair(
     measuredPercent(scout?.before_recall), measuredPercent(scout?.after_recall), '%'));
   measurementText('numbers-status', director || ablation || scout
-    ? 'Latest saved measurements' : 'No measured results yet');
+    ? 'Latest measurements' : 'No measured results yet');
 }
 
 async function refreshMeasurements() {

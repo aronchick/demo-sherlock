@@ -124,22 +124,18 @@ def ablation_result(data):
     rows = data.get("results", [data])
     if not isinstance(rows, list):
         return None
-    # A summary file contains several configurations. Prefer the named reference,
-    # then configuration ID, so the panel does not cherry-pick the best score.
-    rows = sorted(
-        (r for r in rows if isinstance(r, dict)),
-        key=lambda r: (
-            r.get("ablation_id") != "nemotron_lightning",
-            text(r.get("ablation_id")),
-        ),
-    )
     for row in rows:
+        if not isinstance(row, dict) or row.get("ablation_id") != "nemotron_lightning":
+            continue
         metrics = mapping(row.get("summary_metrics"))
         tasks = count(metrics.get("num_tasks"))
-        if not no_stub(row) or not tasks:
+        if not no_stub(row) or not tasks or row.get("execution_mode", data["execution_mode"]) != "live_endpoint":
             continue
+        server = mapping(row.get("model_server", data.get("model_server")))
         return {
             "config": text(row.get("ablation_id")),
+            "runtime": text(row.get("runtime", data.get("runtime"))),
+            "model_server_label": text(server.get("label") or server.get("name")),
             "tasks": tasks,
             "task_success": number(metrics.get("task_success"), maximum=1),
             "tool_call_validity": number(metrics.get("tool_call_validity"), maximum=1),
@@ -216,9 +212,16 @@ def latest(root, paths, parse):
 def read_numbers(root=None):
     root = ROOT if root is None else Path(root)
     results = root / "results"
+    # Fixed source priority: checkout mtimes and other configurations cannot
+    # replace the reference result. Keep latest()'s bounded, confined reads.
+    ablation = None
+    for name in ("ablation_summary.json", "ablation_nemotron_lightning.json"):
+        ablation = latest(root, [results / name], ablation_result)
+        if ablation is not None:
+            break
     return {
         "director": latest(root, results.rglob("vllm_bench_*.json"), director_result),
-        "ablation": latest(root, results.glob("ablation_*.json"), ablation_result),
+        "ablation": ablation,
         "scout": latest(
             root,
         [root / "runs/scout/eval.json", root / "runs/scout/eval_baseline.json", *results.glob("scout_eval*.json")],

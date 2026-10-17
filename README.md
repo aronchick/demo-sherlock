@@ -68,7 +68,7 @@ The planned Brev setup runs two vLLM **0.28.0** containers on one H100:
 | Role | Model | Served name | Port |
 |---|---|---|---:|
 | Director | Nemotron 3.5 Lightning 30B, NVFP4 repository | `director` | 8001 |
-| Analyst + Verifier | Small VLM, approximately 2B; exact revision pending | `vlm` | 8002 |
+| Analyst + Verifier | `HuggingFaceTB/SmolVLM-Instruct`, 2.25B, shared | `vlm` | 8002 |
 
 The Director uses automatic tool selection and disables thinking in the
 request's chat-template kwargs. Analyst and Verifier share one VLM to avoid
@@ -82,6 +82,30 @@ memory on the H100. This benchmark does not change `serve.sh`.
 **Live H100 measurements are pending.** The benchmark is validated against
 a local streaming stub. Stub results test the measurement code and must
 not be submitted as vLLM performance evidence.
+
+### Parameter budget and speculation
+
+Configuration A's model-card budget is approximately **32.25B** generative
+parameters: the 30B Director plus the shared 2.25B VLM, counted once.
+Speculative draft weights count toward the 33B cap. `brev/serve.sh` passes
+no `--speculative-config` / `-sc`, `--spec-method`, `--spec-model`,
+`--spec-tokens`, or other MTP/draft settings.
+
+The [vLLM v0.28.0 engine arguments](https://github.com/vllm-project/vllm/blob/v0.28.0/vllm/engine/arg_utils.py)
+default `speculative_config` to `None`; `create_speculative_config` returns
+`None` when no speculation options are supplied. The
+[automatic speculator detection](https://github.com/vllm-project/vllm/blob/v0.28.0/vllm/transformers_utils/config.py)
+only overrides this when the checkpoint has `speculators_config`. The
+[Lightning NVFP4 configuration](https://huggingface.co/nvidia/NVIDIA-Nemotron-3.5-Lightning-30B-A3B-NVFP4/raw/main/config.json)
+inspected for this build has no such key and selects `NemotronHForCausalLM`.
+
+Lightning includes embedded MTP tensors, but the
+[v0.28.0 NemotronH base-model loader](https://github.com/vllm-project/vllm/blob/v0.28.0/vllm/model_executor/models/nemotron_h.py)
+uses `AutoWeightsLoader(self, skip_prefixes=["mtp"])`. Those weights are
+skipped when loading the base model; their presence in the checkpoint does
+not enable MTP speculation. This is configuration and source-code evidence.
+Live container startup and its effective model configuration still need
+verification on the H100.
 
 ### Run the benchmark
 
@@ -241,10 +265,12 @@ the Red Hat vLLM bounty explanation.
 ### Local validation
 
 ```bash
-uv run --with-requirements requirements-bench.txt ruff check .
-PYTHONPATH=sherlock uv run \
-  --with-requirements requirements-bench.txt pytest -q
+uvx ruff@0.17.1 check .
+uv run --with-requirements requirements-bench.txt pytest -q
 ```
+
+With the test dependencies installed, bare `uv run pytest` also works:
+the root `pytest.ini` supplies the nested package path and test directory.
 
 The tests start a tiny loopback OpenAI-compatible SSE server, run the
 benchmark CLI through both A/B legs and all concurrency levels, verify JSON

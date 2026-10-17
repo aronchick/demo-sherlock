@@ -234,7 +234,7 @@ is dropped on failure.
 
 | Job | Node | Input | What it does | Output |
 |---|---|---|---|---|
-| E1 `sherlock-telemetry` | Laptop | `http_server` `127.0.0.1:23111/events`; the sink sends every bus event in batches | Splits batches, drops any `*_b64` field, stamps node and time | Core `/telemetry` in batches; local spool if the core is unreachable |
+| E1 `sherlock-telemetry` | Laptop | `http_server` `127.0.0.1:23111/events`; the sink sends every bus event in batches | Splits batches, drops every image payload (the dashboard's `image` preview thumbnails, including the face on `evidence_preview`, `*_b64` fields, data URLs), stamps node and time | Core `/telemetry` in batches; local spool if the core is unreachable |
 | E2 `sherlock-incidents` | Laptop | `http_server` `:23112/incident`; one POST per report | Rejects a report without incident or action. Sends the report metadata and the masked weapon or object crop for every outcome, with hashes and provenance. Drops any other image (face crop, original frame) whatever the sender included. `switch`: alerts go at once, other reports in 1 s batches | Core `/incident`; local spool on failure |
 | E3 `sherlock-examples` | Laptop | `http_server` `:23113/example`; sent only with `SHERLOCK_EDGE_EXAMPLES=1` | Crops the Verifier did not confirm, for the next Scout fine-tune. Rejects anything but a weapon or object crop | Core `/example`; local spool on failure |
 | C1 `sherlock-core-intake` | Brev box | `http_server` `127.0.0.1:23121/{endpoint}` | Splits batches, rejects unknown streams, stamps receipt, logs each alert | `file` per stream and day; `http_client` to `SHERLOCK_ALERT_WEBHOOK` if set |

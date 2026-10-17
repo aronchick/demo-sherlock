@@ -31,11 +31,13 @@ config:
               - unarchive:
                   format: json_array
 
-      # Events never carry pixels; drop any encoded payload a future field adds.
+      # Enforced here, not trusted from the sender: telemetry carries no pixels. Drop the
+      # dashboard's preview thumbnails (`image`, a face on evidence_preview), *_b64 fields
+      # and any data URL, so no face or frame reaches the core this way.
       - label: metadata_only
         mapping: |
           root = this
-          root.data = this.data.or({}).filter(kv -> !kv.key.has_suffix("_b64"))
+          root.data = this.data.or({}).filter(kv -> !kv.key.has_suffix("_b64") && kv.key != "image" && !(if kv.value.type() == "string" { kv.value.has_prefix("data:") } else { false }))
 
       - label: provenance
         mutation: |

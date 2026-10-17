@@ -607,6 +607,11 @@ def markdown(result: dict) -> str:
         "| Workload | C | OK / all | TTFT p50 / p95 / p99 | E2E p50 / p95 / p99 | Output tok/s | Req/s | Valid tool responses | Cache hit rate |",
         "|---|---:|---:|---|---|---:|---:|---:|---:|",
     ]
+    if result["evidence_kind"] == "stub":
+        lines.insert(
+            3,
+            "Stub protocol test only: token counts and cache metrics are synthetic. No model is served.",
+        )
     for row in result["runs"]:
         s = row["summary"]
         ttft = " / ".join(fmt(v) for v in s["ttft_ms"].values())

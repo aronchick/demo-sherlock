@@ -604,3 +604,37 @@ bat escalate; everything else YOLO names is benign.
    args**: the Director gets an error, recovers, still reports.
 4. **Fallback.** Cover the hero lens: the investigation finishes on scout1.
 5. **Close** on the ratio: frames handled by a 10 ms model vs. VLM calls made.
+
+## Open data and synthetic dataset provenance
+
+Sherlock incorporates both existing open datasets and openly published synthetic datasets built during the hackathon:
+
+1. **Existing open data (COCO 2017 CC-BY subset, `scripts/build_scout_dataset.py`)**:
+   - Filters `annotations/instances_train2017.json` and `instances_val2017.json` (CC-BY-4.0 annotations) to images carrying Flickr licenses `4` (Attribution), `7` (No known copyright restrictions), or `8` (US Government Work) via `scripts/scout_data.py` (`CC_BY_LICENSES`).
+   - Maps COCO `person`, `knife`, `scissors`, `baseball bat`, and `bottle` annotations onto the four Scout runtime classes (`person`, `weapon`, `badge`, `bottle`) and records per-image `coco_id`, `license`, `license_name`, `coco_url`, and `flickr_url` in `data/coco_subset/manifest.jsonl`.
+2. **Synthetic evaluation dataset (`gym/resources_servers/sherlock/data/tasks.jsonl` and `gym/resources_servers/sherlock/scenes.py`)**:
+   - Contains 8 deterministic multi-step camera investigation scenarios generated from the state-machine simulator in `gym/resources_servers/sherlock/scenes.py` and released under the repository MIT [`LICENSE`](LICENSE):
+     - Benign objects (`cup`, `bottle`, `cell phone`) requiring single-step `report(ignore)` with zero VLM calls.
+     - Weapon escalations (`knife`, `scissors`, `baseball bat`) requiring weapon zoom + weapon crop + head zoom + unanalyzed face crop + `verify` confirmation + `report(alert)`.
+     - Fault-injection and false-positive recovery scenarios (`look_at` hardware error, occluded `hero` camera requiring fallback to `scout1`, and unconfirmed Verifier claims requiring downgrade to `log`).
+3. **VLM bake-off evaluation crops (`tests/fixtures/vllm/`)**:
+   - Uses public-domain NASA imagery (`spacecraft_crop.jpg`, `astronaut_crop.jpg`, documented in [`tests/fixtures/vllm/README.md`](tests/fixtures/vllm/README.md)) and 50 CC-BY COCO 2017 object crops (`knife`, `scissors`, `baseball bat`, `cup`, `bottle`) to fit per-model Verifier log-odds thresholds (`MARGIN_DEFAULTS` in `sherlock/agents/vision.py`).
+
+## Known limitations & next steps
+
+### Known limitations
+- **Human-in-the-loop review required for security alerts**: Small vision-language models (`SmolVLM-Instruct` 2.25B and `SmolVLM-500M-Instruct` 0.51B) are decision-support tools, not autonomous safety-critical detectors. In our 50-crop COCO bake-off, `Verifier.check` with vLLM JSON schema constraints and log-odds thresholding rejects 20/20 false `"kitchen knife"` claims on cups and bottles, while confirming 29/30 real weapon crops on 2.2B (`margin > 0.56`) and 24/30 on 500M (`margin > 3.31`). Borderline crops near the log-odds threshold can still flip across JPEG re-encodes, so every `alert` attaches both the weapon crop and an unanalyzed human-only face crop for operator verification.
+- **Parameter-count accounting across model card vs. checkpoint tensors**: Under the hackathon's official model-card rule, `NVIDIA-Nemotron-3.5-Lightning` (30B) + `SmolVLM-Instruct` (2.25B) totals **32.25B** (`<= 33B`). Summing raw BF16 safetensors headers excluding never-loaded `mtp.*` weights yields `31.58B + 2.25B = 33.82B`. Swapping the shared VLM to `HuggingFaceTB/SmolVLM-500M-Instruct` (`0.51B`) brings the total to **30.51B by model card and 32.09B by base checkpoint tensors**, staying under 33B on both counts at the cost of lower single-crop Verifier recall (24/30 vs. 29/30).
+- **Platform-specific USB gimbal control**: Direct UVC pan/tilt/zoom control for the Insta360 Link 2 (`2e1a:4c01`, `2e1a:4c02`, `2e1a:4c04`) relies on macOS IOKit via `link-ctl`. On Linux, the stock `uvcvideo` kernel driver rejects UVC pan/tilt `SET_CUR` transfers without detaching the video stream, so Linux hosts automatically fall back to the secondary camera or software crop (`FakePTZ`).
+- **Local dashboard network scope**: The FastAPI dashboard serves live MJPEG streams and saved evidence crops without authentication and therefore binds to `127.0.0.1` by default (`DASHBOARD_HOST=127.0.0.1`).
+- **NeMo Gym simulation scope**: The 8 tasks in `gym/resources_servers/sherlock/data/tasks.jsonl` evaluate the Director's multi-turn tool policy, fault recovery, and verification discipline against deterministic scene responses rather than live pixel crops.
+
+### Next steps
+- **Evaluate ~1B vision-language models (`InternVL3-1B`, 0.94B)**: Fits inside the 1.42B tensor-count VLM ceiling (`31.58B + 0.94B = 32.52B <= 33B`) to combine tensor-count compliance with 2B-class Verifier discrimination.
+- **Expand in-room prop and lighting coverage**: Capture multi-angle in-room sessions across varied lighting with `scripts/capture_props.py` and `scripts/review_labels.py`, then publish the CC-BY dataset and fine-tuned Scout weights to Hugging Face via `scripts/publish_scout_hf.py --public`.
+- **Continuous multi-camera handoff**: Extend `Orchestrator` from reactive single-incident failover (`hero` -> `scout1`) to continuous cross-camera homography calibration so `scout1` bounding boxes map directly into `hero` pan/tilt angles without an intermediate wide sweep.
+
+## License
+
+Code and synthetic evaluation datasets (`gym/resources_servers/sherlock/data/tasks.jsonl`) are released under the [MIT License](LICENSE). Vendored dashboard fonts carry the [SIL Open Font License 1.1](sherlock/sherlock/dashboard/static/fonts/OFL-ibm-plex-mono.txt). COCO 2017 annotations are CC-BY-4.0 with per-image Flickr attribution recorded in `data/coco_subset/manifest.jsonl`.
+

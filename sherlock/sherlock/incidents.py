@@ -14,7 +14,7 @@ import threading
 import time
 
 ID = re.compile(r"[0-9]{8}-[0-9]{6}-[0-9]{3,}")
-NAMES = {"weapon_crop", "object_crop", "face_crop"}
+NAMES = {"original_frame", "model_context", "weapon_crop", "object_crop", "face_crop"}
 
 
 class IncidentStore:
@@ -23,7 +23,7 @@ class IncidentStore:
         self.lock = threading.RLock()
 
     def path(self, iid: str, filename: str = "manifest.json") -> pathlib.Path:
-        if not ID.fullmatch(iid) or filename not in {"manifest.json", "manifest.tmp", *(f"{n}.jpg" for n in NAMES)}:
+        if not ID.fullmatch(iid) or filename not in {"manifest.json", "manifest.tmp", *(f"{n}.jpg" for n in NAMES), "model_context.png"}:
             raise ValueError("invalid evidence path")
         path = self.root / iid / filename
         if not path.resolve().is_relative_to(self.root.resolve()) or path.is_symlink() or path.parent.is_symlink():
@@ -44,19 +44,21 @@ class IncidentStore:
         with self.lock:
             record = {**report, "custody": list(custody), "models": models, "artifacts": [],
                       "custody_scope": "Local application history; not independently attested or immutable"}
-            record["custody"].append({"stage": "decision", "t": report["t"],
-                "detail": f"{report['action']}: {report.get('claim', '')}"})
+            record["custody"].append({"stage": "acquisition" if report.get("state") == "investigating" else "decision",
+                "t": report["t"], "detail": "Investigation in progress; evidence saved before assessment"
+                if report.get("state") == "investigating" else f"{report['action']}: {report.get('claim', '')}"})
             for name in report["evidence"]:
-                path = self.path(report["incident"], f"{name}.jpg")
+                filename = f"{name}.png" if name == "model_context" else f"{name}.jpg"
+                path = self.path(report["incident"], filename)
                 digest = hashlib.sha256(path.read_bytes()).hexdigest()
                 record["artifacts"].append({"name": name, "sha256": digest,
-                    "url": f"/evidence/{report['incident']}/{name}.jpg", "integrity": "verified",
+                    "url": f"/evidence/{report['incident']}/{filename}", "integrity": "verified",
                     **report.get("evidence_provenance", {}).get(name, {"camera": None, "captured_at": None})})
                 record["custody"].append({"stage": "evidence", "t": time.time(),
-                    "detail": f"Saved {name}.jpg locally; SHA-256 {digest}"})
+                    "detail": f"Saved {filename} locally; SHA-256 {digest}"})
             for name in report.get("evidence_unsaved", []):
                 record["custody"].append({"stage": "evidence", "t": time.time(),
-                    "detail": f"{name}.jpg was NOT saved; no stored artifact available"})
+                    "detail": f"{name} was NOT saved; no stored artifact available"})
             record["notification"] = {"simulated": True, "status": "not_sent",
                                       "delivered_at": None, "acknowledged_at": None}
             if report["action"] == "alert" and report.get("verified"):
@@ -74,7 +76,7 @@ class IncidentStore:
                 raise ValueError("manifest identity mismatch")
             for artifact in record["artifacts"]:
                 try:
-                    digest = hashlib.sha256(self.path(iid, artifact["name"] + ".jpg").read_bytes()).hexdigest()
+                    digest = hashlib.sha256(self.path(iid, artifact["name"] + (".png" if artifact["name"] == "model_context" else ".jpg")).read_bytes()).hexdigest()
                     artifact["integrity"] = "verified" if digest == artifact["sha256"] else "mismatch"
                 except (OSError, ValueError):
                     artifact["integrity"] = "missing"

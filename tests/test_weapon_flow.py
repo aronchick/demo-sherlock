@@ -42,12 +42,12 @@ def spy_models(s: Sherlock) -> list[tuple[str, bool, bool]]:
 
     def mark(who, img):
         ev = s.tools.evidence
-        seen.append((who, img is ev.get("weapon_crop"), img is ev.get("face_crop")))
+        seen.append((who, np.array_equal(img, ev.get("model_context")), np.array_equal(img, ev.get("face_crop"))))
 
     class A:
-        def describe(self, img, question):
+        def assess(self, img, claim):
             mark("analyst", img)
-            return analyst.describe(img, question)
+            return analyst.assess(img, claim)
 
     class V:
         def check(self, img, claim):
@@ -69,9 +69,10 @@ def test_ignore_path_makes_zero_vlm_calls(tmp_path):
     assert r, "no ignore report"
     assert r["trigger"]["label"] == "cup" and r["trigger"]["threat"] == "benign"
     assert r["vlm_calls"] == 0
-    assert r["evidence"] == [] and "verified" not in r
+    assert r["evidence"] == ["original_frame"] and "verified" not in r
     assert chain(drain(q), r["incident"]) == ["report"], "benign path must not look, snapshot or verify"
-    assert not list((tmp_path / r["incident"]).glob("*.jpg")), "benign incidents retain metadata only"
+    assert [p.name for p in (tmp_path / r["incident"]).glob("*.jpg")] == ["original_frame.jpg"]
+    assert s.incidents.read(r["incident"])["artifacts"][0]["integrity"] == "verified"
     assert s.incidents.read(r["incident"])["notification"]["status"] == "not_sent"
 
 
@@ -82,43 +83,36 @@ def test_alert_path_runs_full_chain_and_saves_evidence(tmp_path):
     r = wait_for(s, is_alert)
     s.stop()
     assert r, "no alert"
-    assert chain(drain(q), r["incident"]) == ["look_at", "snapshot", "look_at", "snapshot", "verify", "report"]
+    assert chain(drain(q), r["incident"]) == ["look_at", "snapshot", "look_at", "snapshot", "report"]
     assert r["trigger"]["threat"] == "weapon" and r["trigger"]["person"] and r["trigger"]["head"]
     assert r["verified"] is True
-    assert r["evidence"] == ["weapon_crop", "face_crop"]
+    assert r["evidence"] == ["original_frame", "face_crop", "weapon_crop", "model_context"]
     for name in r["evidence"]:
-        assert (tmp_path / r["incident"] / f"{name}.jpg").is_file()
+        assert (tmp_path / r["incident"] / f"{name}.{'png' if name == 'model_context' else 'jpg'}").is_file()
     assert r["vlm_calls"] == 2, "analyst on the weapon crop + verifier; the face crop is never analyzed"
     assert BUS.stats["alerts"] >= 1 and BUS.stats["ignored"] >= 1
 
 
-def test_rejected_weapon_claim_stores_and_emits_no_face_crop(tmp_path):
-    """The chain snapshots the face before verify, so a false positive (cup read as
-    knife, Verifier REJECTED) must not keep the face of an innocent person."""
-    s = Sherlock(Config(), synthetic=True, evidence_dir=str(tmp_path))
-    rejecting = SimpleNamespace(check=lambda img, claim: {"supported": False, "confidence": 0.2, "reason": "no weapon"})
-    s.tools.verifier = s.verifier = rejecting
-    q = BUS.subscribe()
-    s.start()
-    r = wait_for(s, lambda r: r["trigger"]["label"] == "knife")
-    s.stop()
-    assert r, "no weapon report"
-    events = drain(q)
-    assert chain(events, r["incident"]) == ["look_at", "snapshot", "look_at", "snapshot", "verify", "report"], \
-        "the chain order is unchanged; the face snapshot still happens before verify"
+def test_rejected_weapon_claim_retains_linked_face_and_scene(tmp_path):
+    s = _frozen_sherlock(tmp_path)
+    s.tools.verifier = SimpleNamespace(check=lambda img, claim: {
+        "supported": False, "confidence": 0.2, "reason": "no weapon"})
+    s._investigate(_knife_det())
+    r = s.log[-1]
     assert r["verified"] is False and r["action"] == "log"
-    assert r["evidence"] == ["weapon_crop"] and r["face_crop_dropped"]
-    assert "face_crop" not in r.get("evidence_unsaved", [])
-    assert not (tmp_path / r["incident"] / "face_crop.jpg").exists()
-    assert (tmp_path / r["incident"] / "weapon_crop.jpg").is_file()
-    assert "face_crop" not in s.tools.evidence, "the bytes are gone from the toolbox, not just the file"
-    assert s.tools.last_crop is s.tools.evidence["weapon_crop"], "the live crop view falls back to the weapon"
-    report_events = [e for e in events if e.stage == "system" and e.msg.startswith("REPORT")
-                     and e.data.get("incident") == r["incident"]]
-    assert report_events and "face_crop" not in report_events[0].data["evidence"]
+    assert set(r["evidence"]) == {"original_frame", "weapon_crop", "face_crop", "model_context"}
+    assert r["comparison"]["status"] == "disagreed"
+    record = s.incidents.read(r["incident"])
+    assert all(a["integrity"] == "verified" for a in record["artifacts"])
+    for artifact in record["artifacts"]:
+        if artifact["name"] in ("weapon_crop", "face_crop"):
+            assert artifact["source_artifact"] == "original_frame"
+            assert artifact["relationship"] == "subsequent_capture"
+            assert artifact["bbox"]
+    assert record["notification"]["status"] == "not_sent"
 
 
-def test_models_never_see_the_face_crop(tmp_path):
+def test_models_share_scene_object_and_face_context(tmp_path):
     s = Sherlock(Config(), synthetic=True, evidence_dir=str(tmp_path))
     seen = spy_models(s)
     s.start()
@@ -127,7 +121,7 @@ def test_models_never_see_the_face_crop(tmp_path):
     assert r
     assert seen, "no model calls recorded"
     assert all(not face for _, _, face in seen)
-    assert all(weapon for who, weapon, _ in seen if who == "verifier"), "verifier must check the weapon crop"
+    assert all(weapon for who, weapon, _ in seen if who == "verifier"), "verifier must check the complete context"
 
 
 def test_second_camera_does_not_duplicate_the_incident(tmp_path):
@@ -400,7 +394,7 @@ def test_final_report_rechecks_a_changed_claim_and_a_replaced_crop(tmp_path):
 
     def check(img, claim):
         checked.append((claim, img))
-        ok = "cup" in claim or "knife" in claim and len(checked) > 2
+        ok = "cup" in claim or "knife" in claim and len(checked) > 1
         return {"supported": ok, "confidence": 0.9, "reason": "stub"}
 
     s = _frozen_sherlock(tmp_path)
@@ -418,7 +412,7 @@ def test_final_report_rechecks_a_changed_claim_and_a_replaced_crop(tmp_path):
     s.director = SimpleNamespace(investigate=claim_swap)
     s._investigate(_knife_det())
     r = s.log[-1]
-    assert [c for c, _ in checked] == ["a white cup", "a kitchen knife"]
+    assert [c for c, _ in checked] == ["a knife"]
     assert r["verified"] is False and r["action"] == "log", "a cup verdict must not verify a knife alert"
 
     def crop_swap(det):  # verifies the knife, then replaces the crop before reporting
@@ -430,7 +424,9 @@ def test_final_report_rechecks_a_changed_claim_and_a_replaced_crop(tmp_path):
 
     s.director = SimpleNamespace(investigate=crop_swap)
     s._investigate(_knife_det())
-    assert len(checked) == 4 and checked[3][1] is t.evidence["weapon_crop"] is not checked[2][1]
+    assert len(checked) == 2
+    assert np.array_equal(checked[1][1], t.evidence["model_context"])
+    assert checked[1][1] is not checked[0][1]
     assert s.log[-1]["verified"] is True and s.log[-1]["action"] == "alert"
 
 
@@ -469,7 +465,8 @@ def test_names_claim(said, claim, same):
 def _said(text: str, supported: bool, tmp_path) -> dict:
     """One incident through the orchestrator with a stubbed Analyst and Verifier."""
     s = _frozen_sherlock(tmp_path)
-    s.tools.analyst = SimpleNamespace(describe=lambda img, q: {"description": text})
+    s.tools.analyst = SimpleNamespace(assess=lambda img, claim: {
+        "description": text, "claim": claim, "supported": text == "Knife."})
     s.tools.verifier = SimpleNamespace(check=lambda img, c: {"supported": supported, "reason": "stub"})
     q = BUS.subscribe()
     s._investigate(_knife_det())
@@ -479,12 +476,11 @@ def _said(text: str, supported: bool, tmp_path) -> dict:
     return r
 
 
-def test_a_confirmed_weapon_never_carries_a_description_of_something_else(tmp_path):
-    """The 500M read a confirmed COCO knife as 'Cake.'. The alert stands on the Verifier's
-    yes; the board must not print 'Cake.' under it, and the words stay on file."""
+def test_disagreement_preserves_both_results_and_routes_to_review(tmp_path):
+    """Conflicting assessments stay visible and never raise an alert."""
     r = _said("Cake.", True, tmp_path)
-    assert r["action"] == "alert" and r["verified"] is True
-    assert r["description"] == "" and r["analyst_mismatch"] == "Cake."
+    assert r["action"] == "log" and r["verified"] is False
+    assert r["description"] == "Cake." and r["comparison"]["status"] == "disagreed"
     r = _said("Knife.", True, tmp_path)
     assert r["description"] == "Knife." and "analyst_mismatch" not in r
     r = _said("A white ceramic mug. No text.", False, tmp_path)  # dissent that agrees with the verdict
@@ -500,12 +496,12 @@ def test_evidence_write_failures_keep_the_report_and_the_loop(tmp_path, monkeypa
     r = s.log[-1]
     assert r["action"] == "alert" and r["evidence"] == []
     assert r["custody_saved"] is False and r["notification"]["status"] == "failed"
-    assert r["evidence_unsaved"] == ["weapon_crop", "face_crop"] and "evidence_camera" not in r
+    assert r["evidence_unsaved"] == ["original_frame", "face_crop", "weapon_crop", "model_context"] and "evidence_camera" not in r
     monkeypatch.setattr("sherlock.orchestrator.cv2.imwrite", lambda *a, **k: False)
     s.evidence_dir = tmp_path / "ok"
     s._investigate(_knife_det())
     assert len(s.log) == 2, "the next incident still runs"
-    assert s.log[-1]["evidence"] == [] and s.log[-1]["evidence_unsaved"] == ["weapon_crop", "face_crop"]
+    assert s.log[-1]["evidence"] == [] and s.log[-1]["evidence_unsaved"] == ["original_frame", "face_crop", "weapon_crop", "model_context"]
 
 
 def test_finetuned_scout_classes_route():

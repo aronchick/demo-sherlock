@@ -37,8 +37,10 @@ monitors those pipelines
       ▼                                      shared Analyst + Verifier
  Director tool loop ── HTTP /v1 ─────────► :8001
    look_at / move ──► gimbal or crop
-   snapshot / verify ── crop JPEG ───────► :8002
-   report
+   snapshot ──► save scene/object/face
+      ├─ Analyst ── context PNG ─────────► :8002
+      └─ Verifier ─ context PNG ─────────► :8002
+   compare both results → report
       │
       ▼
  snapshots/<incident>/
@@ -61,32 +63,33 @@ monitors those pipelines
 3. **Duplicates and overlaps are dropped.** The same label seen on another
    camera moments ago counts as a duplicate. A detection that arrives while
    an investigation is running is counted as `dropped_busy`, not "avoided".
-4. **Benign objects stop here.** The Director calls `report(ignore)` with no
-   `look_at` and no `snapshot`, so **no VLM call is made**. This is the
-   "VLM calls avoided" number.
-5. **The Director (Nemotron) drives the camera.** `agents/director.py`
-   sends the detection as JSON with the six tool schemas in
-   `sherlock/sherlock/tools.py` (`look_at`, `move`, `snapshot`, `verify`,
-   `list_cameras`, `report`), at temperature 0.1, 300 output tokens and
-   thinking off. A weapon runs `look_at` weapon → `snapshot(weapon)` →
-   `look_at` head → `snapshot(face)` → `verify` → `report(alert)`. The
-   budget is `MAX_TOOL_CALLS` (6) plus 4 for weapons, to leave room for
-   recovery. A tool error makes the Director try another camera or other
-   arguments; prose instead of a tool call gets one nudge.
+4. **Benign objects stop here.** The original scene is saved, and the Director
+   calls `report(ignore)` with no `look_at` or extra `snapshot`, so **no VLM
+   call is made**. This is the "VLM calls avoided" number.
+5. **The Director acquires evidence.** It uses `look_at`, `move` and
+   `snapshot` to obtain object and face detail. The orchestrator saves the
+   original scene before acquisition and persists each available image and
+   a pending manifest before model assessment. A later PTZ capture records
+   its own camera and timestamp; it is linked to, rather than described as
+   a direct crop of, the original frame.
 6. **`look_at` moves real hardware.** On the Insta360 Link 2 it sends UVC
    pan/tilt/zoom over USB with `link-ctl` (macOS only). Other cameras use a
    software crop (`FakePTZ`).
-7. **The VLM sees only the crop.** The Analyst describes the zoomed object
-   crop. The Verifier asks a yes/no question about the claim and decides on
-   `log P(yes) - log P(no)` (margin 0.0 by default), or on the reply's first
-   word when the server returns no usable logprobs
-   ([Verifier verdicts](#verifier-verdicts)).
-8. **The face crop never reaches a model.** It is saved for a human
-   reviewer. Nothing identifies or describes the person.
-9. **The orchestrator has the last word.** It re-checks the final claim
-   against the current weapon crop, and an `alert` without a verified claim
-   is **downgraded to `log`**. Evidence lands in `snapshots/<incident>/`;
-   every step streams to the dashboard over SSE.
+7. **Analyst and Verifier run in parallel.** Both receive the same immutable
+   contact sheet: original scene, object detail and available face context.
+   The exact input is saved as lossless `model_context.png`. Separate prompts
+   ask for a description and a claim check; the endpoints may use the same
+   model. Neither receives the other's answer. Prompts allow person/object
+   context and prohibit identity recognition.
+8. **A deterministic comparison follows both answers.** Both must support
+   the weapon claim before the orchestrator can alert. Disagreement, an
+   inconclusive answer or a failed check goes to review (`log`). A failed
+   acquisition also prevents an alert. The comparison and both answers
+   appear in the custody record.
+9. **Evidence survives the outcome.** Captured scene, object, face and model
+   input stay in `snapshots/<incident>/`, including rejected or interrupted
+   investigations. SHA-256 hashes, camera, capture time and source relationships
+   accompany each artifact. Missing captures are recorded rather than fabricated.
 10. **Fallbacks.** If the Director endpoint is unreachable, `RuleDirector`
     runs the same tools with no LLM. A covered or failed hero camera hands
     the investigation to `scout1`. `--mock --synthetic` runs the whole loop
@@ -94,15 +97,17 @@ monitors those pipelines
 
 ### Simulated responder phone and evidence history
 
-The flow page includes a simulated responder phone. Open `/phone` for a
-separate filming view. Only a verified `alert` produces a simulated delivery;
+The 16:9 flow page includes a compact phone indicator. Clicking it opens
+or focuses the named `/phone` tab; `/custody` has its own reusable tab.
+The phone shows the original scene and available object and face details. Only a verified `alert` produces a simulated delivery;
 `log` and `ignore` do not. Select **Acknowledge · Investigating** to save a
 responder acknowledgment against that incident. No SMS or push message is sent.
 
 Click a saved picture on the evidence shelf or phone to open `/custody` for
 that incident. It shows the recorded tool/model events, trigger and evidence
 cameras, saved images, SHA-256 integrity checks, simulated delivery, and
-acknowledgment. Face images require an explicit reveal for human review.
+acknowledgment. Face images require an explicit reveal in the custody browser; the responder
+phone displays them with the incident context.
 The evidence browser uses pagination; the full timeline scrolls with the page.
 
 Each new investigation writes `snapshots/<incident>/manifest.json`, including
@@ -111,6 +116,13 @@ a restart. Old snapshot folders without manifests are not backfilled. A missing
 or changed image is flagged when the record is read. These records provide local
 application history, not independently attested or immutable chain of custody.
 Manifest write failures are reported and do not claim successful delivery.
+
+The mock-only **Simulate disagreement** control makes the next assessment
+produce differing answers so the Review path can be rehearsed. No external
+phone delivery occurs. The cloud card says **Simulated destination · no upload**
+in mock mode. An enabled Edge sink can accept or spool a package, but that is
+not proof of remote storage. Core currently stores JSONL packages; there is no
+per-incident cloud receipt or object-bucket readback in this UI.
 
 ### Where each piece runs
 
@@ -192,7 +204,7 @@ is dropped on failure.
 | Job | Node | Input | What it does | Output |
 |---|---|---|---|---|
 | E1 `sherlock-telemetry` | Laptop | `http_server` `127.0.0.1:23111/events`; the sink sends every bus event in batches | Splits batches, drops any `*_b64` field, stamps node and time | Core `/telemetry` in batches; local spool if the core is unreachable |
-| E2 `sherlock-incidents` | Laptop | `http_server` `:23112/incident`; one POST per report | Rejects a report without incident or action. Enforces the crop policy itself: crop bytes only on `alert`, **never the face crop** (hash, size and local path only); re-hashes each crop it sends. `switch`: alerts go at once, other reports in 1 s batches | Core `/incident`; local spool on failure |
+| E2 `sherlock-incidents` | Laptop | `http_server` `:23112/incident`; one POST per report | Rejects a report without incident or action. Sends available scene, object, face and lossless model-context bytes for each captured outcome, with hashes and provenance. `switch`: alerts go at once, other reports in 1 s batches | Core `/incident`; local spool on failure |
 | E3 `sherlock-examples` | Laptop | `http_server` `:23113/example`; sent only with `SHERLOCK_EDGE_EXAMPLES=1` | Crops the Verifier did not confirm, for the next Scout fine-tune. Rejects anything but a weapon or object crop | Core `/example`; local spool on failure |
 | C1 `sherlock-core-intake` | Brev box | `http_server` `127.0.0.1:23121/{endpoint}` | Splits batches, rejects unknown streams, stamps receipt, logs each alert | `file` per stream and day; `http_client` to `SHERLOCK_ALERT_WEBHOOK` if set |
 | C2 `sherlock-vllm-metrics` | Brev box | `generate` every 10 s, then GET both vLLM `/metrics` | KV-cache use, prefix-cache queries and hits, running and waiting requests; a down server is recorded as `up: false` | `file` per day; the laptop dashboard, dropped if the tunnel is down |
@@ -202,8 +214,8 @@ response. (An Expanso `catch` clears the error flag, so the jobs log
 failures with a `switch` on `errored()` instead; a test guards this.)
 
 **Decisions taken:** the core runs on the Brev box next to vLLM, so
-stopping Brev stops it; the face crop never leaves the laptop; E3 is off by
-default because room photos show real people.
+stopping Brev stops it. Enabled incident transport includes captured scene and
+face context. E3 remains off by default and accepts only object/weapon crops.
 
 **Dashboard.** The footer on `/` and `/topology` polls `/expanso`. It says
 "connected" only while the Edge pipelines accepted this run's events in the
@@ -495,8 +507,8 @@ stay out of the upload unless `--include-room-photos`, and that needs everyone p
 ## vLLM
 
 vLLM is the serving layer for Sherlock's investigation loop. The Director
-chooses camera tools; the Analyst reads a zoomed crop; the Verifier checks
-the resulting claim against that crop. Scout gates these calls locally.
+chooses camera tools; Analyst and Verifier independently assess a shared
+scene/object/person contact sheet. Scout gates these calls locally.
 The planned Brev setup runs two vLLM **0.28.0** containers on one H100:
 
 | Role | Model | Served name | Port |
@@ -681,7 +693,7 @@ tool schemas; no padding is added to inflate a caching benefit.
 VLM traffic alternates the imported Analyst and Verifier prompts using a
 [real JPEG object crop](tests/fixtures/vllm/README.md) of a model spacecraft,
 with no face in the image. Director face-tool results are text metadata;
-face crops are never sent to the VLM. Supply a representative object
+this benchmark does not send face crops to the VLM. Supply a representative object
 crop with `--image path/to/crop.jpg` for the final run. This fixed-image
 test includes repeated image/prompt cache reuse; it does not represent a
 stream of unique scenes. Workloads run sequentially, so results describe

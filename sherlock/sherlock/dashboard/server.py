@@ -25,7 +25,7 @@ from .numbers import read_numbers
 
 STATIC = pathlib.Path(__file__).parent / "static"
 _INCIDENT_ID = re.compile(r"^[0-9]{8}-[0-9]{6}-[0-9]{3,}$")
-_EVIDENCE_NAMES = {"weapon_crop", "face_crop", "object_crop"}
+_EVIDENCE_NAMES = {"model_context", "original_frame", "weapon_crop", "face_crop", "object_crop"}
 _SERVING_SERVERS = {"director", "vlm"}
 _SERVING_FIELDS = {"up", "at", "kv_cache_usage", "prefix_cache_queries", "prefix_cache_hits",
                    "requests_running", "requests_waiting", "error"}
@@ -105,6 +105,7 @@ def make_app(sherlock: Sherlock) -> FastAPI:
             raise HTTPException(404)
         return mjpeg("wide", camera)
 
+    @app.get("/evidence/{incident}/{name}.png")
     @app.get("/evidence/{incident}/{name}.jpg")
     def evidence(incident: str, name: str):
         if not _INCIDENT_ID.match(incident) or name not in _EVIDENCE_NAMES:
@@ -115,13 +116,23 @@ def make_app(sherlock: Sherlock) -> FastAPI:
             raise HTTPException(404) from None
         if not path.is_file():
             raise HTTPException(404)
-        return FileResponse(path, media_type="image/jpeg")
+        return FileResponse(path, media_type="image/png" if path.suffix == ".png" else "image/jpeg")
 
     @app.post("/demo/cover/{camera}/{state}")
     def cover(camera: str, state: str):
         if not sherlock.cover(camera, state == "on"):
             raise HTTPException(404, f"camera {camera!r} is not available")
         return {"ok": True}
+
+    @app.post("/demo/disagree/{n}")
+    def disagree(n: int):
+        if not sherlock.cfg.mock:
+            raise HTTPException(409, "Disagreement injection is available only in mock mode")
+        if n != 1:
+            raise HTTPException(400, "Inject one investigation at a time")
+        sherlock.tools.injected_disagreements = 1
+        BUS.emit("system", "Next investigated pair will include a SIMULATED analyst disagreement")
+        return {"ok": True, "simulated": True}
 
     @app.post("/demo/fail/{n}")
     def fail(n: int):

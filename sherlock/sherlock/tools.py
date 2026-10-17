@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import base64
 import time
+from concurrent.futures import ThreadPoolExecutor
 
 import cv2
 import numpy as np
@@ -17,10 +18,10 @@ ACTIONS = ("log", "alert", "ignore")
 _DEVICE_TOOLS = ("look_at", "move", "snapshot")
 
 
-def _preview(role: str, img: np.ndarray) -> None:
+def _preview(role: str, img: np.ndarray, stage: str = "model_input", **metadata) -> None:
     """Publish a bounded copy of the actual model input before inference starts.
 
-    This travels only on the dashboard bus. Face evidence never calls this.
+    This travels only on the dashboard bus. Face previews use evidence_preview, never model_input.
     PNG keeps the thumbnail faithful and limits the longest edge to 256 pixels.
     """
     height, width = img.shape[:2]
@@ -28,7 +29,8 @@ def _preview(role: str, img: np.ndarray) -> None:
     thumb = cv2.resize(img, (max(1, round(width * scale)), max(1, round(height * scale))))
     ok, encoded = cv2.imencode(".png", thumb)
     if ok:
-        BUS.emit("model_input", f"{role} reading the object crop", role=role,
+        BUS.emit(stage, f"{role} " + ("human-review evidence" if stage == "evidence_preview" else
+                 "reading the object crop"), role=role, **metadata,
                  image="data:image/png;base64," + base64.b64encode(encoded).decode("ascii"))
 
 TOOL_SCHEMAS = [
@@ -51,8 +53,8 @@ TOOL_SCHEMAS = [
     {"type": "function", "function": {
         "name": "snapshot",
         "description": "Capture what the camera sees right now and store it as evidence. subject=weapon or "
-                       "object sends the crop to the Analyst and returns its description. subject=face only "
-                       "stores the crop: it is never sent to any model. Never snapshot a benign object.",
+                       "object stores the model-safe crop for the parallel checks after acquisition. subject=face only "
+                       "stores person context without invoking a model during acquisition. Never snapshot a benign object.",
         "parameters": {"type": "object", "properties": {
             "camera": {"type": "string"},
             "subject": {"type": "string", "enum": list(SUBJECTS),
@@ -140,8 +142,8 @@ def _crop(img: np.ndarray, box: tuple, margin: float = 0.3, floor: float = 0.0) 
 
 # The chain the dashboard draws, in plain language. A call's step comes from what
 # it does, not from how many calls came before it, so a retry keeps its number.
-_SAYS = {1: "zooming {camera} to the {subject}", 2: "asking the analyst to read the {subject} crop",
-         3: "zooming {camera} to the head", 4: "storing the review crop · no model",
+_SAYS = {1: "zooming {camera} to the {subject}", 2: "capturing the {subject} crop for parallel checks",
+         3: "zooming {camera} to the head", 4: "storing the person-context crop",
          5: "verifying “{claim}”", 6: "reporting · {action}"}
 
 
@@ -157,6 +159,9 @@ class ToolBox:
         self.last_crop: np.ndarray | None = None  # latest crop of any incident, for the live view
         self.injected_failures = 0  # demo switch: next N device calls fail
         self.injected_corruptions = 0  # demo switch: next N device calls get garbage arguments
+        self.injected_disagreements = 0
+        self.defer_analysis = False
+        self.on_capture = None
         self.begin_incident()
 
     def _cam(self, name: str) -> Camera:
@@ -177,6 +182,7 @@ class ToolBox:
                          "bbox": getattr(detection, "bbox", None), "head": getattr(detection, "head", None),
                          "label": getattr(detection, "label", "")}
         self._failed_steps: set[int] = set()  # chain steps that failed; a later success is a recovery
+        self.provenance: dict[str, dict] = {}
         self.evidence: dict[str, np.ndarray] = {}
         self.evidence_captured_at: dict[str, float] = {}
         self.evidence_camera: dict[str, str] = {}  # which camera captured each crop (differs after recovery)
@@ -364,11 +370,20 @@ class ToolBox:
         self.evidence[eid] = img
         self.evidence_camera[eid] = camera
         self.evidence_captured_at[eid] = captured_at
+        self.provenance[eid] = {"camera": camera, "captured_at": captured_at,
+            "source_artifact": "original_frame" if "original_frame" in self.evidence else None,
+            "relationship": "subsequent_capture", "bbox": list(aim) if aim else None}
+        if self.on_capture:
+            self.on_capture()
+        if subject == "face" and self.defer_analysis:
+            _preview("face", img, "evidence_preview", incident=self.incident["id"])
         self._shots += 1
         self._versions[eid] = self._shots  # a new crop invalidates any verdict on the old one
         if subject == "face":
-            # Evidence only. No model ever sees this crop: no recognition, no description.
+            # Acquisition only. The parallel investigation later includes it in labeled scene context.
             return {"evidence_id": eid, "stored": True, "analyzed": False}
+        if self.defer_analysis:
+            return {"evidence_id": eid, "stored": True, "description": "", "analysis": "pending"}
         BUS.bump("vlm_calls")
         _preview("analyst", img)
         out = self.analyst.describe(img, question)
@@ -376,7 +391,106 @@ class ToolBox:
         return {**out, "evidence_id": eid}
 
     def t_verify(self, claim: str) -> dict:
+        if self.defer_analysis:
+            return {"supported": False, "reason": "parallel checks pending"}
         return self.check_claim(claim)
+
+    def build_model_context(self) -> np.ndarray | None:
+        """One labeled scene/object/person image for both independently prompted checks."""
+        eid, crop = self.model_crop()
+        if crop is None:
+            return None
+        names = [name for name in ("original_frame", eid, "face_crop") if name in self.evidence]
+        context = np.full((752, 768, 3), 28, dtype=np.uint8)
+        regions = {"original_frame": (0, 0, 768, 448), eid: (0, 448, 384, 304),
+                   "face_crop": (384, 448, 384, 304)}
+        for name in ("original_frame", eid, "face_crop"):
+            x, y, width, height = regions[name]
+            img = self.evidence.get(name)
+            cv2.putText(context, name.replace("_", " "), (x + 8, y + 18),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.45, (230, 230, 230), 1)
+            if img is None:
+                cv2.putText(context, "NOT CAPTURED", (x + 8, y + 45),
+                            cv2.FONT_HERSHEY_SIMPLEX, 0.45, (230, 230, 230), 1)
+                continue
+            provenance = self.provenance.get(name, {})
+            camera = self.evidence_camera.get(name, "unknown")
+            captured = self.evidence_captured_at.get(name)
+            stamp = f"{captured:.3f}" if isinstance(captured, (int, float)) else "unknown time"
+            cv2.putText(context, f"{camera} / {stamp}", (x + 8, y + 35),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.35, (210, 210, 210), 1)
+            cv2.putText(context, provenance.get("relationship", "unknown provenance"), (x + 8, y + 50),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.35, (210, 210, 210), 1)
+            scale = min((width - 16) / img.shape[1], (height - 64) / img.shape[0])
+            tile = cv2.resize(img, (max(1, round(img.shape[1] * scale)), max(1, round(img.shape[0] * scale))))
+            left = x + (width - tile.shape[1]) // 2
+            top = y + 58 + (height - 64 - tile.shape[0]) // 2
+            context[top:top + tile.shape[0], left:left + tile.shape[1]] = tile
+        self.evidence["model_context"] = context
+        self.evidence_camera["model_context"] = self.evidence_camera.get(eid, "unknown")
+        self.evidence_captured_at["model_context"] = time.time()
+        self.provenance["model_context"] = {
+            "camera": self.evidence_camera["model_context"],
+            "captured_at": self.evidence_captured_at["model_context"],
+            "source_artifact": None, "relationship": "composite", "sources": names,
+            "bbox": None, "missing_sources": [n for n in ("original_frame", eid, "face_crop") if n not in names]}
+        if self.on_capture:
+            self.on_capture()
+        return context
+
+    def assess_parallel(self, claim: str) -> dict:
+        """Independent prompts on one immutable scene/object/person context, then comparison."""
+        eid, _ = self.model_crop()
+        image = self.build_model_context()
+        missing = {"status": "uncertain", "reason": "No object crop available",
+                   "analyst_supports": None, "verifier_supports": None, "claim": claim}
+        if image is None:
+            BUS.emit("comparison", missing["reason"], **missing)
+            return missing
+        image = image.copy()
+        image.flags.writeable = False
+        version = self._versions[eid]
+        custody = BUS.captured_events()
+
+        def run(role):
+            with BUS.capture(custody):
+                _preview(role, image, incident=self.incident["id"], evidence="model_context")
+                try:
+                    if role == "analyst":
+                        BUS.bump("vlm_calls")
+                        return self.analyst.assess(image, claim)
+                    return self.verifier.check(image, claim)
+                except Exception as exc:  # noqa: BLE001 - endpoint failure must retain the evidence
+                    BUS.emit(role, f"Assessment failed: {type(exc).__name__}")
+                    return {"error": type(exc).__name__}
+
+        with ThreadPoolExecutor(max_workers=2) as pool:
+            analyst = pool.submit(run, "analyst")
+            verifier = pool.submit(run, "verifier")
+            a, v = analyst.result(), verifier.result()
+        if self.injected_disagreements:
+            self.injected_disagreements -= 1
+            a = {"description": "A ceramic cup. Simulated disagreement.", "claim": claim, "supported": False}
+            BUS.emit("analyst", "SIMULATED disagreement injected: a ceramic cup", simulated=True)
+        description = str(a.get("description", ""))
+        self.descriptions[eid] = description
+        self.verdict = v
+        self._verified = (_norm(claim), eid, version)
+        supports = a.get("supported")
+        if type(supports) is not bool or a.get("claim") != claim or "error" in a:
+            supports = None
+        checked = v.get("supported") if "error" not in v and v.get("determinate", True) else None
+        if self._versions.get(eid) != version:
+            supports = checked = None
+        status = "uncertain" if supports is None or checked is None else (
+            "agreed" if supports == checked else "disagreed")
+        reason = ("Both checks support the claim" if supports is True and checked is True else
+                  "Both checks reject the claim" if supports is False and checked is False else
+                  "Checks disagree" if status == "disagreed" else "At least one check is inconclusive")
+        result = {"status": status, "reason": reason, "analyst_supports": supports,
+                  "verifier_supports": checked, "claim": claim}
+        BUS.emit("comparison", reason, **result)
+        return result
 
     def t_list_cameras(self) -> dict:
         return {"cameras": [c.describe() for c in self.cameras.values()]}

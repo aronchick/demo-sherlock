@@ -1,5 +1,5 @@
 """The Expanso Edge sink and its dashboard surface: off by default, never sends a
-face crop, never blocks the bus, and the footer claims only what is delivering."""
+training face crop, never blocks the bus, and the footer claims only what is delivering."""
 import base64
 import hashlib
 import http.server
@@ -28,7 +28,8 @@ def _evidence(tmp_path, incident="20261017-120000-001", crops=(("weapon_crop", W
     folder = tmp_path / incident
     folder.mkdir(parents=True)
     for name, raw in crops:
-        (folder / f"{name}.jpg").write_bytes(raw)
+        extension = "png" if name == "model_context" else "jpg"
+        (folder / f"{name}.{extension}").write_bytes(raw)
     return incident
 
 
@@ -54,23 +55,22 @@ def test_sink_is_off_unless_asked(monkeypatch, tmp_path):
 
 # --- what leaves the laptop ----------------------------------------------------------
 
-def test_alert_carries_the_weapon_crop_and_never_the_face(tmp_path):
+def test_alert_carries_weapon_and_face_evidence(tmp_path):
     iid = _evidence(tmp_path)
     rec = incident_record(_report(iid), tmp_path)
     weapon, face = rec["crops"]["weapon_crop"], rec["crops"]["face_crop"]
     assert base64.b64decode(weapon["b64"]) == WEAPON
     assert weapon["sha256"] == hashlib.sha256(WEAPON).hexdigest()
-    assert "b64" not in face
+    assert base64.b64decode(face["b64"]) == FACE
     assert face["sha256"] == hashlib.sha256(FACE).hexdigest()
     assert face["path"].endswith(f"{iid}/face_crop.jpg")
-    assert FACE.hex() not in json.dumps(rec) and base64.b64encode(FACE).decode() not in json.dumps(rec)
 
 
 @pytest.mark.parametrize("action", ["log", "ignore"])
-def test_routine_reports_send_no_pixels(tmp_path, action):
+def test_routine_reports_send_captured_evidence(tmp_path, action):
     iid = _evidence(tmp_path)
     rec = incident_record(_report(iid, action=action), tmp_path)
-    assert rec["crops"] and all("b64" not in c for c in rec["crops"].values())
+    assert rec["crops"] and all("b64" in c for c in rec["crops"].values())
 
 
 def test_hard_examples_are_unconfirmed_object_crops_only(tmp_path):
@@ -136,7 +136,7 @@ def test_sink_batches_events_and_posts_reports(tmp_path, capture):
     events = [e for b in batches for e in b]
     assert any(e["stage"] == "scout" and e["msg"] == "new knife on hero" for e in events)
     incident = next(b for p, b in got if p == "/incident")
-    assert incident["incident"] == iid and "b64" not in incident["crops"]["face_crop"]
+    assert incident["incident"] == iid and base64.b64decode(incident["crops"]["face_crop"]["b64"]) == FACE
     assert not any(p == "/example" for p, _ in got)  # verified: not a hard example
     status = sink.status()
     assert status["edge"] is True and status["sent"]["incidents"] == 1 and status["sent"]["failed"] == 0
@@ -209,3 +209,31 @@ def test_rejections_are_not_cleared_by_catch():
         text = path.read_text()
         if "throw(" in text and "reject_errored" in text:
             assert "catch:" not in text, path.name
+
+
+def test_saved_manifest_provenance_and_scene_are_transported(tmp_path):
+    iid = _evidence(tmp_path, crops=(("original_frame", b"scene"), ("face_crop", FACE), ("model_context", b"\x89PNG\r\n\x1a\ncontext")))
+    manifest = {**_report(iid, "log", False, ("original_frame", "face_crop", "model_context")),
+                "custody": [{"stage": "capture"}], "models": {"analyst": "configured"},
+                "evidence_provenance": {"face_crop": {"source": "original_frame", "bbox": [1, 2, 3, 4]}},
+                "unrelated_secret": "not transported"}
+    (tmp_path / iid / "manifest.json").write_text(json.dumps(manifest))
+    rec = incident_record(_report(iid), tmp_path)
+    assert rec["action"] == "log" and rec["custody"] == manifest["custody"]
+    assert base64.b64decode(rec["crops"]["original_frame"]["b64"]) == b"scene"
+    assert rec["crops"]["face_crop"]["provenance"]["source"] == "original_frame"
+    assert base64.b64decode(rec["crops"]["model_context"]["b64"]) == b"\x89PNG\r\n\x1a\ncontext"
+    assert rec["crops"]["model_context"]["content_type"] == "image/png"
+    assert rec["crops"]["model_context"]["path"].endswith("/model_context.png")
+    assert "unrelated_secret" not in rec
+
+
+def test_transport_refuses_unsafe_artifact_reads(tmp_path):
+    iid = _evidence(tmp_path, crops=())
+    secret = tmp_path / "unrelated.txt"
+    secret.write_bytes(b"private")
+    (tmp_path / iid / "face_crop.jpg").symlink_to(secret)
+    report = _report(iid, evidence=("face_crop", "../unrelated", "unknown"))
+    assert incident_record(report, tmp_path)["crops"] == {}
+    assert incident_record(_report("../outside"), tmp_path)["crops"] == {}
+    assert example_record(_report("../outside", verified=False), tmp_path) is None

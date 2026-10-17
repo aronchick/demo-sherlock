@@ -10,7 +10,7 @@ import time
 import cv2
 import numpy as np
 
-from .agents.director import Director, RuleDirector, names_claim
+from .agents.director import Director, RuleDirector, weapon_claim
 from .agents.scout import Detection, Scout, classify
 from .agents.vision import Analyst, MockAnalyst, MockVerifier, Verifier
 from .camera import Camera, CameraError, build_camera
@@ -64,6 +64,7 @@ class Sherlock:
         self.evidence_dir = pathlib.Path(evidence_dir or os.environ.get("EVIDENCE_DIR", "snapshots"))
         self.incidents = IncidentStore(self.evidence_dir)
         self.edge = EdgeSink.from_env(self.evidence_dir)  # None unless SHERLOCK_EDGE=1
+        self.latest_wide_at: dict[str, float] = {}
         self.latest_wide: dict[str, np.ndarray] = {}
         self.log: list[dict] = []
         self.active: Detection | None = None
@@ -132,6 +133,7 @@ class Sherlock:
                     down.discard(name)
                     BUS.emit("system", f"{name}: back online")
                 self.latest_wide[name] = frame
+                self.latest_wide_at[name] = time.time()
                 for det in self.scout.step(frame, name):
                     self._investigate(det)
             time.sleep(0.03)
@@ -171,39 +173,82 @@ class Sherlock:
             with BUS.capture() as custody:
                 custody.append({"stage": "scout", "t": time.time(),
                                 "detail": f"Investigation opened: {det.label} on {det.camera}"})
-                report = self.director.investigate(det)
-                claim = report.get("claim", "")
-                eid, _ = self.tools.model_crop()
-                verdict = self.tools.verdict_for(claim)
-                if verdict is None and eid is not None and report.get("action") != "ignore":
-                    # The final claim against the current weapon crop (never the face). A verdict on
-                    # another claim, or on a crop since replaced, says nothing about this report.
-                    verdict = self.tools.check_claim(claim)
-                if verdict is not None:
-                    report["verified"] = bool(verdict["supported"])
-                    report["verifier_reason"] = verdict["reason"]
-                if report.get("action") == "alert" and not report.get("verified"):
-                    report["action"] = "log"
-                    report["downgraded"] = "alert without a verified weapon claim"
-                if eid is not None:
-                    said = self.tools.descriptions.get(eid, "")
-                    if report.get("verified") and said and not names_claim(said, claim):
-                        # A confirmed knife described as 'Cake.' reads as a broken system. The
-                        # claim stands on the Verifier's own yes; the Analyst's words stay on file.
-                        report["description"], report["analyst_mismatch"] = "", said
-                    else:
-                        report["description"] = said
-                if not report.get("verified"):
-                    self._drop_face_crop(report)
+                self.tools.defer_analysis = True
+                saved, unsaved = [], []
+
+                def persist():
+                    nonlocal saved, unsaved
+                    saved, unsaved = self._save_evidence(iid, self.tools.evidence)
+                    pending = {"incident": iid, "t": time.time(), "action": "log",
+                               "claim": weapon_claim(det.label), "verified": False,
+                               "state": "investigating", "evidence": saved,
+                               "evidence_unsaved": unsaved,
+                               "evidence_provenance": self.tools.provenance.copy()}
+                    try:
+                        self.incidents.save(pending, custody, {
+                            "mock": self.cfg.mock, "scout": self.cfg.yolo_model,
+                            "director": self.cfg.director.model, "analyst": self.cfg.analyst.model,
+                            "verifier": self.cfg.verifier.model})
+                    except (OSError, ValueError) as exc:
+                        BUS.emit("system", f"Pending incident manifest NOT saved for {iid}: {exc}")
+
+                self.tools.on_capture = persist
+                source = self.latest_wide.get(det.camera)
+                captured = self.latest_wide_at.get(det.camera)
+                if source is None:
+                    try:
+                        source = self.cameras[det.camera].wide_frame()
+                        captured = time.time()
+                    except CameraError as exc:
+                        BUS.emit("system", f"Original frame unavailable: {exc}")
+                if source is not None:
+                    self.tools.evidence["original_frame"] = source.copy()
+                    self.tools.evidence_camera["original_frame"] = det.camera
+                    self.tools.evidence_captured_at["original_frame"] = captured
+                    self.tools.provenance["original_frame"] = {
+                        "camera": det.camera, "captured_at": captured,
+                        "source_artifact": None, "relationship": "source_frame", "bbox": None}
+                    if det.head:
+                        height, width = source.shape[:2]
+                        x1, y1, x2, y2 = det.head
+                        x1, x2 = max(0, int(x1)), min(width, int(x2))
+                        y1, y2 = max(0, int(y1)), min(height, int(y2))
+                        if x2 > x1 and y2 > y1:
+                            self.tools.evidence["face_crop"] = source[y1:y2, x1:x2].copy()
+                            self.tools.evidence_camera["face_crop"] = det.camera
+                            self.tools.evidence_captured_at["face_crop"] = captured
+                            self.tools.provenance["face_crop"] = {
+                                "camera": det.camera, "captured_at": captured,
+                                "source_artifact": "original_frame", "relationship": "crop_of_source",
+                                "bbox": [x1, y1, x2, y2]}
+                    persist()
+                try:
+                    report = self.director.investigate(det)
+                except Exception as exc:  # noqa: BLE001 - preserve captured evidence on an interrupted investigation
+                    report = {"action": "log", "claim": weapon_claim(det.label),
+                              "confidence": 0, "error": type(exc).__name__}
+                    BUS.emit("system", f"Investigation failed: {type(exc).__name__}")
+                if det.threat != "benign":
+                    claim = weapon_claim(det.label)
+                    comparison = self.tools.assess_parallel(claim)
+                    report["claim"] = claim
+                    report["comparison"] = comparison
+                    report["verified"] = (not report.get("error") and comparison["analyst_supports"] is True and
+                                          comparison["verifier_supports"] is True)
+                    report["action"] = "alert" if det.threat == "weapon" and report["verified"] else "log"
+                    report["verifier_reason"] = (self.tools.verdict or {}).get("reason", "")
+                    eid, _ = self.tools.model_crop()
+                    report["description"] = self.tools.descriptions.get(eid, "")
                 report["incident"] = iid
                 report["t"] = time.time()
-                report["evidence"], unsaved = self._save_evidence(iid, self.tools.evidence)
-                report["evidence_provenance"] = {name: {"camera": self.tools.evidence_camera.get(name),
-                    "captured_at": self.tools.evidence_captured_at.get(name)} for name in self.tools.evidence}
+                report["evidence"] = saved
+                report["evidence_provenance"] = self.tools.provenance.copy()
                 if unsaved:
                     report["evidence_unsaved"] = unsaved
                 if report["evidence"]:
-                    report["evidence_camera"] = self.tools.evidence_camera[report["evidence"][0]]
+                    primary = next((n for n in ("weapon_crop", "object_crop") if n in report["evidence"]),
+                                   report["evidence"][0])
+                    report["evidence_camera"] = self.tools.evidence_camera[primary]
                 report["vlm_calls"] = BUS.stats["vlm_calls"] - vlm_before
                 report["total_ms"] = (time.perf_counter() - t0) * 1000
                 report["trigger"] = {"camera": det.camera, "label": det.label, "bbox": det.bbox,
@@ -230,26 +275,10 @@ class Sherlock:
                      label=det.label, threat=det.threat, camera=det.camera,
                      **{k: v for k, v in report.items() if k != "trigger"})
         finally:
+            self.tools.on_capture = None
+            self.tools.defer_analysis = False
             self.active = None
             self._busy.release()
-
-    def _drop_face_crop(self, report: dict) -> None:
-        """A face is evidence only when the weapon claim is verified. The chain takes the
-        face snapshot before verify, so a rejected (or unverified) claim would otherwise
-        store the face of someone holding a cup. Enforced here, whatever order the
-        Director chose: the bytes leave the toolbox before anything is saved or emitted,
-        and the live crop view falls back to the weapon crop."""
-        tools = self.tools
-        face = tools.evidence.pop("face_crop", None)
-        tools.evidence_camera.pop("face_crop", None)
-        tools.evidence_captured_at.pop("face_crop", None)
-        if face is None:
-            return
-        if tools.last_crop is face:
-            _, weapon = tools.model_crop()
-            tools.last_crop = weapon
-        report["face_crop_dropped"] = "claim not verified"
-        BUS.emit("system", f"face crop discarded: weapon claim not verified ({report.get('claim')})")
 
     def _save_evidence(self, iid: str, evidence: dict[str, np.ndarray]) -> tuple[list[str], list[str]]:
         """One folder per incident: <evidence_dir>/<incident>/<weapon_crop|face_crop|object_crop>.jpg.
@@ -262,7 +291,8 @@ class Sherlock:
         try:
             folder.mkdir(parents=True, exist_ok=True)
             for name, img in evidence.items():
-                if cv2.imwrite(str(folder / f"{name}.jpg"), img):
+                suffix = ".png" if name == "model_context" else ".jpg"
+                if cv2.imwrite(str(folder / f"{name}{suffix}"), img):
                     saved.append(name)
         except (OSError, cv2.error) as e:
             BUS.emit("system", f"evidence write failed in {folder}: {e}")
@@ -273,7 +303,8 @@ class Sherlock:
         return saved, unsaved
 
     def evidence_path(self, iid: str, name: str) -> pathlib.Path:
-        return self.incidents.path(iid, f"{name}.jpg")
+        suffix = ".png" if name == "model_context" else ".jpg"
+        return self.incidents.path(iid, f"{name}{suffix}")
 
     # --- dashboard frames -------------------------------------------------------
     def _annotate(self, camera: str, frame: np.ndarray) -> np.ndarray:

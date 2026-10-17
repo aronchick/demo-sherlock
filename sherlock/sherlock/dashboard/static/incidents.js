@@ -1,19 +1,22 @@
 // @ts-check
 'use strict';
 
-/** @typedef {{name:string, sha256:string, url:string, integrity:string, camera?:string,captured_at?:number|null}} Artifact */
+/** @typedef {{name:string, sha256:string, url:string, integrity:string, camera?:string,captured_at?:number|null,source_artifact?:string|null,relationship?:string,sources?:string[],missing_sources?:string[],bbox?:number[]|null}} Artifact */
 /** @typedef {{stage:string, t:number, detail:string}} CustodyEvent */
-/** @typedef {{incident:string, action:string, claim:string, t:number, verified?:boolean, evidence_camera?:string, trigger?:{camera:string}, artifacts:Artifact[], custody:CustodyEvent[], models?:{mock?:boolean,scout?:string,director?:string,analyst?:string,verifier?:string}, notification:{simulated:boolean,status:string,delivered_at?:number,acknowledged_at?:number}}} Incident */
+/** @typedef {{incident:string, action:string, state?:string, claim:string, t:number, verified?:boolean, comparison?:{status:string,reason:string,claim:string,analyst_supports:boolean|null,verifier_supports:boolean|null}, evidence_camera?:string, trigger?:{camera:string}, artifacts:Artifact[], custody:CustodyEvent[], models?:{mock?:boolean,scout?:string,director?:string,analyst?:string,verifier?:string}, notification:{simulated:boolean,status:string,delivered_at?:number,acknowledged_at?:number}}} Incident */
 
 (() => {
   const phone = document.getElementById('phone-content');
   const phoneError = document.getElementById('phone-error');
   const shelf = document.getElementById('evidence-links');
+  const cloudShelf = document.getElementById('cloud-evidence-links');
+  const cloudStatus = document.getElementById('cloud-evidence-status');
   const custody = document.getElementById('custody-content');
   const custodyError = document.getElementById('custody-error');
   const selected = new URLSearchParams(location.search).get('incident');
   const isPhone = location.pathname === '/phone';
   const isCustody = location.pathname === '/custody';
+  window.name = isPhone ? 'sherlock-phone' : isCustody ? 'sherlock-evidence' : 'sherlock-flow';
   let page = 0;
   let phoneRevision = '';
   let shelfRevision = '';
@@ -52,6 +55,7 @@
   function pictureLink(record, artifact) {
     const link = document.createElement('a');
     link.href = custodyUrl(record.incident);
+    link.target = 'sherlock-evidence';
     link.title = `Chain of custody: ${artifact.name}, ${record.incident}`;
 
     if (artifact.integrity === 'missing') {
@@ -90,6 +94,14 @@
 
   /** @param {Incident|undefined} record */
   function renderPhone(record) {
+    const indicator = document.getElementById('phone-indicator');
+    const summary = document.getElementById('phone-summary');
+
+    if (indicator && summary) {
+      indicator.dataset.status = record?.notification.status || 'waiting';
+      summary.textContent = record ? (record.notification.status === 'acknowledged' ? 'Investigating' : 'Alert received') : 'Waiting for an alert';
+    }
+
     if (!phone) return;
     const revision = record ? `${record.incident}:${record.notification.status}` : 'empty';
 
@@ -107,19 +119,25 @@
     phone.append(element('p', acknowledged ? 'ACKNOWLEDGED · SIMULATED' : 'DELIVERED · SIMULATED', `phone-status${acknowledged ? ' acknowledged' : ''}`));
     phone.append(element('h2', record.claim || 'Verified incident'));
     phone.append(element('p', `Detected on ${record.trigger?.camera || 'unrecorded camera'} · ${timestamp(record.t)}`));
-    const artifact = record.artifacts.find(item => item.name !== 'face_crop');
+    const gallery = element('div', '', 'phone-gallery');
+    const original = record.artifacts.find(item => item.name === 'original_frame');
+    const crops = record.artifacts.filter(item => ['weapon_crop', 'object_crop', 'face_crop'].includes(item.name));
 
-    if (artifact) {
-      const link = pictureLink(record, artifact);
-      link.className = 'phone-image';
-      phone.append(link);
+    for (const artifact of [...(original ? [original] : []), ...crops]) {
+      const picture = pictureLink(record, artifact);
+      picture.className = artifact.name === 'original_frame' ? 'phone-scene' : 'phone-crop';
+      const image = picture.querySelector('img');
+
+      if (image) image.classList.remove('face-preview');
+      picture.append(element('span', artifact.name === 'original_frame' ? 'Original scene' : artifact.name === 'face_crop' ? 'Face · human review' : 'Object'));
+      gallery.append(picture);
     }
 
-    phone.append(element('p', `Evidence camera: ${record.evidence_camera || 'not recorded'}`));
-    phone.append(element('p', record.models?.mock ? 'Mock analysis' : 'Live analysis'));
-    phone.append(element('p', `Incident ${record.incident}`));
+    phone.append(gallery);
+    phone.append(element('p', `${record.incident} · ${record.models?.mock ? 'Mock' : 'Live'}`, 'phone-id'));
     const link = document.createElement('a');
     link.href = custodyUrl(record.incident);
+    link.target = 'sherlock-evidence';
     link.textContent = 'View evidence and chain of custody';
     phone.append(link);
     const button = document.createElement('button');
@@ -135,11 +153,13 @@
   /** @param {Incident[]} records */
   function renderShelf(records) {
     if (!shelf) return;
-    const entries = records.flatMap(record => record.artifacts.map(artifact => ({ record, artifact }))).slice(0, 8);
+    const entries = records.flatMap(record => record.artifacts.filter(artifact => artifact.name !== 'model_context').map(artifact => ({ record, artifact }))).slice(0, 8);
     const revision = entries.map(({ record, artifact }) => `${record.incident}:${artifact.name}`).join(',');
 
     if (revision === shelfRevision) return;
     shelfRevision = revision;
+
+    if (cloudShelf) cloudShelf.replaceChildren(...entries.slice(0, 3).map(({record, artifact}) => pictureLink(record, artifact)));
     shelf.replaceChildren(...entries.map(({ record, artifact }) => pictureLink(record, artifact)));
 
     if (!entries.length) shelf.append(element('span', 'No saved evidence yet'));
@@ -158,12 +178,20 @@
     if (!custody) return;
     custody.replaceChildren();
     const summary = element('div', '', 'incident-summary');
-    summary.append(fact('Incident', record.incident), fact('Trigger camera', record.trigger?.camera || 'Not recorded'), fact('Evidence camera', record.evidence_camera || 'Not recorded'), fact('Analysis', record.models?.mock ? 'Mock run' : 'Live run'), fact('Decision', record.action), fact('Recorded', timestamp(record.t)));
+    summary.append(fact('Incident', record.incident), fact('Trigger camera', record.trigger?.camera || 'Not recorded'), fact('Evidence camera', record.evidence_camera || 'Not recorded'), fact('Analysis', record.models?.mock ? 'Mock run' : 'Live run'), fact('Decision', record.state === 'investigating' ? 'Investigating' : record.action), fact('Recorded', timestamp(record.t)));
     custody.append(summary, element('h2', record.claim || 'Incident evidence'));
+
+    if (record.comparison) {
+      const comparison = element('section', '', 'comparison-record');
+      comparison.append(element('h3', `Comparison: ${record.comparison.status}`), element('p', record.comparison.reason), element('p', `Analyst supports claim: ${verdictLabel(record.comparison.analyst_supports)} · Verifier supports claim: ${verdictLabel(record.comparison.verifier_supports)}`));
+      custody.append(comparison);
+    }
+
     const grid = element('div', '', 'artifact-grid');
 
     for (const artifact of record.artifacts) {
-      const figure = element('figure', '', 'artifact');
+      const figure = element('figure', '', `artifact${artifact.name === 'original_frame' ? ' original-scene' : ''}`);
+      figure.id = `artifact-${artifact.name}`;
       const img = document.createElement('img');
       img.src = artifact.url;
       img.alt = artifact.name.replaceAll('_', ' ');
@@ -177,6 +205,25 @@
       } else figure.append(img);
       figure.append(element('figcaption', `${artifact.name.replaceAll('_', ' ')} · ${artifact.camera || record.evidence_camera || 'camera not recorded'}`));
       figure.append(element('p', `Captured ${timestamp(artifact.captured_at)}`));
+
+      if (artifact.relationship === 'composite') {
+        figure.append(element('p', `Model input combines: ${(artifact.sources || []).join(', ')}`));
+
+        if (artifact.missing_sources?.length) figure.append(element('p', `Unavailable: ${artifact.missing_sources.join(', ')}`));
+      }
+
+      if (artifact.source_artifact) {
+        const association = element('p', `${artifact.relationship === 'subsequent_capture' ? 'Later camera capture, associated with' : 'Source image:'} `);
+        const source = document.createElement('a');
+        source.href = `#artifact-${artifact.source_artifact}`;
+        source.textContent = artifact.source_artifact.replaceAll('_', ' ');
+        association.append(source);
+        figure.append(association);
+      }
+
+      if (artifact.relationship === 'composite') figure.append(element('p', 'Model context assembled from this incident’s scene and crops. Both checks receive this context.'));
+
+      if (artifact.bbox) figure.append(element('p', `Target box in source coordinates: ${artifact.bbox.join(', ')}`));
       const good = artifact.integrity === 'verified';
       figure.append(element('p', good ? 'SHA-256 matches saved record' : `Integrity check: ${artifact.integrity}`, good ? 'integrity-ok' : 'integrity-error'));
       figure.append(element('code', `SHA-256 ${artifact.sha256}`));
@@ -215,6 +262,11 @@
     custody.append(downloadParagraph);
   }
 
+  /** @param {boolean|null} verdict */
+  function verdictLabel(verdict) {
+    return verdict == null ? 'uncertain' : verdict ? 'yes' : 'no';
+  }
+
   async function loadCustody() {
     if (!custody) return;
 
@@ -229,6 +281,7 @@
         for (const record of records.slice(0, pageSize)) {
           const link = document.createElement('a');
           link.href = custodyUrl(record.incident);
+    link.target = 'sherlock-evidence';
           const artifact = record.artifacts.find(item => item.name !== 'face_crop');
 
           if (artifact && artifact.integrity !== 'missing') {
@@ -239,7 +292,7 @@
           }
 
           const copy = element('div');
-          copy.append(element('h2', record.claim || record.action), element('p', `${record.incident} · ${record.trigger?.camera || 'Camera not recorded'} · ${timestamp(record.t)}`), element('p', `${record.action} · ${record.artifacts.length} saved images · View chain of custody`));
+          copy.append(element('h2', record.claim || record.action), element('p', `${record.incident} · ${record.trigger?.camera || 'Camera not recorded'} · ${timestamp(record.t)}`), element('p', `${record.state === 'investigating' ? 'Investigating' : record.action} · ${record.artifacts.length} saved images · View chain of custody`));
           link.append(copy);
           list.append(link);
         }
@@ -277,10 +330,32 @@
       if (phoneError) phoneError.textContent = '';
 
       if (shelf) renderShelf(await read('/incidents?limit=8&evidence_only=true'));
+
+      if (cloudStatus) {
+        const [mode, transport] = await Promise.all([read('/mode'), read('/expanso')]);
+        cloudStatus.textContent = mode.mock ? 'Simulated destination · no upload' : transport.edge ? 'Edge accepted · cloud unconfirmed' : 'Not connected · source previews';
+      }
     } catch {
       if (phoneError) phoneError.textContent = 'Connection unavailable. Displayed incident may be out of date.';
+
+      if (cloudStatus) cloudStatus.textContent = 'Connection unavailable · cloud unconfirmed';
     }
   }
+
+  document.addEventListener('click', event => {
+    const target = event.target;
+
+    if (!(target instanceof Element) || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey || event.button !== 0) return;
+    const link = target.closest('a');
+
+    if (!(link instanceof HTMLAnchorElement) || !['sherlock-phone', 'sherlock-evidence', 'sherlock-flow'].includes(link.target)) return;
+    const tab = window.open(link.href, link.target);
+
+    if (tab) {
+      event.preventDefault();
+      tab.focus();
+    }
+  });
 
   const phoneView = document.getElementById('phone-view');
   const custodyView = document.getElementById('custody-view');

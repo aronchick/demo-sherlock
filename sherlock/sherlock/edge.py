@@ -6,8 +6,8 @@ the bus already drops events for a subscriber that falls behind, and every
 POST has a short timeout and is dropped on failure.
 
 - E1 telemetry: every bus event, sent in small JSON-array batches.
-- E2 incidents: one message per report. Alerts carry the weapon/object crop;
-  the face crop is never sent, only its SHA-256 and local path.
+- E2 incidents: one message per report, with the complete saved evidence package.
+  Scene, face and exact model-input images are evidence, not training examples.
 - E3 examples (SHERLOCK_EDGE_EXAMPLES=1 only): crops the Verifier did not
   confirm, for the next Scout fine-tune. Never faces.
 """
@@ -25,11 +25,13 @@ import urllib.error
 import urllib.request
 
 from .events import BUS, Event
+from .incidents import ID
 
 LIVE_SECONDS = 30.0  # a delivery this recent means the Edge pipeline is carrying data
 _BATCH_MAX = 50
 _BATCH_WAIT = 1.0
 _SENDABLE_CROPS = ("weapon_crop", "object_crop")
+_EVIDENCE_NAMES = {*_SENDABLE_CROPS, "face_crop", "original_frame", "model_context"}
 
 
 def _on(name: str) -> bool:
@@ -145,29 +147,61 @@ def telemetry_record(ev: Event) -> dict:
     return {"stage": ev.stage, "msg": ev.msg, "latency_ms": ev.latency_ms, "t": ev.t, "data": ev.data}
 
 
+def _evidence_file(evidence_dir: pathlib.Path, incident: str, filename: str) -> pathlib.Path:
+    if not ID.fullmatch(incident) or filename not in {
+        "manifest.json", "model_context.png",
+        *(f"{name}.jpg" for name in _EVIDENCE_NAMES if name != "model_context")
+    }:
+        raise ValueError("invalid evidence path")
+    root = pathlib.Path(evidence_dir).resolve()
+    folder = root / incident
+    path = folder / filename
+    if folder.is_symlink() or path.is_symlink() or not path.resolve().is_relative_to(root):
+        raise ValueError("invalid evidence path")
+    return path
+
+
 def _crop_file(evidence_dir: pathlib.Path, incident: str, name: str) -> pathlib.Path:
-    return evidence_dir / incident / f"{name}.jpg"
+    extension = "png" if name == "model_context" else "jpg"
+    return _evidence_file(evidence_dir, incident, f"{name}.{extension}")
 
 
 def incident_record(report: dict, evidence_dir: pathlib.Path) -> dict:
-    """The report plus one entry per saved crop. Bytes only for a weapon or
-    object crop on an alert; a face crop is described by hash and path only."""
+    """Send saved scene/object/face evidence regardless of the incident decision.
+
+    Only known manifest metadata and named evidence files are read. Local paths
+    are provenance, never instructions to read an arbitrary file from a manifest.
+    Transport acceptance does not attest downstream persistence.
+    """
     incident = str(report.get("incident", ""))
-    alert = report.get("action") == "alert"
+    source = report
+    try:
+        manifest = json.loads(_evidence_file(evidence_dir, incident, "manifest.json").read_text())
+        if isinstance(manifest, dict) and manifest.get("incident") == incident:
+            source = manifest
+    except (OSError, ValueError):
+        pass
     crops: dict[str, dict] = {}
-    for name in report.get("evidence") or []:
-        path = _crop_file(evidence_dir, incident, name)
-        try:
-            raw = path.read_bytes()
-        except OSError:
+    provenance = source.get("evidence_provenance") or {}
+    for name in source.get("evidence") or []:
+        if not isinstance(name, str) or name not in _EVIDENCE_NAMES:
             continue
-        entry = {"sha256": hashlib.sha256(raw).hexdigest(), "bytes": len(raw), "path": str(path)}
-        if alert and name in _SENDABLE_CROPS:
-            entry["b64"] = base64.b64encode(raw).decode()
+        try:
+            path = _crop_file(evidence_dir, incident, name)
+            raw = path.read_bytes()
+        except (OSError, ValueError):
+            continue
+        entry = {"sha256": hashlib.sha256(raw).hexdigest(), "bytes": len(raw), "path": str(path),
+                 "b64": base64.b64encode(raw).decode(),
+                 "content_type": "image/png" if name == "model_context" else "image/jpeg"}
+        if isinstance(provenance, dict) and isinstance(provenance.get(name), dict):
+            entry["provenance"] = provenance[name]
         crops[name] = entry
     keep = ("incident", "action", "claim", "confidence", "verified", "verifier_reason", "description",
-            "downgraded", "vlm_calls", "total_ms", "t", "camera", "label", "threat", "evidence_camera")
-    out = {k: report[k] for k in keep if k in report}
+            "downgraded", "vlm_calls", "total_ms", "t", "camera", "label", "threat", "evidence_camera",
+            "evidence", "evidence_unsaved", "evidence_provenance", "artifacts", "custody", "models",
+            "custody_scope", "notification", "trigger", "comparison", "analyst_mismatch")
+    out = {k: source[k] for k in keep if k in source}
     out["crops"] = crops
     return out
 
@@ -181,7 +215,7 @@ def example_record(report: dict, evidence_dir: pathlib.Path) -> dict | None:
         if name in (report.get("evidence") or []):
             try:
                 raw = _crop_file(evidence_dir, incident, name).read_bytes()
-            except OSError:
+            except (OSError, ValueError):
                 return None
             return {"incident": incident, "crop": name, "label": report.get("label"),
                     "claim": report.get("claim"), "verifier_reason": report.get("verifier_reason"),

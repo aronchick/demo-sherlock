@@ -3,6 +3,7 @@ Both talk to any OpenAI-compatible vision endpoint (Ollama /v1, vLLM)."""
 from __future__ import annotations
 
 import base64
+import json
 import logging
 import math
 import os
@@ -19,21 +20,24 @@ from ..events import BUS
 log = logging.getLogger(__name__)
 
 
-def _b64(img: np.ndarray, max_side: int = 768) -> str:
+def _b64(img: np.ndarray, max_side: int = 768, lossless: bool = False) -> str:
     h, w = img.shape[:2]
     s = max_side / max(h, w)
     if s < 1:
         img = cv2.resize(img, (int(w * s), int(h * s)))
-    _, buf = cv2.imencode(".jpg", img, [cv2.IMWRITE_JPEG_QUALITY, 85])
+    _, buf = (cv2.imencode(".png", img) if lossless else
+              cv2.imencode(".jpg", img, [cv2.IMWRITE_JPEG_QUALITY, 85]))
     return base64.b64encode(buf.tobytes()).decode()
 
 
 def _vision_request(client: OpenAI, model: str, img: np.ndarray, prompt: str, max_tokens: int = 200,
                     **extra):
+    lossless = img.shape[:2] == (752, 768)  # persisted model_context contact sheet
+    mime = "image/png" if lossless else "image/jpeg"
     return client.chat.completions.create(
         model=model, max_tokens=max_tokens, temperature=0.1,
         messages=[{"role": "user", "content": [
-            {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{_b64(img)}"}},
+            {"type": "image_url", "image_url": {"url": f"data:{mime};base64,{_b64(img, lossless=lossless)}"}},
             {"type": "text", "text": prompt}]}], **extra)
 
 
@@ -45,7 +49,8 @@ def _vision_call(client: OpenAI, model: str, img: np.ndarray, prompt: str, max_t
 class Analyst:
     PROMPT = ("You are looking at a zoomed-in security camera crop of an object. {question} "
               "Answer in two short sentences: what the object is, and any text or brand you can read. "
-              "Describe only the object. Never identify, name or describe any person. "
+              "Describe the object and visible person-object interaction when scene context is provided. "
+              "Never identify or name any person, infer identity, or perform facial recognition. "
               "If you cannot tell, say so plainly.")
 
     def __init__(self, ep: Endpoint):
@@ -57,6 +62,43 @@ class Analyst:
         text = _vision_call(self.client, self.model, img, self.PROMPT.format(question=question))
         BUS.emit("analyst", text, (time.perf_counter() - t0) * 1000)
         return {"description": text}
+
+    def assess(self, img: np.ndarray, claim: str) -> dict:
+        """One request returns an explicit claim verdict and its description."""
+        prompt = (
+            "Assess the target object in the labeled weapon/object crop (bottom-left tile), "
+            "using the scene and person context. Captures may have different times. "
+            "Decide whether the target really is the claimed object, not a nearby object, toy, "
+            "replica, or merely something that resembles it. If unclear, use uncertain. "
+            "Describe the object and visible person-object interaction; never identify or name "
+            "any person or infer identity. Return ONLY a JSON object with three fields: "
+            "claim (copy the supplied claim exactly), supported (yes, no, or uncertain), "
+            "description (two short sentences). Supplied claim: " + json.dumps(claim))
+        t0 = time.perf_counter()
+        text = _vision_call(self.client, self.model, img, prompt)
+        out = parse_assessment(text, claim)
+        BUS.emit("analyst", out["description"], (time.perf_counter() - t0) * 1000,
+                 supported=out["supported"], claim=claim)
+        return out
+
+
+def parse_assessment(text: str, claim: str) -> dict:
+    """No keyword inference: malformed or unbound output cannot support a claim."""
+    out = {"supported": None, "description": text, "claim": claim}
+    try:
+        record = json.loads(text)
+    except (ValueError, TypeError):
+        return out
+    if not isinstance(record, dict):
+        return out
+    description = record.get("description")
+    if isinstance(description, str):
+        out["description"] = description
+    if (record.get("claim") != claim or not isinstance(description, str) or not description.strip()
+            or record.get("supported") not in ("yes", "no", "uncertain")):
+        return out
+    out["supported"] = {"yes": True, "no": False, "uncertain": None}[record["supported"]]
+    return out
 
 
 # The Verifier asks a yes/no question. Small VLMs ignore a JSON-verdict instruction ('True.',
@@ -121,8 +163,10 @@ class Verifier:
       margin  logprobs at the first word, margin > threshold
       text    the reply's first word"""
 
-    PROMPT = ("Is the object in this image {claim}? Judge the object only; do not identify or "
-              "describe any person. Answer yes or no.")
+    PROMPT = ("Does this image support the claim that the object is {claim}? Use the labeled object, "
+              "scene and person context if provided; the target is the labeled object crop, not nearby objects. "
+              "Captures may have different times. "
+              "Do not identify any person or infer identity; facial recognition is prohibited. Answer yes or no.")
 
     def __init__(self, ep: Endpoint):
         self.client = OpenAI(base_url=ep.base_url, api_key=ep.api_key)
@@ -162,7 +206,8 @@ class Verifier:
         else:
             mode, supported, confidence = "text", _leading_verdict(raw) is True, None
         out = {"supported": supported, "confidence": confidence, "reason": raw[:200] or "(empty reply)",
-               "mode": mode, "margin": None if margin is None else round(margin, 3)}
+               "mode": mode, "margin": None if margin is None else round(margin, 3),
+               "determinate": margin is not None or _leading_verdict(raw) is not None}
         BUS.bump("confirmed" if supported else "rejected")
         how = f"margin {margin:+.2f} vs {self.threshold:+.2f}" if margin is not None else "first word"
         BUS.emit("verifier", f"{'CONFIRMED' if supported else 'REJECTED'} ({how}): {out['reason']}",
@@ -181,6 +226,8 @@ def _mock_wait(seconds: float) -> float:
 def _mock_classify(img: np.ndarray) -> str | None:
     """Crude pixel 'vision' for the synthetic scene: a near-white, unsaturated blade
     means knife; the legacy blue ACME box means cola."""
+    if img.shape[:2] == (752, 768):
+        img = img[506:746, 8:376]  # labeled composite: mock classification uses the object tile
     b, g, r = (img[..., i].astype(np.int16) for i in range(3))
     steel = (b > 200) & (g > 200) & (r > 200) & (np.abs(b - r) < 25)
     if steel.mean() > 0.008:
@@ -202,6 +249,12 @@ class MockAnalyst:
         text = _MOCK_TEXT[kind] if kind else "Hard to tell; a dark object with no readable text."
         BUS.emit("analyst", text, ms)
         return {"description": text}
+
+    def assess(self, img: np.ndarray, claim: str) -> dict:
+        out = self.describe(img, "Describe the target object and person interaction")
+        kind = _mock_classify(img)
+        supported = kind is not None and any(w in claim.lower() for w in _CLAIM_WORDS[kind])
+        return {**out, "claim": claim, "supported": supported if kind is not None else None}
 
 
 class MockVerifier:

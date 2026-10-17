@@ -18,11 +18,11 @@ A cheap detector just flagged something new. The event's "threat" field decides 
 - "benign" (cup, bottle, phone...): call report with action="ignore" right away. No look_at, no snapshot.
 - "weapon": call, in this order: look_at(camera, weapon bbox) -> snapshot(camera, subject="weapon",
   question about the object) -> look_at(camera, head_bbox) -> snapshot(camera, subject="face")
-  -> verify(claim naming the weapon, e.g. "a knife") -> report(the same claim you verified,
-  action="alert" if verified else "log", evidence=["weapon_crop", "face_crop"]).
+  -> report(the event claim, action="log", evidence=["weapon_crop", "face_crop"]).
   Skip the two face steps if head_bbox is null.
-- "unknown": look_at -> snapshot(subject="object") -> verify -> report(action="log").
-Never ask about, describe or identify a person. The face crop is evidence for a human only.
+- "unknown": look_at -> snapshot(subject="object") -> report(action="log").
+Snapshot stores evidence. Independent Analyst and Verifier checks run after acquisition finishes;
+do not call verify or decide their outcome. Never ask about, describe or identify a person. The face crop is evidence for a human only.
 If a tool returns an error, do not repeat the identical call:
 try list_cameras and use a different camera, or adjust the arguments.
 Be decisive. Use at most {max_calls} tool calls. Always finish with report."""
@@ -159,7 +159,7 @@ class RuleDirector:
             r = self.tools.call("snapshot", {"camera": cam, "subject": subject, "question": "What is this object?"})
             if self._failed(cam, r):
                 continue
-            claim = weapon_claim(detection.label) if threat == "weapon" else r["description"].split(".")[0]
+            claim = weapon_claim(detection.label)
             evidence = [r["evidence_id"]]
             # Face evidence is best effort: a failed zoom must not cost us the weapon alert.
             if threat == "weapon" and head and not self._failed(
@@ -167,7 +167,8 @@ class RuleDirector:
                 f = self.tools.call("snapshot", {"camera": cam, "subject": "face"})
                 if not self._failed(cam, f):
                     evidence.append(f["evidence_id"])
-            v = self.tools.call("verify", {"claim": claim})
+            v = ({"supported": False, "confidence": 0.4} if self.tools.defer_analysis else
+                 self.tools.call("verify", {"claim": claim}))
             supported = bool(v.get("supported"))
             action = "alert" if threat == "weapon" and supported else "log"
             return self.tools.call("report", {"claim": claim,

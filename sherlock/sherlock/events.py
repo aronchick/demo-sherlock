@@ -56,15 +56,18 @@ class Bus:
         return q
 
     @contextmanager
-    def capture(self):
+    def capture(self, events=None):
         """Collect this investigation thread's textual events, never image payloads."""
         previous = getattr(self._capture, "events", None)
-        events = []
+        events = [] if events is None else events
         self._capture.events = events
         try:
             yield events
         finally:
             self._capture.events = previous
+
+    def captured_events(self):
+        return getattr(self._capture, "events", None)
 
     def emit(self, stage: str, msg: str, latency_ms: float | None = None, **data) -> None:
         ev = Event(stage, msg, latency_ms, data)
@@ -80,7 +83,8 @@ class Bus:
                     pass
 
     def bump(self, key: str, n: int = 1) -> None:
-        self.stats[key] = self.stats.get(key, 0) + n
+        with self._lock:
+            self.stats[key] = self.stats.get(key, 0) + n
 
 
 BUS = Bus()

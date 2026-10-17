@@ -1190,7 +1190,19 @@
     "limitations": [
       "Stock YOLOv8n is pretrained on COCO; this is an in-distribution validation baseline, not room evaluation or fine-tuning improvement.",
       "Scout weapon maps knife, scissors and baseball bat; this subset does not evaluate firearms.",
-      "Crowd annotations are excluded by the dataset builder."
+      "Crowd annotations are excluded by the dataset builder.",
+      "Stock YOLOv8n lacks badge, fedora and cap classes. This COCO subset has zero ground-truth boxes for those classes; its zero rows do not measure their recall."
     ]
-  }
+  },
+  "classes": [
+    "person",
+    "weapon",
+    "badge",
+    "bottle",
+    "fedora",
+    "cap"
+  ],
+  "image_count": 107,
+  "dataset_fingerprint": "06a83db64b72255f4a27149d6bd176991800c31205a24cdd0beb1789001a978e",
+  "comparison_status": "standalone_coco_baseline; fine-tune held-out split not yet confirmed"
 }

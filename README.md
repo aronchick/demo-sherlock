@@ -479,6 +479,13 @@ recall **18.27%** (19 TP, 2 FP, 85 FN; confidence 0.35, IoU 0.5). All selected
 images were evaluated as `val`; the report records their source URLs and hashes.
 The weapon mapping covers knives, scissors and baseball bats, not firearms.
 After remains unmeasured until the fine-tuned model is evaluated on the same data.
+Reports record the ordered class list, split, image count and a fingerprint of
+the exact images and labels. Match those plus confidence/IoU/image size before
+comparing separate runs. The current class list is person, weapon, badge, bottle,
+fedora and cap. Stock YOLOv8n has no badge, fedora or cap class: it scores zero
+recall on their annotated boxes. Zero-support rows in the COCO-only report
+are not measurements of those classes. This COCO subset is not yet confirmed
+as the fine-tune owner's held-out split.
 
 `eval_scout.py` prints precision and recall per class, before (stock YOLOv8n, COCO names mapped) vs after,
 on the held-out test photos, at the 0.35 confidence the runtime Scout uses. Its last line is the number for

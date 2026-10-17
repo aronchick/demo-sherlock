@@ -310,6 +310,9 @@ def test_eval_labels_persist_and_control_dashboard_evidence(tmp_path, eval_args,
     saved = json.loads(output.read_text())
     assert saved == report
     assert saved["evidence_kind"] == "model_evaluation"
+    assert saved["classes"] == list(sd.CLASSES)
+    assert saved["image_count"] == 1
+    assert len(saved["dataset_fingerprint"]) == 64
     assert saved["execution_mode"] == ("smoke" if smoke else "measured")
     result = read_numbers(tmp_path)["scout"]
     if smoke:
@@ -380,3 +383,19 @@ def test_baseline_only_measured_has_no_after(tmp_path, eval_args):
     assert result["after_recall"] is None and result["device"] == "mps"
     with pytest.raises(ValueError, match="cannot be published"):
         publish_scout_hf.measured_headline(report)
+
+
+def test_eval_split_identity_tracks_labels_images_and_classes(tmp_path, eval_args, monkeypatch):
+    dataset = tmp_path / "scout"
+    images = sorted((dataset / "images/test").glob("*.jpg"))
+    original = eval_scout.split_identity(dataset, "test", images)
+    assert original == eval_scout.split_identity(dataset, "test", list(reversed(images)))
+    label = dataset / "labels/test/room_knife.txt"
+    label.write_text(label.read_text() + "2 0.5 0.5 0.2 0.2\n")
+    relabelled = eval_scout.split_identity(dataset, "test", images)
+    assert relabelled["dataset_fingerprint"] != original["dataset_fingerprint"]
+    images[0].write_bytes(images[0].read_bytes() + b"changed")
+    changed = eval_scout.split_identity(dataset, "test", images)
+    assert changed["dataset_fingerprint"] != relabelled["dataset_fingerprint"]
+    monkeypatch.setattr(eval_scout, "CLASSES", tuple(reversed(sd.CLASSES)))
+    assert eval_scout.split_identity(dataset, "test", images)["dataset_fingerprint"] != changed["dataset_fingerprint"]

@@ -10,6 +10,7 @@ import numpy as np
 
 from .camera import Camera, CameraError
 from .events import BUS
+from .privacy import FaceMasker
 
 SUBJECTS = ("weapon", "object", "face")
 ACTIONS = ("log", "alert", "ignore")
@@ -145,10 +146,13 @@ _SAYS = {1: "zooming {camera} to the {subject}", 2: "asking the analyst to read 
 
 
 class ToolBox:
-    def __init__(self, cameras: dict[str, Camera], analyst, snapshot_dir: str = "snapshots", verifier=None):
+    def __init__(self, cameras: dict[str, Camera], analyst, snapshot_dir: str = "snapshots", verifier=None,
+                 masker=None):
         self.cameras = cameras
         self.analyst = analyst
         self.verifier = verifier
+        # Loaded here, not on first use: a missing detector stops startup, not an investigation.
+        self.masker = masker if masker is not None else FaceMasker()
         self.snapshot_dir = snapshot_dir
         self.last_crop: np.ndarray | None = None  # latest crop of any incident, for the live view
         self.injected_failures = 0  # demo switch: next N device calls fail
@@ -176,6 +180,7 @@ class ToolBox:
         self.evidence: dict[str, np.ndarray] = {}
         self.evidence_camera: dict[str, str] = {}  # which camera captured each crop (differs after recovery)
         self.descriptions: dict[str, str] = {}  # Analyst text per crop it saw
+        self.masked: dict[str, tuple[int, float]] = {}  # model-bound crop -> (faces masked, ms)
         self.aim: dict[str, tuple] = {}  # camera -> box its last good look_at targeted; absent = unknown
         self.verdict: dict | None = None
         self._verified: tuple | None = None  # (claim, crop id, crop version) the verdict is about
@@ -252,7 +257,14 @@ class ToolBox:
             self._failed_steps.discard(chain["step"])
             BUS.bump("recoveries")  # counted once the retry worked, not when it was attempted
         shown = ", ".join(f"{k}={_short(v)}" for k, v in args.items())
-        BUS.emit("tool", f"{name}({shown})", (time.perf_counter() - t0) * 1000, result=out, **tag)
+        msg, masked = f"{name}({shown})", {}
+        if name == "snapshot" and out.get("evidence_id") in self.masked:
+            # On the event, not in the result: the Director has no use for a face count.
+            n, ms = self.masked[out["evidence_id"]]
+            masked = {"faces_masked": n, "mask_ms": round(ms, 1)}
+            if n:
+                msg += f" · {n} face{'s' if n > 1 else ''} masked"
+        BUS.emit("tool", msg, (time.perf_counter() - t0) * 1000, result=out, **masked, **tag)
         return out
 
     # --- tools -------------------------------------------------------------
@@ -335,8 +347,18 @@ class ToolBox:
                 # The zoom keeps the frame's aspect ratio, so its view runs well past a narrow
                 # box: neighbouring objects, or the face above a raised knife.
                 img = _crop(img, box, MODEL_CROP_MARGIN, MODEL_CROP_FLOOR)
-        self.last_crop = img
         eid = f"{subject}_crop"
+        if subject != "face":
+            # The second line behind the aim rules: a face the box still caught, such as a
+            # seated child's mouth beside the knife, is filled solid. The stored crop is the
+            # masked one, so the Verifier and the saved evidence see exactly what the Analyst saw.
+            t1 = time.perf_counter()
+            try:
+                img, n = self.masker(img)
+            except cv2.error as e:
+                raise ValueError(f"face masking failed, so the crop went to no model: {e}") from e
+            self.masked[eid] = (n, (time.perf_counter() - t1) * 1000)
+        self.last_crop = img
         self.evidence[eid] = img
         self.evidence_camera[eid] = camera
         self._shots += 1

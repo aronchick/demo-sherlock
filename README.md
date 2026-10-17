@@ -619,7 +619,7 @@ Sherlock incorporates both existing open datasets and openly published synthetic
      - Weapon escalations (`knife`, `scissors`, `baseball bat`) requiring weapon zoom + weapon crop + head zoom + unanalyzed face crop + `verify` confirmation + `report(alert)`.
      - Fault-injection and false-positive recovery scenarios (`look_at` hardware error, occluded `hero` camera requiring fallback to `scout1`, and unconfirmed Verifier claims requiring downgrade to `log`).
 3. **VLM bake-off evaluation crops (`tests/fixtures/vllm/`)**:
-   - Uses public-domain NASA imagery (`spacecraft_crop.jpg`, `astronaut_crop.jpg`, documented in [`tests/fixtures/vllm/README.md`](tests/fixtures/vllm/README.md)) and 50 CC-BY COCO 2017 object crops (`knife`, `scissors`, `baseball bat`, `cup`, `bottle`) to fit per-model Verifier log-odds thresholds (`MARGIN_DEFAULTS` in `sherlock/sherlock/agents/vision.py`).
+   - Uses public-domain NASA imagery (`shuttle_crop.jpg`, documented in [`tests/fixtures/vllm/README.md`](tests/fixtures/vllm/README.md)) and 50 CC-BY COCO 2017 object crops (`knife`, `scissors`, `baseball bat`, `cup`, `bottle`) to fit per-model Verifier log-odds thresholds (`MARGIN_DEFAULTS` in `sherlock/sherlock/agents/vision.py`).
 
 ## Known limitations & next steps
 

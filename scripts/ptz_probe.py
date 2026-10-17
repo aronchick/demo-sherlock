@@ -8,11 +8,11 @@ if sys.platform.startswith("linux"):
     if not shutil.which("v4l2-ctl"):
         sys.exit("install v4l-utils")
     print(subprocess.run(["v4l2-ctl", "-d", sys.argv[1] if len(sys.argv) > 1 else "/dev/video0", "-L"],
-                         capture_output=True, text=True).stdout)
+                         check=False, capture_output=True, text=True).stdout)
     print("Look for pan_absolute / tilt_absolute / zoom_absolute above. If present, Plan A works.")
 else:
     if shutil.which("uvc-util"):
-        print(subprocess.run(["uvc-util", "-I", "0", "-c"], capture_output=True, text=True).stdout)
+        print(subprocess.run(["uvc-util", "-I", "0", "-c"], check=False, capture_output=True, text=True).stdout)
         print("Look for pan-tilt-abs / zoom-abs. If present, Plan A works.")
     else:
         try:

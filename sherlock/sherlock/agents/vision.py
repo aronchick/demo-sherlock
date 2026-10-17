@@ -20,7 +20,7 @@ def _b64(img: np.ndarray, max_side: int = 768) -> str:
     s = max_side / max(h, w)
     if s < 1:
         img = cv2.resize(img, (int(w * s), int(h * s)))
-    ok, buf = cv2.imencode(".jpg", img, [cv2.IMWRITE_JPEG_QUALITY, 85])
+    _, buf = cv2.imencode(".jpg", img, [cv2.IMWRITE_JPEG_QUALITY, 85])
     return base64.b64encode(buf.tobytes()).decode()
 
 
@@ -61,7 +61,7 @@ class Verifier:
         t0 = time.perf_counter()
         BUS.bump("vlm_calls")
         raw = _vision_call(self.client, self.model, img, self.PROMPT.format(claim=claim), 120)
-        m = re.search(r"\{.*\}", raw, re.S)
+        m = re.search(r"\{.*\}", raw, re.DOTALL)
         try:
             out = json.loads(m.group(0)) if m else {}
         except json.JSONDecodeError:

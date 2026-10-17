@@ -44,14 +44,18 @@ def usb_presence() -> None:
     print("== USB")
     if sys.platform != "darwin":
         if shutil.which("lsusb"):
-            out = subprocess.run(["lsusb", "-d", f"{ins.INSTA360_VID:04x}:"], check=False,
-                                 capture_output=True, text=True).stdout.strip()
-            print(out or "  no Insta360 device on USB")
+            # lsusb exits 1 when nothing matches: an answer, not a failure.
+            r = subprocess.run(["lsusb", "-d", f"{ins.INSTA360_VID:04x}:"], check=False,
+                               capture_output=True, text=True)
+            print(r.stdout.strip() if r.returncode == 0 else "  no Insta360 device on USB")
         return
     found = False
     for dtype in ("SPUSBHostDataType", "SPUSBDataType"):
+        # Older macOS lacks SPUSBHostDataType and newer lacks SPUSBDataType; try both.
         r = subprocess.run(["system_profiler", "-json", dtype], check=False, capture_output=True,
                            text=True)
+        if r.returncode != 0:
+            continue
         try:
             tree = json.loads(r.stdout or "{}").get(dtype, [])
         except json.JSONDecodeError:
@@ -113,9 +117,10 @@ def macos_usb_direct() -> ins.MacUSBTransport | None:
 
 def link_controller_app() -> None:
     print("== Control path 2: Link Controller WebSocket")
+    # pgrep exits 1 when no process matches.
     r = subprocess.run(["pgrep", "-fl", "Insta360 Link Controller"], check=False,
                        capture_output=True, text=True)
-    print("  app running" if r.stdout.strip() else "  app not running")
+    print("  app running" if r.returncode == 0 else "  app not running")
     print("  not used: the WS protocol has zoom, re-centre and joystick velocity, but no"
           " absolute pan/tilt, so it cannot aim at a bbox")
 
@@ -137,6 +142,8 @@ def video_indexes() -> int | None:
     print("== Video streams (OpenCV index -> size)")
     names: dict[int, str] = {}
     if sys.platform == "darwin" and shutil.which("ffmpeg"):
+        # -list_devices always exits nonzero (there is no input to open); the
+        # device list is on stderr either way, so the return code carries nothing.
         r = subprocess.run(["ffmpeg", "-hide_banner", "-f", "avfoundation", "-list_devices",
                             "true", "-i", ""], check=False, capture_output=True, text=True)
         for ln in r.stderr.splitlines():

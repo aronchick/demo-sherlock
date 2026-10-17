@@ -25,12 +25,41 @@ import shutil
 from pathlib import Path
 
 from scout_data import CC_BY_LICENSES, CLASSES
+from sherlock.dashboard.numbers import count, number, scout_result
 
 ROOT = Path(__file__).resolve().parents[1]
 
 
-def model_card(repo: str, dataset_repo: str, license_id: str, ev: dict | None) -> str:
-    headline = ev.get("headline", "") if ev else "Run scripts/eval_scout.py to fill this in."
+def measured_headline(ev) -> str:
+    """Use the dashboard's provenance/row checks and require complete score fields."""
+    error = "Incomplete, smoke or unlabelled Scout evaluation cannot be published"
+    if not isinstance(ev, dict):
+        raise TypeError(error)
+    try:
+        result = scout_result(ev)
+    except (TypeError, KeyError):
+        result = None
+    images = ev.get("images")
+    image_counts = [count(n) for n in images.values()] if isinstance(images, dict) else []
+    if (
+        result is None
+        or any(result[key] is None for key in ("before_precision", "after_precision", "before_recall", "after_recall"))
+        or number(ev.get("conf"), maximum=1) is None
+        or number(ev.get("iou"), minimum=0.01, maximum=1) is None
+        or not image_counts or None in image_counts or not sum(image_counts)
+    ):
+        raise ValueError(error)
+    for side in ("before", "after"):
+        row = ev[side][result["source"]]["weapon"]
+        if any(count(row.get(key)) is None for key in ("tp", "fp", "fn")):
+            raise ValueError(error)
+    return (f"Scout weapon detection ({result['source']} {result['split']} photos, conf {ev['conf']:g}): "
+            f"recall {result['before_recall']:.0%} -> {result['after_recall']:.0%}, "
+            f"precision {result['before_precision']:.0%} -> {result['after_precision']:.0%}")
+
+
+def model_card(repo: str, dataset_repo: str, license_id: str, headline: str | None) -> str:
+    headline = headline if headline is not None else "Run scripts/eval_scout.py --measured to fill this in."
     return f"""---
 license: {license_id}
 library_name: ultralytics
@@ -94,19 +123,9 @@ Labels for COCO images are COCO's own boxes mapped onto the Scout classes (crowd
 
 def stage(weights: Path, dataset: Path, out: Path, model_repo: str, dataset_repo: str,
           license_id: str, include_rooms: bool, eval_json: Path | None, coco_manifest: Path) -> dict[str, Path]:
-    ev = None
+    headline = None
     if eval_json and eval_json.exists():
-        ev = json.loads(eval_json.read_text())
-        if (
-            not isinstance(ev, dict)
-            or ev.get("evidence_kind") != "model_evaluation"
-            or ev.get("execution_mode") != "measured"
-            or any(ev.get(flag) is True for flag in ("stub", "is_stub", "mock"))
-        ):
-            raise ValueError(
-                "Scout evaluation must be labelled model_evaluation and measured; "
-                "smoke/unlabelled scores cannot be published"
-            )
+        headline = measured_headline(json.loads(eval_json.read_text()))
     if out.exists():
         shutil.rmtree(out)
     mdir, ddir = out / "model", out / "dataset"
@@ -114,9 +133,9 @@ def stage(weights: Path, dataset: Path, out: Path, model_repo: str, dataset_repo
     ddir.mkdir(parents=True)
 
     shutil.copyfile(weights, mdir / "best.pt")
-    if ev:
+    if headline is not None:
         shutil.copyfile(eval_json, mdir / "eval.json")
-    (mdir / "README.md").write_text(model_card(model_repo, dataset_repo, license_id, ev))
+    (mdir / "README.md").write_text(model_card(model_repo, dataset_repo, license_id, headline))
 
     counts: dict[str, int] = {}
     for split in ("train", "val", "test"):

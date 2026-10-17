@@ -157,6 +157,17 @@ def test_capture_props_from_a_named_synthetic_camera(tmp_path):
     assert all(p.parent.parent.name == "badge" and cv2.imread(str(p)) is not None for p in saved)
 
 
+def measured_evaluation():
+    return {
+        "evidence_kind": "model_evaluation", "execution_mode": "measured", "split": "test",
+        "images": {"room": 1}, "conf": 0.35, "iou": 0.5, "headline": "Untrusted headline",
+        "before": {"model": "stock.pt", "room": {"weapon": {
+            "tp": 1, "fp": 1, "fn": 1, "precision": 0.5, "recall": 0.5}}},
+        "after": {"model": "tuned.pt", "room": {"weapon": {
+            "tp": 2, "fp": 0, "fn": 0, "precision": 1.0, "recall": 1.0}}},
+    }
+
+
 @pytest.mark.parametrize("with_evaluation", [False, True])
 def test_publish_is_a_dry_run_and_keeps_people_out(tmp_path, monkeypatch, capsys, with_evaluation):
     monkeypatch.setitem(sys.modules, "huggingface_hub", None)  # any upload attempt would fail loudly
@@ -168,8 +179,7 @@ def test_publish_is_a_dry_run_and_keeps_people_out(tmp_path, monkeypatch, capsys
     weights.write_bytes(b"weights")
     eval_path = tmp_path / "eval.json"
     if with_evaluation:
-        eval_path.write_text(json.dumps({"evidence_kind": "model_evaluation", "execution_mode": "measured",
-                                         "headline": "Measured evaluation fixture"}))
+        eval_path.write_text(json.dumps(measured_evaluation()))
     staged = publish_scout_hf.main(["--model-repo", "o/sherlock-scout", "--dataset-repo", "o/sherlock-scout-data",
                                     "--weights", str(weights), "--dataset", str(tmp_path / "scout"),
                                     "--coco-manifest", str(coco / "manifest.jsonl"),
@@ -182,13 +192,15 @@ def test_publish_is_a_dry_run_and_keeps_people_out(tmp_path, monkeypatch, capsys
     card = (staged["model"] / "README.md").read_text()
     assert "license: agpl-3.0" in card and "o/sherlock-scout-data" in card
     assert (staged["model"] / "eval.json").exists() is with_evaluation
-    assert ("Measured evaluation fixture" in card) is with_evaluation
+    assert ("recall 50% -> 100%" in card) is with_evaluation
+    assert "Untrusted headline" not in card
 
 
 @pytest.mark.parametrize("evaluation", [
     {"evidence_kind": "model_evaluation", "execution_mode": "smoke"},
     {"evidence_kind": "model_evaluation"},
     {"execution_mode": "measured"},
+    {"evidence_kind": "model_evaluation", "execution_mode": "measured"},
     {"evidence_kind": "model_evaluation", "execution_mode": "measured", "stub": True},
     {}, None, [],
 ])
@@ -199,11 +211,58 @@ def test_publish_rejects_unmeasured_evidence_before_replacing_staging(tmp_path, 
     out.mkdir()
     previous = out / "previous.txt"
     previous.write_text("preserve this staging")
-    with pytest.raises(ValueError, match="cannot be published"):
+    with pytest.raises((TypeError, ValueError), match="cannot be published"):
         publish_scout_hf.stage(tmp_path / "weights.pt", tmp_path / "dataset", out,
                               "org/model", "org/data", "agpl-3.0", False, eval_path,
                               tmp_path / "manifest.jsonl")
     assert previous.read_text() == "preserve this staging"
+
+
+@pytest.mark.parametrize("path", [
+    ("split",), ("conf",), ("iou",), ("images",), ("before", "model"),
+    ("after", "room", "weapon", "recall"), ("before", "room", "weapon", "fp"),
+])
+def test_publisher_requires_complete_measured_report(path):
+    evaluation = measured_evaluation()
+    parent = evaluation
+    for key in path[:-1]:
+        parent = parent[key]
+    parent.pop(path[-1])
+    with pytest.raises(ValueError, match="cannot be published"):
+        publish_scout_hf.measured_headline(evaluation)
+
+
+@pytest.mark.parametrize("side", ["before", "after"])
+@pytest.mark.parametrize("marker,value", [("execution_mode", "smoke"), ("mock", True)])
+def test_publisher_rejects_nested_smoke_or_mock(side, marker, value):
+    evaluation = measured_evaluation()
+    evaluation[side][marker] = value
+    with pytest.raises(ValueError, match="cannot be published"):
+        publish_scout_hf.measured_headline(evaluation)
+
+
+@pytest.mark.parametrize("args,name", [([], "scout"), (["--smoke"], "scout_smoke"),
+                                      (["--smoke", "--name", "custom"], "custom")])
+def test_train_keeps_smoke_weights_separate_by_default(tmp_path, monkeypatch, args, name):
+    data = tmp_path / "scout.yaml"
+    data.write_text("test fixture")
+    measured = tmp_path / "runs/scout/weights/best.pt"
+    measured.parent.mkdir(parents=True)
+    measured.write_bytes(b"measured weights")
+
+    def train(_data, _model, project, run_name, **_kwargs):
+        assert run_name == name
+        weights = project / run_name / "weights/best.pt"
+        weights.parent.mkdir(parents=True, exist_ok=True)
+        weights.write_bytes(b"new weights")
+        return weights
+
+    monkeypatch.setattr(train_scout, "train", train)
+    best = train_scout.main(["--data", str(data), "--project", str(tmp_path / "runs"), *args])
+    assert best == tmp_path / "runs" / name / "weights/best.pt"
+    assert best.read_bytes() == b"new weights"
+    if name != "scout":
+        assert measured.read_bytes() == b"measured weights"
 
 
 def test_train_picks_cuda_then_mps_then_cpu(monkeypatch):
@@ -245,8 +304,11 @@ def test_eval_labels_persist_and_control_dashboard_evidence(tmp_path, eval_args,
     result = read_numbers(tmp_path)["scout"]
     if smoke:
         assert result is None
+        with pytest.raises(ValueError, match="cannot be published"):
+            publish_scout_hf.measured_headline(saved)
     else:
         assert result["before_recall"] == 0 and result["after_recall"] == 1
+        assert "recall 0% -> 100%" in publish_scout_hf.measured_headline(saved)
 
 
 def test_eval_requires_explicit_mode_before_reading_data(tmp_path, monkeypatch):

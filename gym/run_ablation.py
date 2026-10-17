@@ -187,6 +187,15 @@ async def run_single_ablation(
     model_block = resolved_dict["policy_model"]["responses_api_models"]["vllm_model"]
     model_block["host"] = host
     model_block["port"] = model_port
+    default_model_id = (
+        "Qwen/Qwen2.5-7B-Instruct"
+        if endpoint_env_var == "QWEN_DIRECTOR_BASE_URL"
+        else "nvidia/NVIDIA-Nemotron-3.5-Lightning-30B-A3B-NVFP4"
+    )
+    if not str(model_block.get("model") or "").strip():
+        model_block["model"] = default_model_id
+    if not str(agent_block.get("director_model_name") or "").strip():
+        agent_block["director_model_name"] = model_block["model"]
     if effective_use_stub:
         model_block["base_url"] = f"http://{host}:{stub_port}/v1"
         model_block["api_key"] = "EMPTY"

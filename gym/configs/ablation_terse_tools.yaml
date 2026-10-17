@@ -20,12 +20,13 @@ policy_model:
       entrypoint: app.py
       base_url: ${oc.env:DIRECTOR_BASE_URL,http://127.0.0.1:18900/v1}
       api_key: ${oc.env:DIRECTOR_API_KEY,EMPTY}
-      model: nvidia/NVIDIA-Nemotron-3.5-Lightning-30B-A3B-NVFP4
+      model: ${oc.env:DIRECTOR_MODEL,nvidia/NVIDIA-Nemotron-3.5-Lightning-30B-A3B-NVFP4}
       return_token_id_information: false
       uses_reasoning_parser: false
       chat_template_kwargs:
         enable_thinking: false
       extra_body:
+        reasoning_effort: none
         chat_template_kwargs:
           enable_thinking: false
 
@@ -47,7 +48,7 @@ sherlock_agent:
       ablation_component: "Tool Descriptions (terse vs verbose)"
       ablation_description: "Strip tool & parameter descriptions to terse 3-word strings; hold model, prompt (v2), thinking (off) fixed"
       endpoint_env_var: DIRECTOR_BASE_URL
-      director_model_name: nvidia/NVIDIA-Nemotron-3.5-Lightning-30B-A3B-NVFP4
+      director_model_name: ${oc.env:DIRECTOR_MODEL,nvidia/NVIDIA-Nemotron-3.5-Lightning-30B-A3B-NVFP4}
       director_params_b: 30.0
       vlm_model_name: HuggingFaceTB/SmolVLM-500M-Instruct
       vlm_params_b: 0.507

@@ -411,7 +411,13 @@ def create_stub_app() -> FastAPI:
         chat_template_kwargs = body.get("chat_template_kwargs") or (
             (body.get("extra_body") or {}).get("chat_template_kwargs") or {}
         )
-        enable_thinking = bool(chat_template_kwargs.get("enable_thinking", False))
+        reasoning_effort = body.get("reasoning_effort") or (
+            (body.get("extra_body") or {}).get("reasoning_effort")
+        )
+        enable_thinking = (
+            bool(chat_template_kwargs.get("enable_thinking", False))
+            and reasoning_effort != "none"
+        )
 
         # Simulate realistic inference timing differences (thinking on vs off, 30B-A3B MoE vs 7B dense)
         if enable_thinking:

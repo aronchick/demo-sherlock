@@ -90,6 +90,31 @@ def _short(v, limit: int = 40) -> str:
     return r if len(r) <= limit else r[:limit - 2] + "…" + r[-1]
 
 
+def _box(v) -> tuple | None:
+    """A usable [x1, y1, x2, y2], or None for whatever a confused model sent."""
+    if isinstance(v, (list, tuple)) and len(v) == 4 and all(isinstance(n, (int, float)) for n in v):
+        return tuple(v)
+    return None
+
+
+def _crop(img: np.ndarray, box: tuple, margin: float = 0.3) -> np.ndarray:
+    """The box plus `margin` of its size on every side, clamped to the image."""
+    h, w = img.shape[:2]
+    mx, my = (box[2] - box[0]) * margin, (box[3] - box[1]) * margin
+    x1, y1 = max(int(box[0] - mx), 0), max(int(box[1] - my), 0)
+    x2, y2 = min(int(box[2] + mx), w), min(int(box[3] + my), h)
+    if x2 - x1 < 8 or y2 - y1 < 8:
+        return img  # box fell outside the view: keep the whole frame rather than nothing
+    return img[y1:y2, x1:x2].copy()
+
+
+# The chain the dashboard draws, in plain language. A call's step comes from what
+# it does, not from how many calls came before it, so a retry keeps its number.
+_SAYS = {1: "zooming {camera} to the {subject}", 2: "asking the analyst to read the {subject} crop",
+         3: "zooming {camera} to the head", 4: "storing the review crop · no model",
+         5: "verifying “{claim}”", 6: "reporting · {action}"}
+
+
 class ToolBox:
     def __init__(self, cameras: dict[str, Camera], analyst, snapshot_dir: str = "snapshots", verifier=None):
         self.cameras = cameras
@@ -116,7 +141,9 @@ class ToolBox:
         """Fresh evidence per investigation, so an ignore can never inherit (and
         re-verify) the previous incident's crop."""
         self.incident = {"id": incident_id, "threat": getattr(detection, "threat", "unknown"),
-                         "bbox": getattr(detection, "bbox", None), "head": getattr(detection, "head", None)}
+                         "bbox": getattr(detection, "bbox", None), "head": getattr(detection, "head", None),
+                         "label": getattr(detection, "label", "")}
+        self._failed_steps: set[int] = set()  # chain steps that failed; a later success is a recovery
         self.evidence: dict[str, np.ndarray] = {}
         self.evidence_camera: dict[str, str] = {}  # which camera captured each crop (differs after recovery)
         self.descriptions: dict[str, str] = {}  # Analyst text per crop it saw
@@ -127,23 +154,60 @@ class ToolBox:
         self._shots = 0
         self.steps = 0
 
+    def _chain(self, name: str, args: dict) -> dict:
+        """Where a call sits in the six-step chain: step, subject and camera. Read
+        from the arguments as sent, before any injected corruption."""
+        step, subject, camera = None, None, args.get("camera")
+        if name == "look_at":
+            box = _box(args.get("bbox"))
+            subject = "face" if box and self._near_head(box) else self._object_subject()
+            step = 3 if subject == "face" else 1
+        elif name == "snapshot":
+            subject = args.get("subject", "object")
+            step = 4 if subject == "face" else 2
+        elif name == "verify":
+            step, camera = 5, self.evidence_camera.get(self.model_crop()[0] or "")
+        elif name == "report":
+            step = 6
+        return {"step": step, "subject": subject, "camera": camera if isinstance(camera, str) else None,
+                "retry": step in self._failed_steps}
+
+    def _object_subject(self) -> str:
+        return "weapon" if self.incident["threat"] == "weapon" else "object"
+
     def call(self, name: str, args: dict) -> dict:
         t0 = time.perf_counter()
         self.steps += 1
-        tag = {"step": self.steps, "tool": name, "incident": self.incident["id"]}
+        BUS.bump("tool_calls")
+        chain = self._chain(name, args)
+        tag = {"call": self.steps, "tool": name, "incident": self.incident["id"],
+               "label": self.incident["label"], **chain}
+        if chain["step"]:
+            # The Director's state in plain language, before the call runs. Its own
+            # stage, so views that animate every director event (/pipeline) skip it.
+            say = _SAYS[chain["step"]].format(claim=args.get("claim", ""), action=args.get("action", ""),
+                                              **{k: chain[k] for k in ("camera", "subject")})
+            BUS.emit("narration", say, **tag,
+                     **({"claim": args["claim"]} if isinstance(args.get("claim"), str) else {}))
+
+        def failed(msg: str, **data) -> None:
+            BUS.bump("tool_errors")
+            if chain["step"]:
+                self._failed_steps.add(chain["step"])
+            BUS.emit("tool", msg, error=True, **data, **tag)
+
         if name in _DEVICE_TOOLS and self.injected_failures > 0:
             self.injected_failures -= 1
             if name != "snapshot":
                 self.aim.pop(str(args.get("camera")), None)  # a failed move: pose unknown
-            BUS.bump("tool_errors")
-            BUS.emit("tool", f"{name} FAILED (injected)", data=args, **tag)
+            failed(f"{name}({args.get('camera')}) FAILED (injected)", data=args)
             return {"error": f"{name}: device returned garbage (simulated fault)"}
         if name in _DEVICE_TOOLS and self.injected_corruptions > 0:
             self.injected_corruptions -= 1
             args = {k: "\x00garbage" for k in args}  # what a confused model might send
             BUS.emit("tool", f"{name} args corrupted (injected)", **tag)
         if name == "snapshot" and self.incident["threat"] == "benign":
-            BUS.emit("tool", "snapshot refused: benign object, no VLM call needed", **tag)
+            BUS.emit("tool", "snapshot refused: benign object, no VLM call needed", error=True, **tag)
             return {"error": "benign object: no closer look needed. Call report with action='ignore'."}
         try:
             fn = getattr(self, f"t_{name}")
@@ -153,9 +217,11 @@ class ToolBox:
         try:
             out = fn(**args)
         except (TypeError, KeyError, ValueError, CameraError) as e:
-            BUS.bump("tool_errors")
-            BUS.emit("tool", f"{name} error: {e}", data=args, **tag)
+            failed(f"{name} error: {e}", data=args)
             return {"error": str(e)}
+        if chain["retry"]:
+            self._failed_steps.discard(chain["step"])
+            BUS.bump("recoveries")  # counted once the retry worked, not when it was attempted
         shown = ", ".join(f"{k}={_short(v)}" for k, v in args.items())
         BUS.emit("tool", f"{name}({shown})", (time.perf_counter() - t0) * 1000, result=out, **tag)
         return out
@@ -184,14 +250,16 @@ class ToolBox:
         this detection has a head box: the camera may still sit on the last incident's
         face zoom, so only a successful look_at in this incident clears it."""
         aim = self.aim.get(camera)
-        if aim is None:
-            return True
+        return True if aim is None else self._near_head(aim)
+
+    def _near_head(self, box: tuple) -> bool:
+        """Is this box closer to the incident's head box than to its weapon box?"""
         head, weapon = self.incident["head"], self.incident["bbox"]
         if head is None or weapon is None:
             return False
-        if _iou(aim, weapon) >= 0.5:
+        if _iou(box, weapon) >= 0.5:
             return False  # the weapon box itself, even when it is held up near the face
-        centre = ((aim[0] + aim[2]) / 2, (aim[1] + aim[3]) / 2)
+        centre = ((box[0] + box[2]) / 2, (box[1] + box[3]) / 2)
         return _gap(head, centre) <= _gap(weapon, centre)
 
     def model_crop(self) -> tuple[str | None, np.ndarray | None]:
@@ -226,6 +294,11 @@ class ToolBox:
             raise ValueError(f"refused: {camera} is not aimed at the weapon, and a head view never goes to "
                              "a model. look_at the weapon bbox first, or use subject='face' for evidence")
         img = cam.snapshot()
+        aim = self.aim.get(camera)
+        if subject == "face" and aim is not None:
+            # A head crop, not the chest-up view the zoom leaves, so the review crop
+            # holds the person's head and nothing the weapon chain needed.
+            img = _crop(img, cam.view_box(aim, (img.shape[1], img.shape[0])))
         self.last_crop = img
         eid = f"{subject}_crop"
         self.evidence[eid] = img

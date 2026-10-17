@@ -46,7 +46,9 @@ class Sherlock:
         self.tools = ToolBox(self.cameras, analyst, verifier=self.verifier)
         self.director = RuleDirector(self.tools) if cfg.mock else Director(cfg.director, self.tools, cfg.max_tool_calls, cfg.director_thinking)
         backend = "scene" if self.scenes else ("mock" if cfg.mock else cfg.scout_backend)
-        self.scout = Scout(backend, cfg.yolo_model, cfg.dwell_seconds, truth=self._scene_truth)
+        # Scout latency is measured only when a real detector runs in the live runtime.
+        self.scout = Scout(backend, cfg.yolo_model, cfg.dwell_seconds, truth=self._scene_truth,
+                           measure=not cfg.mock and backend != "scene", handled_via=self._handled_via)
         self.evidence_dir = pathlib.Path(evidence_dir or os.environ.get("EVIDENCE_DIR", "snapshots"))
         self.latest_wide: dict[str, np.ndarray] = {}
         self.log: list[dict] = []
@@ -88,15 +90,20 @@ class Sherlock:
 
     def _loop(self) -> None:
         down: set[str] = set()  # loud once per outage, not every frame: keeps the tool chain readable
+        # A failed camera is retried after a pause instead of sleeping the loop, so
+        # one covered lens does not slow every other camera to two frames a second.
+        retry_at: dict[str, float] = {}
         while self.running:
             for name, cam in self.cameras.items():
+                if time.monotonic() < retry_at.get(name, 0.0):
+                    continue
                 try:
                     frame = cam.wide_frame()
                 except CameraError as e:
                     if name not in down:
                         down.add(name)
                         BUS.emit("system", str(e))
-                    time.sleep(0.5)
+                    retry_at[name] = time.monotonic() + 0.5
                     continue
                 if name in down:
                     down.discard(name)
@@ -106,11 +113,18 @@ class Sherlock:
                     self._investigate(det)
             time.sleep(0.03)
 
-    def _duplicate(self, det: Detection) -> bool:
+    def _handled_via(self, det: Detection) -> str | None:
+        """The other camera that handled this object moments ago, if any."""
         seen = self._recent.get(det.label)
         if seen and seen[0] != det.camera and time.monotonic() - seen[1] < DEDUPE_SECONDS:
+            return seen[0]
+        return None
+
+    def _duplicate(self, det: Detection) -> bool:
+        via = self._handled_via(det)
+        if via:
             BUS.bump("duplicates")
-            BUS.emit("system", f"{det.label} on {det.camera} already handled via {seen[0]}")
+            BUS.emit("system", f"{det.label} on {det.camera} already handled via {via}")
             return True
         return False
 
@@ -209,11 +223,14 @@ class Sherlock:
             cv2.putText(f, text, (x1 + 5, y1 - 6), cv2.FONT_HERSHEY_SIMPLEX, 0.55, (24, 24, 24), 1, cv2.LINE_AA)
         return f
 
-    def frame_jpeg(self, which: str = "wide") -> bytes | None:
+    def frame_jpeg(self, which: str = "wide", camera: str | None = None) -> bytes | None:
+        """JPEG for the dashboard: the latest crop, or one camera's wide view
+        (the first camera when none is named)."""
         if which == "crop":
             img = self.tools.last_crop  # live: follows the chain from weapon crop to face crop
         else:
-            name, img = next(iter(self.latest_wide.items()), ("", None))
+            name = camera or next(iter(self.latest_wide), "")
+            img = self.latest_wide.get(name)
             if img is not None and self.cameras[name].covered:
                 img = (img * 0.15).astype(np.uint8)  # last frame is stale: say so instead of freezing
                 cv2.putText(img, f"{name.upper()}: LENS COVERED", (40, img.shape[0] // 2), cv2.FONT_HERSHEY_SIMPLEX,

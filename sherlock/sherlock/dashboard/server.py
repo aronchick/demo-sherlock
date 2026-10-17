@@ -9,10 +9,10 @@ import re
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import (
     FileResponse,
-    HTMLResponse,
     JSONResponse,
     StreamingResponse,
 )
+from fastapi.staticfiles import StaticFiles
 
 from ..events import BUS
 from ..orchestrator import Sherlock
@@ -25,18 +25,24 @@ _EVIDENCE_NAMES = {"weapon_crop", "face_crop", "object_crop"}
 
 def make_app(sherlock: Sherlock) -> FastAPI:
     app = FastAPI(title="Sherlock")
-
-    @app.get("/", response_class=HTMLResponse)
-    def index():
-        return (STATIC / "index.html").read_text()
+    # The board (index.html, styles.css, app.js, icons.svg) is served from the
+    # site root, so its links stay relative and static/ also renders on its own.
+    # StaticFiles is the router's fallback, not a mount at "/": a "/" mount would
+    # shadow routes added after make_app(), such as the /pipeline view.
+    app.router.default = StaticFiles(directory=STATIC, html=True)
 
     @app.get("/numbers")
     def numbers():
         return JSONResponse(read_numbers(), headers={"Cache-Control": "no-store"})
 
-    @app.get("/numbers.js")
-    def numbers_script():
-        return FileResponse(STATIC / "numbers.js", media_type="application/javascript")
+    @app.get("/mode")
+    def mode():
+        """What the board labels itself with: the mock runtime or the live models."""
+        cfg = sherlock.cfg
+        return {"mock": cfg.mock,
+                "director_model": None if cfg.mock else cfg.director.model,
+                "vlm_model": None if cfg.mock else cfg.analyst.model,
+                "scout_ms": BUS.snapshot().get("scout_ms")}
 
     @app.get("/events")
     async def events():
@@ -52,15 +58,24 @@ def make_app(sherlock: Sherlock) -> FastAPI:
                     await asyncio.sleep(0.5)
         return StreamingResponse(gen(), media_type="text/event-stream")
 
-    @app.get("/stream/{which}")
-    async def stream(which: str):
+    def mjpeg(which: str, camera: str | None = None) -> StreamingResponse:
         async def gen():
             while True:
-                jpg = sherlock.frame_jpeg(which)
+                jpg = sherlock.frame_jpeg(which, camera)
                 if jpg:
                     yield b"--frame\r\nContent-Type: image/jpeg\r\n\r\n" + jpg + b"\r\n"
                 await asyncio.sleep(0.08)
         return StreamingResponse(gen(), media_type="multipart/x-mixed-replace; boundary=frame")
+
+    @app.get("/stream/{which}")
+    async def stream(which: str):
+        return mjpeg(which)  # /stream/wide is the first camera (the /pipeline view uses it)
+
+    @app.get("/stream/wide/{camera}")
+    async def stream_camera(camera: str):
+        if camera not in sherlock.cameras:
+            raise HTTPException(404)
+        return mjpeg("wide", camera)
 
     @app.get("/evidence/{incident}/{name}.jpg")
     def evidence(incident: str, name: str):

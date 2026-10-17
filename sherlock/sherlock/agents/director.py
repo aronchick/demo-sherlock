@@ -89,8 +89,6 @@ class Director:
                     result = {"error": f"malformed JSON arguments: {e}"}
                 else:
                     result = self.tools.call(tc.function.name, args)
-                if "error" in result:
-                    BUS.bump("recoveries")  # model is about to get a chance to recover
                 msgs.append({"role": "tool", "tool_call_id": tc.id, "content": json.dumps(result)})
                 if result.get("done"):
                     return result
@@ -140,8 +138,8 @@ class RuleDirector:
 
     @staticmethod
     def _failed(cam: str, result: dict) -> bool:
+        # The ToolBox counts the recovery when a retried step succeeds.
         if "error" in result:
-            BUS.bump("recoveries")
-            BUS.emit("director", f"{cam}: {result['error']}; recovering")
+            BUS.emit("director", f"{cam} failed · recovering", fault=True, error=result["error"])
             return True
         return False

@@ -323,7 +323,7 @@ def test_api_reads_updated_files_and_returns_only_summary(tmp_path, monkeypatch)
         assert response.json()["scout"]["boxes"] == 4
         assert client.get("/numbers.js").status_code == 200
         page = client.get("/").text
-        assert 'id="numbers"' in page and 'id="avoided"' in page
+        assert 'id="avoided"' in page
 
 
 def test_no_producer_objects_are_mutated():

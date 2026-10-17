@@ -3,14 +3,16 @@ from __future__ import annotations
 
 import json
 import queue
+import statistics
 import threading
 import time
+from collections import deque
 from dataclasses import asdict, dataclass, field
 
 
 @dataclass
 class Event:
-    stage: str          # scout | director | tool | analyst | verifier | system
+    stage: str          # scout | director | narration | tool | analyst | verifier | system
     msg: str
     latency_ms: float | None = None
     data: dict = field(default_factory=dict)
@@ -28,14 +30,22 @@ class Bus:
                       "vlm_calls": 0, "vlm_calls_avoided": 0, "tool_errors": 0,
                       "recoveries": 0, "confirmed": 0, "rejected": 0,
                       "alerts": 0, "ignored": 0, "logged": 0, "duplicates": 0, "dropped_busy": 0,
-                      "evidence_unsaved": 0}
+                      "evidence_unsaved": 0, "tool_calls": 0}
+        # Per-frame detector time for real detectors only; empty in mock mode, so
+        # the dashboard never shows a latency nothing measured.
+        self.scout_samples: deque[float] = deque(maxlen=300)
 
     def snapshot(self) -> dict:
         """Stats for display. 'Avoided' = frames the Scout handled that a VLM-per-frame
         system would have sent to a VLM, minus the VLM calls we actually made."""
         s = dict(self.stats)
         s["vlm_calls_avoided"] = max(0, s["frames"] - s["vlm_calls"])
+        if self.scout_samples:
+            s["scout_ms"] = round(statistics.median(list(self.scout_samples)), 1)
         return s
+
+    def time_scout(self, ms: float) -> None:
+        self.scout_samples.append(ms)
 
     def subscribe(self) -> queue.Queue:
         q: queue.Queue = queue.Queue(maxsize=500)

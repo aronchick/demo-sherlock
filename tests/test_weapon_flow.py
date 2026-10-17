@@ -5,10 +5,10 @@ import queue
 from types import SimpleNamespace
 
 import numpy as np
-from sherlock.agents.director import Director
+from sherlock.agents.director import Director, RuleDirector
 from sherlock.agents.scout import Detection, Scout, head_region
 from sherlock.agents.vision import Analyst, MockAnalyst, MockVerifier, Verifier
-from sherlock.camera import FakePTZCamera
+from sherlock.camera import CameraError, FakePTZCamera
 from sherlock.config import Config, Endpoint
 from sherlock.events import BUS
 from sherlock.orchestrator import Sherlock
@@ -161,6 +161,25 @@ def test_face_snapshot_is_stored_but_never_analyzed():
     assert out == {"evidence_id": "face_crop", "stored": True, "analyzed": False}
     assert "face_crop" in tools.evidence and BUS.stats["vlm_calls"] == vlm_before
     assert "error" in tools.call("verify", {"claim": "a knife"}), "nothing but a face to verify against"
+
+
+def test_failed_face_zoom_still_alerts_with_weapon_crop():
+    tools = _toolbox()
+    head = head_region(PERSON)
+    look_at = tools.t_look_at
+
+    def flaky_look_at(camera, bbox):
+        if tuple(bbox) == head:
+            raise CameraError("gimbal stalled")
+        return look_at(camera, bbox)
+
+    tools.t_look_at = flaky_look_at
+    tools.cameras["hero"].src = ScriptedScene("hero", t0=0, speed=0)
+    tools.cameras["hero"].src.clock = lambda: 17.0  # knife held up
+    det = Detection("knife", 0.9, KNIFE, "hero", threat="weapon", person=PERSON, head=head)
+    tools.begin_incident(det, "x")
+    out = RuleDirector(tools).investigate(det)
+    assert out["action"] == "alert" and out["evidence"] == ["weapon_crop"]
 
 
 def test_benign_snapshot_is_refused():

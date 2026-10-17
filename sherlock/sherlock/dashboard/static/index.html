@@ -143,63 +143,87 @@
 </div>
 <script>
   const $ = id => document.getElementById(id);
+
   const log = $('log');
-  let statusTimer = null, lastAlert = null;
+
+  let statusTimer = null;
+
+  let lastAlert = null;
+
+  let flagged = 'object';
+
+  let covered = false;
 
   function setStatus(state, text, holdMs) {
     $('status').dataset.state = state;
     $('status-text').textContent = text;
     clearTimeout(statusTimer);
+
     if (holdMs) statusTimer = setTimeout(() => setStatus('clear', 'Monitoring'), holdMs);
   }
 
   function addLog(ev) {
     const d = ev.data || {};
+
     const row = document.createElement('div');
+
     const isReport = ev.msg.startsWith('REPORT');
+
     row.className = ['ev', ev.stage,
       isReport ? 'report ' + (d.action || '') : '',
       ev.stage === 'scout' && d.threat === 'weapon' ? 'weapon' : '',
       ev.stage === 'tool' && /FAILED|error|refused|corrupted/.test(ev.msg) ? 'err' : ''].join(' ');
+
     const stage = ev.stage === 'tool' && d.step ? `tool ${d.step}` : ev.stage;
+
     row.innerHTML = '<span class="stage"></span><span class="msg"></span><span class="ms"></span>';
     row.querySelector('.stage').textContent = stage;
     row.querySelector('.msg').textContent = ev.msg;
     row.querySelector('.ms').textContent = ev.latency_ms ? Math.round(ev.latency_ms) + ' ms' : '';
     log.prepend(row);
+
     // Bounded, not scrolled: drop the oldest rows that no longer fit.
     while (log.children.length > 1 && log.scrollHeight > log.clientHeight) log.lastChild.remove();
   }
 
   function showIncident(d) {
     const verified = d.verified === true ? 'verified' : d.verified === false ? 'not verified' : 'unverified';
+
+    const via = d.evidence_camera && d.evidence_camera !== d.camera ? `, evidence via ${d.evidence_camera}` : '';
+
     $('incident').dataset.state = d.action === 'alert' ? 'alert' : 'log';
     $('inc-title').textContent = (d.action === 'alert' ? 'Weapon alert · ' : 'Logged · ') + d.label;
     $('inc-claim').textContent = d.claim;
-    const via = d.evidence_camera && d.evidence_camera !== d.camera ? `, evidence via ${d.evidence_camera}` : '';
     $('inc-meta').textContent = `seen on ${d.camera}${via} · ${verified} · ${d.vlm_calls} VLM calls · ${(d.total_ms / 1000).toFixed(1)} s`;
+
     for (const name of ['weapon', 'face']) {
       const img = $(name + '-img');
+
       const has = (d.evidence || []).includes(name + '_crop');
+
       img.hidden = !has;
+
       if (has) img.src = `/evidence/${encodeURIComponent(d.incident)}/${name}_crop.jpg`;
     }
+
     lastAlert = d.t ? d.t * 1000 : Date.now();
     tick();
   }
 
   function tick() {
     if (!lastAlert) return;
+
     const s = Math.round((Date.now() - lastAlert) / 1000);
+
     $('inc-time').textContent = s < 2 ? 'just now' : `${s} s ago`;
   }
-  setInterval(tick, 1000);
 
   function onReport(d) {
     if (d.action === 'ignore') {
       setStatus('ignored', `Ignored ${d.label} · ${d.vlm_calls} VLM calls`, 4000);
     } else if (d.threat === 'weapon') {
       showIncident(d);
+
       if (d.action === 'alert') setStatus('alert', `ALERT · ${d.label} · ${d.verified ? 'verified' : 'unverified'}`, 30000);
       else setStatus('busy', `Logged ${d.label} · not verified`, 8000);
     } else {
@@ -207,41 +231,69 @@
     }
   }
 
-  let flagged = 'object';
-  const es = new EventSource('/events');
-  es.onmessage = e => {
+  function onEvent(e) {
     const ev = JSON.parse(e.data);
+
     const d = ev.data || {};
+
     addLog(ev);
+
     if (ev.stage === 'scout') flagged = d.label;
+
     // Busy only once a chain really starts: a second camera's duplicate sighting must not mask an alert.
     if (ev.stage === 'tool' && d.step === 1 && d.tool !== 'report') setStatus('busy', `Investigating ${flagged}`);
+
     if (ev.stage === 'tool' && d.tool === 'snapshot' && d.result && d.result.evidence_id) {
-      const face = d.result.evidence_id === 'face_crop';
-      $('crop-label').textContent = face ? 'Where the camera looked · face crop, not analyzed' : 'Where the camera looked · ' + d.result.evidence_id.replace('_', ' ');
+      const id = d.result.evidence_id;
+
+      $('crop-label').textContent = id === 'face_crop'
+        ? 'Where the camera looked · face crop, not analyzed'
+        : 'Where the camera looked · ' + id.replace('_', ' ');
     }
+
     if (ev.msg.startsWith('REPORT')) onReport(d);
-  };
-  es.addEventListener('stats', e => {
+  }
+
+  function onStats(e) {
     const s = JSON.parse(e.data);
-    for (const k in s) { const el = $(k); if (el) el.textContent = s[k]; }
-    $('avoided').textContent = s.vlm_calls_avoided;
-  });
-  // A reload must not blank the panel mid-recording: restore the latest weapon incident.
-  fetch('/reports').then(r => r.json()).then(reports => {
-    const last = reports.filter(r => r.trigger && r.trigger.threat === 'weapon').pop();
-    if (last && !lastAlert) {
-      const {label, threat, camera} = last.trigger;
-      showIncident({...last, label, threat, camera});
+
+    for (const k in s) {
+      const el = $(k);
+
+      if (el) el.textContent = s[k];
     }
-  });
+
+    $('avoided').textContent = s.vlm_calls_avoided;
+  }
+
+  // A reload must not blank the panel mid-recording: restore the latest weapon incident.
+  function restoreLastIncident(reports) {
+    const last = reports.filter(r => r.trigger && r.trigger.threat === 'weapon').pop();
+
+    if (!last || lastAlert) return;
+
+    const {label, threat, camera} = last.trigger;
+
+    showIncident({...last, label, threat, camera});
+  }
+
   const post = url => fetch(url, {method: 'POST'});
-  let covered = false;
+
   async function toggleCover() {
     covered = !covered;
     await post(`/demo/cover/hero/${covered ? 'on' : 'off'}`);
     $('cover').textContent = covered ? 'Uncover hero lens' : 'Cover hero lens';
   }
+
+  const es = new EventSource('/events');
+
+  es.onmessage = onEvent;
+
+  es.addEventListener('stats', onStats);
+
+  setInterval(tick, 1000);
+
+  fetch('/reports').then(r => r.json()).then(restoreLastIncident);
 </script>
 </body>
 </html>

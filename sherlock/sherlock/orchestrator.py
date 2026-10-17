@@ -172,6 +172,8 @@ class Sherlock:
                 report["downgraded"] = "alert without a verified weapon claim"
             if eid is not None:
                 report["description"] = self.tools.descriptions.get(eid, "")
+            if not report.get("verified"):
+                self._drop_face_crop(report)
             report["incident"] = iid
             report["t"] = time.time()
             report["evidence"], unsaved = self._save_evidence(iid, self.tools.evidence)
@@ -194,6 +196,23 @@ class Sherlock:
         finally:
             self.active = None
             self._busy.release()
+
+    def _drop_face_crop(self, report: dict) -> None:
+        """A face is evidence only when the weapon claim is verified. The chain takes the
+        face snapshot before verify, so a rejected (or unverified) claim would otherwise
+        store the face of someone holding a cup. Enforced here, whatever order the
+        Director chose: the bytes leave the toolbox before anything is saved or emitted,
+        and the live crop view falls back to the weapon crop."""
+        tools = self.tools
+        face = tools.evidence.pop("face_crop", None)
+        tools.evidence_camera.pop("face_crop", None)
+        if face is None:
+            return
+        if tools.last_crop is face:
+            _, weapon = tools.model_crop()
+            tools.last_crop = weapon
+        report["face_crop_dropped"] = "claim not verified"
+        BUS.emit("system", f"face crop discarded: weapon claim not verified ({report.get('claim')})")
 
     def _save_evidence(self, iid: str, evidence: dict[str, np.ndarray]) -> tuple[list[str], list[str]]:
         """One folder per incident: <evidence_dir>/<incident>/<weapon_crop|face_crop|object_crop>.jpg.

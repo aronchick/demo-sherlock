@@ -90,6 +90,32 @@ def test_alert_path_runs_full_chain_and_saves_evidence(tmp_path):
     assert BUS.stats["alerts"] >= 1 and BUS.stats["ignored"] >= 1
 
 
+def test_rejected_weapon_claim_stores_and_emits_no_face_crop(tmp_path):
+    """The chain snapshots the face before verify, so a false positive (cup read as
+    knife, Verifier REJECTED) must not keep the face of an innocent person."""
+    s = Sherlock(Config(), synthetic=True, evidence_dir=str(tmp_path))
+    rejecting = SimpleNamespace(check=lambda img, claim: {"supported": False, "confidence": 0.2, "reason": "no weapon"})
+    s.tools.verifier = s.verifier = rejecting
+    q = BUS.subscribe()
+    s.start()
+    r = wait_for(s, lambda r: r["trigger"]["label"] == "knife")
+    s.stop()
+    assert r, "no weapon report"
+    events = drain(q)
+    assert chain(events, r["incident"]) == ["look_at", "snapshot", "look_at", "snapshot", "verify", "report"], \
+        "the chain order is unchanged; the face snapshot still happens before verify"
+    assert r["verified"] is False and r["action"] == "log"
+    assert r["evidence"] == ["weapon_crop"] and r["face_crop_dropped"]
+    assert "face_crop" not in r.get("evidence_unsaved", [])
+    assert not (tmp_path / r["incident"] / "face_crop.jpg").exists()
+    assert (tmp_path / r["incident"] / "weapon_crop.jpg").is_file()
+    assert "face_crop" not in s.tools.evidence, "the bytes are gone from the toolbox, not just the file"
+    assert s.tools.last_crop is s.tools.evidence["weapon_crop"], "the live crop view falls back to the weapon"
+    report_events = [e for e in events if e.stage == "system" and e.msg.startswith("REPORT")
+                     and e.data.get("incident") == r["incident"]]
+    assert report_events and "face_crop" not in report_events[0].data["evidence"]
+
+
 def test_models_never_see_the_face_crop(tmp_path):
     s = Sherlock(Config(), synthetic=True, evidence_dir=str(tmp_path))
     seen = spy_models(s)

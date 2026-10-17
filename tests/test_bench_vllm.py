@@ -404,7 +404,7 @@ def test_vlm_prompts_ask_only_about_the_object():
     assert verifier["messages"][0]["content"][0][
         "text"
     ] == bench.Verifier.PROMPT.format(
-        claim="A white model spacecraft with dark windows."
+        claim="a white model spacecraft with dark windows"
     )
 
 
@@ -569,7 +569,10 @@ def test_summary_denominators_and_ab_guards():
         "runs": [],
     }
     candidate = {**base, "prefix_caching": "on"}
-    assert bench.compare_runs(base, candidate)["results"] == []
+    comparison = bench.compare_runs(base, candidate)
+    assert comparison["results"] == []
+    assert comparison["baseline_workload_fingerprint"] == "x"
+    assert comparison["candidate_workload_fingerprint"] == "x"
     for field in (
         "evidence_kind",
         "workload_fingerprint",

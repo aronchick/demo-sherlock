@@ -27,15 +27,15 @@ def test_parallel_checks_share_crop_and_capture_worker_events(tmp_path):
         seen.append(image)
         BUS.emit(role, "worker result")
 
-    def describe(image, question):
+    def describe(image, claim):
         assess("analyst", image)
-        return {"description": "A knife."}
+        return {"description": "A knife.", "claim": claim, "supported": True}
 
     def check(image, claim):
         assess("verifier", image)
         return {"supported": True, "reason": "yes"}
 
-    s.tools.analyst = SimpleNamespace(describe=describe)
+    s.tools.analyst = SimpleNamespace(assess=describe)
     s.tools.verifier = SimpleNamespace(check=check)
     s._investigate(_knife_det())
     report = s.log[-1]
@@ -65,7 +65,7 @@ def test_model_failure_preserves_full_package_and_yields_uncertain(tmp_path):
     def broken(*args):
         raise RuntimeError("endpoint unavailable")
 
-    s.tools.analyst = SimpleNamespace(describe=broken)
+    s.tools.analyst = SimpleNamespace(assess=broken)
     s._investigate(_knife_det())
     report = s.log[-1]
     assert report["action"] == "log" and not report["verified"]
@@ -128,7 +128,7 @@ def test_acquisition_failure_keeps_source_scene_and_face(tmp_path):
 
 def test_unparseable_verifier_is_uncertain_not_agreement(tmp_path):
     s = _frozen_sherlock(tmp_path)
-    s.tools.analyst = SimpleNamespace(describe=lambda *args: {"description": "A cup."})
+    s.tools.analyst = SimpleNamespace(assess=lambda image, claim: {"description": "A cup.", "claim": claim, "supported": False})
     s.tools.verifier = SimpleNamespace(check=lambda *args: {
         "supported": False, "determinate": False, "reason": "Cannot tell"})
     s._investigate(_knife_det())

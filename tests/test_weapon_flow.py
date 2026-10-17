@@ -45,9 +45,9 @@ def spy_models(s: Sherlock) -> list[tuple[str, bool, bool]]:
         seen.append((who, np.array_equal(img, ev.get("model_context")), np.array_equal(img, ev.get("face_crop"))))
 
     class A:
-        def describe(self, img, question):
+        def assess(self, img, claim):
             mark("analyst", img)
-            return analyst.describe(img, question)
+            return analyst.assess(img, claim)
 
     class V:
         def check(self, img, claim):
@@ -69,9 +69,10 @@ def test_ignore_path_makes_zero_vlm_calls(tmp_path):
     assert r, "no ignore report"
     assert r["trigger"]["label"] == "cup" and r["trigger"]["threat"] == "benign"
     assert r["vlm_calls"] == 0
-    assert r["evidence"] == [] and "verified" not in r
+    assert r["evidence"] == ["original_frame"] and "verified" not in r
     assert chain(drain(q), r["incident"]) == ["report"], "benign path must not look, snapshot or verify"
-    assert not list((tmp_path / r["incident"]).glob("*.jpg")), "benign incidents retain metadata only"
+    assert [p.name for p in (tmp_path / r["incident"]).glob("*.jpg")] == ["original_frame.jpg"]
+    assert s.incidents.read(r["incident"])["artifacts"][0]["integrity"] == "verified"
     assert s.incidents.read(r["incident"])["notification"]["status"] == "not_sent"
 
 
@@ -464,7 +465,8 @@ def test_names_claim(said, claim, same):
 def _said(text: str, supported: bool, tmp_path) -> dict:
     """One incident through the orchestrator with a stubbed Analyst and Verifier."""
     s = _frozen_sherlock(tmp_path)
-    s.tools.analyst = SimpleNamespace(describe=lambda img, q: {"description": text})
+    s.tools.analyst = SimpleNamespace(assess=lambda img, claim: {
+        "description": text, "claim": claim, "supported": text == "Knife."})
     s.tools.verifier = SimpleNamespace(check=lambda img, c: {"supported": supported, "reason": "stub"})
     q = BUS.subscribe()
     s._investigate(_knife_det())

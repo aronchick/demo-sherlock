@@ -440,7 +440,6 @@ class ToolBox:
 
     def assess_parallel(self, claim: str) -> dict:
         """Independent prompts on one immutable scene/object/person context, then comparison."""
-        from .agents.director import names_claim
         eid, _ = self.model_crop()
         image = self.build_model_context()
         missing = {"status": "uncertain", "reason": "No object crop available",
@@ -459,10 +458,7 @@ class ToolBox:
                 try:
                     if role == "analyst":
                         BUS.bump("vlm_calls")
-                        return self.analyst.describe(image, "First name the object in the labeled weapon/object crop (bottom-left tile). "
-                            "Then describe its interaction with the person, "
-                            "using the labeled scene and close-ups. Respect differing capture times. "
-                            "Do not infer identity or recognize the person.")
+                        return self.analyst.assess(image, claim)
                     return self.verifier.check(image, claim)
                 except Exception as exc:  # noqa: BLE001 - endpoint failure must retain the evidence
                     BUS.emit(role, f"Assessment failed: {type(exc).__name__}")
@@ -474,17 +470,15 @@ class ToolBox:
             a, v = analyst.result(), verifier.result()
         if self.injected_disagreements:
             self.injected_disagreements -= 1
-            a = {"description": "A ceramic cup. Simulated disagreement."}
+            a = {"description": "A ceramic cup. Simulated disagreement.", "claim": claim, "supported": False}
             BUS.emit("analyst", "SIMULATED disagreement injected: a ceramic cup", simulated=True)
         description = str(a.get("description", ""))
         self.descriptions[eid] = description
         self.verdict = v
         self._verified = (_norm(claim), eid, version)
-        # "No readable text" is ordinary descriptive output, not uncertainty about the object.
-        first = description.split(".")[0]
-        uncertain = any(word in first.lower() for word in
-                        ("not ", "no ", "cannot", "can't", "uncertain", "hard to tell", "might", "maybe"))
-        supports = None if not first or uncertain or "error" in a else names_claim(first, claim)
+        supports = a.get("supported")
+        if type(supports) is not bool or a.get("claim") != claim or "error" in a:
+            supports = None
         checked = v.get("supported") if "error" not in v and v.get("determinate", True) else None
         if self._versions.get(eid) != version:
             supports = checked = None

@@ -3,6 +3,7 @@ Both talk to any OpenAI-compatible vision endpoint (Ollama /v1, vLLM)."""
 from __future__ import annotations
 
 import base64
+import json
 import logging
 import math
 import os
@@ -61,6 +62,43 @@ class Analyst:
         text = _vision_call(self.client, self.model, img, self.PROMPT.format(question=question))
         BUS.emit("analyst", text, (time.perf_counter() - t0) * 1000)
         return {"description": text}
+
+    def assess(self, img: np.ndarray, claim: str) -> dict:
+        """One request returns an explicit claim verdict and its description."""
+        prompt = (
+            "Assess the target object in the labeled weapon/object crop (bottom-left tile), "
+            "using the scene and person context. Captures may have different times. "
+            "Decide whether the target really is the claimed object, not a nearby object, toy, "
+            "replica, or merely something that resembles it. If unclear, use uncertain. "
+            "Describe the object and visible person-object interaction; never identify or name "
+            "any person or infer identity. Return ONLY a JSON object with three fields: "
+            "claim (copy the supplied claim exactly), supported (yes, no, or uncertain), "
+            "description (two short sentences). Supplied claim: " + json.dumps(claim))
+        t0 = time.perf_counter()
+        text = _vision_call(self.client, self.model, img, prompt)
+        out = parse_assessment(text, claim)
+        BUS.emit("analyst", out["description"], (time.perf_counter() - t0) * 1000,
+                 supported=out["supported"], claim=claim)
+        return out
+
+
+def parse_assessment(text: str, claim: str) -> dict:
+    """No keyword inference: malformed or unbound output cannot support a claim."""
+    out = {"supported": None, "description": text, "claim": claim}
+    try:
+        record = json.loads(text)
+    except (ValueError, TypeError):
+        return out
+    if not isinstance(record, dict):
+        return out
+    description = record.get("description")
+    if isinstance(description, str):
+        out["description"] = description
+    if (record.get("claim") != claim or not isinstance(description, str) or not description.strip()
+            or record.get("supported") not in ("yes", "no", "uncertain")):
+        return out
+    out["supported"] = {"yes": True, "no": False, "uncertain": None}[record["supported"]]
+    return out
 
 
 # The Verifier asks a yes/no question. Small VLMs ignore a JSON-verdict instruction ('True.',
@@ -211,6 +249,12 @@ class MockAnalyst:
         text = _MOCK_TEXT[kind] if kind else "Hard to tell; a dark object with no readable text."
         BUS.emit("analyst", text, ms)
         return {"description": text}
+
+    def assess(self, img: np.ndarray, claim: str) -> dict:
+        out = self.describe(img, "Describe the target object and person interaction")
+        kind = _mock_classify(img)
+        supported = kind is not None and any(w in claim.lower() for w in _CLAIM_WORDS[kind])
+        return {**out, "claim": claim, "supported": supported if kind is not None else None}
 
 
 class MockVerifier:

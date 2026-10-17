@@ -193,36 +193,35 @@ class Sherlock:
                         BUS.emit("system", f"Pending incident manifest NOT saved for {iid}: {exc}")
 
                 self.tools.on_capture = persist
-                if det.threat != "benign":
-                    source = self.latest_wide.get(det.camera)
-                    captured = self.latest_wide_at.get(det.camera)
-                    if source is None:
-                        try:
-                            source = self.cameras[det.camera].wide_frame()
-                            captured = time.time()
-                        except CameraError as exc:
-                            BUS.emit("system", f"Original frame unavailable: {exc}")
-                    if source is not None:
-                        self.tools.evidence["original_frame"] = source.copy()
-                        self.tools.evidence_camera["original_frame"] = det.camera
-                        self.tools.evidence_captured_at["original_frame"] = captured
-                        self.tools.provenance["original_frame"] = {
-                            "camera": det.camera, "captured_at": captured,
-                            "source_artifact": None, "relationship": "source_frame", "bbox": None}
-                        if det.head:
-                            height, width = source.shape[:2]
-                            x1, y1, x2, y2 = det.head
-                            x1, x2 = max(0, int(x1)), min(width, int(x2))
-                            y1, y2 = max(0, int(y1)), min(height, int(y2))
-                            if x2 > x1 and y2 > y1:
-                                self.tools.evidence["face_crop"] = source[y1:y2, x1:x2].copy()
-                                self.tools.evidence_camera["face_crop"] = det.camera
-                                self.tools.evidence_captured_at["face_crop"] = captured
-                                self.tools.provenance["face_crop"] = {
-                                    "camera": det.camera, "captured_at": captured,
-                                    "source_artifact": "original_frame", "relationship": "crop_of_source",
-                                    "bbox": [x1, y1, x2, y2]}
-                        persist()
+                source = self.latest_wide.get(det.camera)
+                captured = self.latest_wide_at.get(det.camera)
+                if source is None:
+                    try:
+                        source = self.cameras[det.camera].wide_frame()
+                        captured = time.time()
+                    except CameraError as exc:
+                        BUS.emit("system", f"Original frame unavailable: {exc}")
+                if source is not None:
+                    self.tools.evidence["original_frame"] = source.copy()
+                    self.tools.evidence_camera["original_frame"] = det.camera
+                    self.tools.evidence_captured_at["original_frame"] = captured
+                    self.tools.provenance["original_frame"] = {
+                        "camera": det.camera, "captured_at": captured,
+                        "source_artifact": None, "relationship": "source_frame", "bbox": None}
+                    if det.head:
+                        height, width = source.shape[:2]
+                        x1, y1, x2, y2 = det.head
+                        x1, x2 = max(0, int(x1)), min(width, int(x2))
+                        y1, y2 = max(0, int(y1)), min(height, int(y2))
+                        if x2 > x1 and y2 > y1:
+                            self.tools.evidence["face_crop"] = source[y1:y2, x1:x2].copy()
+                            self.tools.evidence_camera["face_crop"] = det.camera
+                            self.tools.evidence_captured_at["face_crop"] = captured
+                            self.tools.provenance["face_crop"] = {
+                                "camera": det.camera, "captured_at": captured,
+                                "source_artifact": "original_frame", "relationship": "crop_of_source",
+                                "bbox": [x1, y1, x2, y2]}
+                    persist()
                 try:
                     report = self.director.investigate(det)
                 except Exception as exc:  # noqa: BLE001 - preserve captured evidence on an interrupted investigation

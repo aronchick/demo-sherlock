@@ -150,13 +150,13 @@
     const actions = node('div', '', 'responder-actions');
     const disabled = pending || !connected;
     const resolved = record.response?.status === 'resolved';
-    actions.append(button(record.response?.status === 'investigating' ? 'Investigating' : 'Investigate', () => { void respond('investigate'); }, disabled || resolved || record.response?.status === 'investigating'), button(record.response?.team_notified_at ? 'Team notified' : 'Notify team', () => { void respond('notify_team'); }, disabled || resolved || Boolean(record.response?.team_notified_at)));
+    actions.append(button(record.response?.status === 'investigating' ? 'Investigating' : 'Investigate', () => { void respond('investigate'); }, disabled || resolved || record.response?.status === 'investigating'), button(record.response?.team_notified_at ? 'Team notified' : 'Notify team', () => { void respond('notify_team'); }, disabled || resolved || record.response?.status !== 'investigating' || Boolean(record.response?.team_notified_at)));
     const footer = node('div', '', 'responder-detail-footer');
     const evidence = document.createElement('a');
     evidence.href = `/custody?incident=${encodeURIComponent(record.incident)}`;
     evidence.target = 'sherlock-evidence';
     evidence.textContent = 'Full evidence';
-    footer.append(evidence, button(resolved ? 'Resolved' : 'Resolve', () => { void respond('resolve'); }, disabled || resolved));
+    footer.append(evidence, button(resolved ? 'Resolved' : 'Resolve', () => { void respond('resolve'); }, disabled || resolved || record.response?.status !== 'investigating'));
     app.append(actions, footer);
   }
 

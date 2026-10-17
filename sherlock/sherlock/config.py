@@ -33,6 +33,7 @@ class Config:
     mock: bool = field(default_factory=lambda: _env("SHERLOCK_MOCK", "0") == "1")
     scout_backend: str = field(default_factory=lambda: _env("SCOUT_BACKEND", "yolo"))
     yolo_model: str = field(default_factory=lambda: _env("YOLO_MODEL", "yolov8n.pt"))
+    scout_conf: float = field(default_factory=lambda: float(_env("SCOUT_CONF", "0.35")))
     director: Endpoint = field(default_factory=lambda: Endpoint(
         _env("DIRECTOR_BASE_URL", "http://localhost:8001/v1"),
         _env("DIRECTOR_MODEL", "nvidia/NVIDIA-Nemotron-3.5-Lightning-30B-A3B-NVFP4")))
@@ -50,6 +51,8 @@ class Config:
     director_thinking: bool = field(default_factory=lambda: _env("DIRECTOR_THINKING", "0") == "1")
 
     def __post_init__(self) -> None:
+        if not 0 <= self.scout_conf <= 1:
+            raise ValueError("SCOUT_CONF must be between 0 and 1")
         if not self.cameras:
             for item in _env("CAMERAS", "hero:fake:0").split(","):
                 name, backend, source = item.strip().split(":", 2)  # source may be "name:<camera>"

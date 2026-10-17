@@ -172,11 +172,11 @@ class Scout:
     def __init__(self, backend: str, model_path: str, dwell: float,
                  truth: Callable[[str], list[tuple[str, BBox]]] | None = None,
                  measure: bool = False, handled_via: Callable[[Detection], str | None] | None = None,
-                 mislabel: str | None = None):
+                 mislabel: str | None = None, *, conf: float = 0.35):
         if backend == "scene" and truth is not None:
             self.impl: YoloScout | MotionScout | SceneScout = SceneScout(truth)
         else:
-            self.impl = YoloScout(model_path) if backend == "yolo" else MotionScout()
+            self.impl = YoloScout(model_path, conf=conf) if backend == "yolo" else MotionScout()
         # The detector that actually runs, for the dashboard. It can differ from the
         # backend asked for: "mock" and unknown names fall back to motion.
         self.kind = {SceneScout: "scene", YoloScout: "yolo"}.get(type(self.impl), "motion")

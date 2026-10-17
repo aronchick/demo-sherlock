@@ -510,9 +510,12 @@ room detection is reliable. The 63 predicted weapon boxes at 0.10 are three
 times the 21 at 0.35, but temporal dwell and downstream Verifier traffic were
 not measured. Check those on the live scene before recording.
 
-The app still uses `YoloScout`'s **0.35** default; `Scout` passes only the model
-path, and `Config` has no confidence environment override. `DWELL_SECONDS`
-defaults to 0.6 and is a separate temporal gate. No app defaults changed.
+The app defaults to **`SCOUT_CONF=0.35`**. Set `SCOUT_CONF` in the shell or
+`.env` to override YOLO's confidence threshold (0 through 1), then restart the
+app. Choose the demo value after a live prop test with the real camera: COCO's
+small kitchen knives are not the demo props. The 0.10 sweep recommendation is
+a rehearsal candidate, not an adopted default. `DWELL_SECONDS` defaults to 0.6
+and is a separate temporal gate. Motion and synthetic Scouts ignore `SCOUT_CONF`.
 To repeat the measured sweep, choose a new output filename:
 
 ```bash

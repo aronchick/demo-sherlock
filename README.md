@@ -260,9 +260,10 @@ Brev box, which needs the GPU box to exist.
   A/B have only run against the local stub
   ([Results pending live endpoint](#results-pending-live-endpoint)).
 - **NeMo Gym ablations:** live results are pending Brev endpoints.
-- **Verifier threshold:** fitted on 50 COCO crops, not on room photos.
-  SmolVLM-500M confirmed 27/30 real weapon crops and accepted 1/20 false
-  "kitchen knife" claims.
+- **Verifier threshold:** chosen on 90 open COCO objects cut as #62's tight
+  model crop, not on room photos. At the demo's -1.0, SmolVLM-500M confirmed
+  62/70 real weapons, accepted 0/20 false "a knife" claims on cups and
+  bottles and 12/70 wrong-weapon claims (57/70, 0/20, 8/70 at 0.0).
 - **Linux gimbal control:** the Link 2 cannot be aimed on Linux; the hero
   comes up offline there and the Director uses the next camera.
 
@@ -558,9 +559,12 @@ How `Verifier.check` decides:
   on all 100 bake-off calls for each model.
 
 Each verdict records its mode (`margin` or `text`) in the dashboard event
-and the console line. SmolVLM-500M at the default threshold confirmed 27/30
-real weapon crops, accepted 1/20 false "kitchen knife" claims on cups and
-bottles, and accepted 0/30 wrong-weapon claims on weapon crops.
+and the console line. Measured on 90 open COCO objects (the 50 bake-off crops
+plus 40 more knives) cut as #62's tight model crop, each with its true claim
+and one false one, SmolVLM-500M at the default 0.0 confirmed 57/70 real
+weapons (50 knives, 10 scissors, 10 bats), accepted 0/20 false "a knife"
+claims on cups and bottles, and accepted 8/70 wrong-weapon claims on weapon
+crops. At the demo's -1.0: 62/70, 0/20 and 12/70.
 
 The prompt changed, so the benchmark's workload hash, which records
 `Verifier.PROMPT`, changes too. The NeMo Gym schemas do not: the verdict
@@ -1018,9 +1022,9 @@ Sherlock incorporates both existing open datasets and openly published synthetic
 ## Known limitations & next steps
 
 ### Known limitations
-- **Human-in-the-loop review required for security alerts**: Small vision-language models such as the shipped `SmolVLM-500M-Instruct` (0.51B) are decision-support tools, not autonomous safety-critical detectors. In our 50-crop COCO bake-off, the yes/no `Verifier.check` at its default threshold confirms 27/30 real weapon crops on the 500M and accepts 1/20 false `"kitchen knife"` claims on cups and bottles (for comparison, the over-budget 2.25B `SmolVLM-Instruct`: 29/30 and 0/20). Borderline crops near the log-odds threshold can still flip across JPEG re-encodes, so every `alert` attaches both the weapon crop and an unanalyzed human-only face crop for operator verification.
+- **Human-in-the-loop review required for security alerts**: Small vision-language models such as the shipped `SmolVLM-500M-Instruct` (0.51B) are decision-support tools, not autonomous safety-critical detectors. On 90 open COCO objects cut as #62's tight model crop, the 500M's yes/no `Verifier.check` at the demo's `VERIFIER_MARGIN=-1.0` confirms 62/70 real weapons, accepts 0/20 false `"a knife"` claims on cups and bottles and 12/70 wrong-weapon claims (57/70, 0/20, 8/70 at the 0.0 default). The over-budget 2.25B `SmolVLM-Instruct` was measured only on the earlier 50-crop bake-off with wider crops: 29/30 and 0/20, against the 500M's 27/30 and 1/20 there. Borderline crops near the log-odds threshold can still flip across JPEG re-encodes, so every `alert` attaches both the weapon crop and an unanalyzed human-only face crop for operator verification.
 - **The 500M Analyst names the biggest thing in a cluttered crop**: asked "What is this object?", SmolVLM-500M named the wrong object on 34 of 70 COCO weapon crops (a knife on a dinner table comes back "Pizza." or "Cake."), and three reworded prompts did no better (34 to 41 of 70). Alerts do not depend on it, because the Verifier is asked about the weapon itself. When a verified claim and the Analyst's words name different objects (21 of the 57 weapon crops the Verifier confirmed), the report keeps the words under `analyst_mismatch` and the dashboard shows the claim with "named another object · not shown" in their place.
-- **Parameter-count accounting across model card vs. checkpoint tensors**: The default configuration, `NVIDIA-Nemotron-3.5-Lightning` (30B) + the shared `HuggingFaceTB/SmolVLM-500M-Instruct` (`0.51B`), totals **30.51B by model card and 32.09B by base checkpoint tensors** (raw BF16 safetensors headers excluding never-loaded `mtp.*` weights: `31.58B + 0.51B`), under 33B on both counts. The previous `SmolVLM-Instruct` (2.25B) default totals 32.25B by model card but `31.58B + 2.25B = 33.82B` by tensors, over the cap; the 500M costs single-crop Verifier recall (27/30 real weapon crops confirmed vs. 29/30 at the default Verifier threshold).
+- **Parameter-count accounting across model card vs. checkpoint tensors**: The default configuration, `NVIDIA-Nemotron-3.5-Lightning` (30B) + the shared `HuggingFaceTB/SmolVLM-500M-Instruct` (`0.51B`), totals **30.51B by model card and 32.09B by base checkpoint tensors** (raw BF16 safetensors headers excluding never-loaded `mtp.*` weights: `31.58B + 0.51B`), under 33B on both counts. The previous `SmolVLM-Instruct` (2.25B) default totals 32.25B by model card but `31.58B + 2.25B = 33.82B` by tensors, over the cap; the 500M costs single-crop Verifier recall (27/30 real weapon crops confirmed vs. 29/30 at the default Verifier threshold, on the 50-crop bake-off with wider crops; the 2.25B was not rerun on #62's tight crops).
 - **Platform-specific USB gimbal control**: Direct UVC pan/tilt/zoom control for the Insta360 Link 2 (`2e1a:4c01`, `2e1a:4c02`, `2e1a:4c04`) relies on macOS IOKit via `link-ctl`. On Linux, the stock `uvcvideo` kernel driver rejects UVC pan/tilt `SET_CUR` transfers without detaching the video stream, so Linux hosts automatically fall back to the secondary camera or software crop (`FakePTZ`).
 - **Local dashboard network scope**: The FastAPI dashboard serves live MJPEG streams and saved evidence crops without authentication and therefore binds to `127.0.0.1` by default (`DASHBOARD_HOST=127.0.0.1`).
 - **NeMo Gym simulation scope**: The 8 tasks in `gym/resources_servers/sherlock/data/tasks.jsonl` evaluate the Director's multi-turn tool policy, fault recovery, and verification discipline against deterministic scene responses rather than live pixel crops.

@@ -1,5 +1,4 @@
-"""The OBSBOT adapter against a fake IOKit module and a fake gimbal. None of this has run
-on a real OBSBOT yet; scripts/obsbot_probe.py is the hardware check."""
+"""OBSBOT regression tests. Hardware results live in docs/OBSBOT_HARDWARE.md."""
 import struct
 import sys
 import types
@@ -24,6 +23,7 @@ FAST = {"home_after_s": 0.0, "settle_s": 0.0, "cmd_timeout_s": 1.0}
 def fake_iokit(monkeypatch, present=(OBSBOT_VID, 0xFEF9), xu_ok=True):
     """link_usb_macos with one camera on the bus; records every control transfer."""
     opened, sent = [], []
+    pose = [b"\0" * 8]
 
     def open_vc_interface(vid, pid, iface_num):
         key = (vid, pid) if iface_num == 0 else (vid, pid, iface_num)
@@ -32,6 +32,10 @@ def fake_iokit(monkeypatch, present=(OBSBOT_VID, 0xFEF9), xu_ok=True):
 
     def control_request(handle, bm, req, w_value, w_index, data=b"", read_length=0):
         sent.append((bm, req, w_value, w_index, bytes(data)))
+        if w_value == 0x0D00 and req == SET_CUR:
+            pose[0] = bytes(data)
+        if w_value == 0x0D00 and read_length == 8:
+            return True, pose[0]
         return (xu_ok or w_index >> 8 != 2), b"\0" * read_length
 
     fake = types.ModuleType("link_usb_macos")
@@ -51,7 +55,7 @@ def test_opens_the_obsbot_by_its_ids_and_switches_tracking_and_gestures_off_firs
         assert len(payload) == 60 and payload[:4] == bytes(head) and not any(payload[2:])
     tr.set_pantilt(36000, -7200)
     tr.set_zoom(50)
-    assert sent[2:] == [(0x21, SET_CUR, 0x0D00, 0x0100, struct.pack("<ii", 36000, -7200)),
+    assert [s for s in sent[2:] if s[0] == 0x21] == [(0x21, SET_CUR, 0x0D00, 0x0100, struct.pack("<ii", 36000, -7200)),
                         (0x21, SET_CUR, 0x0B00, 0x0100, struct.pack("<H", 50))]
 
 
@@ -229,3 +233,45 @@ def test_probe_control_path_only_reads(monkeypatch):
     assert tr is not None and tr.pid == 0xFEF8 and (tr.iface, tr.ct_unit) == (0, 1)
     assert sent and all(bm == 0xA1 for bm, *_ in sent), "no SET before --wiggle"
     tr.close()
+
+
+def test_hardware_defaults_pan_right_and_allow_zoom_to_finish():
+    tr = FakeTransport(fake_ranges=PTZRanges(pan=(-468000, 468000), tilt=(-324000, 324000), zoom=(0, 100)))
+    cam = ObsbotCamera("hero", "synthetic", transport=tr)
+    try:
+        cam.move(pan=10, zoom=2)
+        assert ("pantilt", -36000, 0) in tr.calls
+        assert cam._settle_until - cam._last_move >= 2.2
+    finally:
+        cam.close()
+
+
+def test_probe_waits_for_zoom_even_with_stationary_pan(monkeypatch):
+    probe = _load_probe()
+    clock = [0.0]
+    monkeypatch.setattr(probe.time, "monotonic", lambda: clock[0])
+    monkeypatch.setattr(probe.time, "sleep", lambda dt: clock.__setitem__(0, clock[0] + dt))
+    tr = types.SimpleNamespace(live_ptz=lambda: (0, 0, 33 if clock[0] >= 2 else 0))
+    cam = types.SimpleNamespace(tuning=Tuning(), pose=types.SimpleNamespace(pan=0, tilt=0, zoom=2),
+                                transport=tr, _zoom_raw=lambda z: 33)
+    _, elapsed = probe.settle(cam, 0)
+    assert elapsed >= 2.2
+    tr.live_ptz = lambda: (0, 0, 0)
+    with pytest.raises(RuntimeError, match="did not reach"):
+        probe.settle(cam, clock[0], timeout=1)
+
+
+@pytest.mark.parametrize("recovers", [True, False])
+def test_stale_axis_is_retried_or_reported_as_failure(monkeypatch, recovers):
+    clock, writes = [0.0], []
+    monkeypatch.setattr(obsbot.time, "monotonic", lambda: clock[0])
+    monkeypatch.setattr(obsbot.time, "sleep", lambda dt: clock.__setitem__(0, clock[0] + dt))
+    tr = ObsbotUSBTransport()
+    monkeypatch.setattr(tr, "_set", lambda *args, **kwargs: writes.append(clock[0]))
+    monkeypatch.setattr(tr, "request", lambda *args: struct.pack("<ii", 0 if recovers and len(writes) > 1 else 36000, 0))
+    if recovers:
+        tr.set_pantilt(0, 0)
+        assert len(writes) == 2 and writes[1] >= 0.5
+    else:
+        with pytest.raises(obsbot.TransportError, match="did not reach"):
+            tr.set_pantilt(0, 0)

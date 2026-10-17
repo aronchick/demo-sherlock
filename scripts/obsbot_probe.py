@@ -202,7 +202,7 @@ def wiggle(name: str, tr: ob.ObsbotUSBTransport) -> None:
     out = ROOT / "snapshots"
     out.mkdir(exist_ok=True)
     try:
-        settle(tr, time.monotonic())
+        settle(cam, time.monotonic())
         hold_still(tr)
         for label, kw in (("home", {"pan": 0, "tilt": 0, "zoom": 1}), ("pan+10", {"pan": 10}),
                           ("tilt+5", {"pan": 0, "tilt": 5}), ("zoom2x", {"tilt": 0, "zoom": 2}),
@@ -210,13 +210,17 @@ def wiggle(name: str, tr: ob.ObsbotUSBTransport) -> None:
             t0 = time.monotonic()
             start = live_pose(tr)
             pose = cam.move(**kw)
-            moved = settle(tr, t0)
+            moved = settle(cam, t0)
             path = out / f"obsbot_{label}.jpg"
             cv2.imwrite(str(path), cam.snapshot())
             print(f"  {label:10} -> {pose}  live {start} -> {moved[0]} in {moved[1]:.2f}s"
                   f"  {path.relative_to(ROOT)}")
     finally:
-        cam.close()
+        try:
+            cam.move(pan=0, tilt=0, zoom=1)
+            settle(cam, time.monotonic())
+        finally:
+            cam.close()
     print("  delete snapshots/obsbot_*.jpg once checked: they show whoever was in view")
 
 
@@ -239,16 +243,20 @@ def live_pose(tr: ins.MacUSBTransport) -> tuple[float, float]:
     return round(pan / 3600, 1), round(tilt / 3600, 1)
 
 
-def settle(tr: ins.MacUSBTransport, t0: float, timeout: float = 8.0) -> tuple[tuple[float, float], float]:
-    """Poll the live position until two reads 100 ms apart agree: when the gimbal stopped."""
-    last = live_pose(tr)
+def settle(cam: ob.ObsbotCamera, t0: float, timeout: float = 10.0) -> tuple[tuple[float, float], float]:
+    """Require pan, tilt AND zoom to reach the target, not merely stop changing."""
+    tn, pose = cam.tuning, cam.pose
+    target = (round(pose.pan * tn.units_per_deg * tn.pan_sign),
+              round(pose.tilt * tn.units_per_deg * tn.tilt_sign), cam._zoom_raw(pose.zoom))
+    matched = 0
     while time.monotonic() - t0 < timeout:
+        raw = cam.transport.live_ptz()
+        at_target = all(abs(a - b) <= tol for a, b, tol in zip(raw, target, (3600, 3600, 1), strict=True))
+        matched = matched + 1 if at_target else 0
+        if matched >= 3:
+            return (raw[0] / 3600, raw[1] / 3600), time.monotonic() - t0
         time.sleep(0.1)
-        now = live_pose(tr)
-        if now == last:
-            return now, time.monotonic() - t0
-        last = now
-    return last, timeout
+    raise RuntimeError(f"PTZ did not reach {target} within {timeout}s; last readback {raw}")
 
 
 def main() -> int:

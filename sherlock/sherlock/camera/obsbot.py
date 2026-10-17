@@ -1,4 +1,4 @@
-"""OBSBOT Tiny 2 / Tiny 2 Lite / Tiny SE adapter. DRAFT: not yet run on a real OBSBOT.
+"""OBSBOT adapter, hardware-tested on the Tiny 2 Lite. See docs/OBSBOT_HARDWARE.md.
 
 The OBSBOT Tiny family is a UVC camera on a two-axis gimbal, so this is the Insta360
 adapter (same IOKit control transfers through link-ctl, same aiming, settling and
@@ -67,7 +67,9 @@ OBSBOT_PIDS = (0xFEF8, 0xFEF9)  # Tiny 2, Tiny 2 Lite
 XU_UNIT, XU_SEL_SIMPLE, XU_LEN = 2, 0x06, 60
 TAG_AI_MODE, TAG_GESTURE = 0x16, 0x20
 
-DEFAULTS = Tuning(pids=OBSBOT_PIDS, hfov_deg=72.9, max_zoom=4.0, slew_deg_s=120.0)
+# Tiny 2 Lite hardware: positive UVC pan turns left; 1x -> 2x takes ~2 s.
+DEFAULTS = Tuning(pids=OBSBOT_PIDS, hfov_deg=72.9, max_zoom=4.0, slew_deg_s=120.0,
+                 pan_sign=-1.0, zoom_settle_s=2.2)
 # Zoom factor at the camera's raw maximum: the spec sheet's 4x.
 ZOOM_AT_MAX = 4.0
 
@@ -134,6 +136,26 @@ class ObsbotUSBTransport(MacUSBTransport):
 
     def set_tracking(self, on: bool) -> None:
         self._set(XU_SEL_SIMPLE, tracking_payload(on), unit=self.xu_unit)
+
+    def set_pantilt(self, pan: int, tilt: int) -> None:
+        """Verify motion and retry the Lite's stale-axis response after it settles."""
+        super().set_pantilt(pan, tilt)
+        deadline = time.monotonic() + 1.7
+        retry_at = time.monotonic() + 0.5
+        matched = 0
+        while time.monotonic() < deadline:
+            actual = struct.unpack("<ii", self.request(GET_CUR, CT_PANTILT_ABSOLUTE, 8))
+            # Lite firmware truncates fractional degrees and biases negative
+            # angles toward zero (e.g. -14.49 requested -> -13 reported).
+            tolerance = int(DRIFT_DEG * 3600)
+            matched = matched + 1 if abs(actual[0] - pan) <= tolerance and abs(actual[1] - tilt) <= tolerance else 0
+            if matched >= 2:
+                return
+            if time.monotonic() >= retry_at:
+                super().set_pantilt(pan, tilt)
+                retry_at = time.monotonic() + 0.5
+            time.sleep(0.05)
+        raise TransportError(f"OBSBOT pan/tilt did not reach {(pan, tilt)}; read back {actual}")
 
     def live_ptz(self) -> tuple[int, int, int]:
         """Where the gimbal is now (the Tiny 2 reports its live position on GET_CUR)."""

@@ -101,6 +101,8 @@ body[data-mode="live"] .mode b { color: var(--ok); }
 .cam[data-looking="true"] { border-color: var(--accent); }
 .cam[data-covered="true"] { border-color: var(--warn); }
 .cam[data-unavailable="true"] { border-color: var(--err); }
+.cam[data-ptz-warning="true"] { border-color: var(--warn); }
+.cam[data-ptz-warning="true"] figcaption em { color: var(--warn); }
 .cam[data-unavailable="true"] .empty { color: var(--err); }
 .cam[data-role="zoom"] figcaption .icon { color: var(--face); }
 .cam[data-role="zoom"][data-subject="face"] figcaption { color: var(--face); }

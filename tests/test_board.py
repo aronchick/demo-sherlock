@@ -227,3 +227,21 @@ def test_second_camera_sighting_says_who_handled_it():
             scout.step(frame, cam)
     seen = {e.data["camera"]: e.data.get("handled_via") for e in drain(q) if e.stage == "scout"}
     assert seen == {"hero": None, "scout1": "hero"}
+
+
+def test_hero_tile_says_when_its_ptz_cannot_deliver():
+    """A dead or self-steering gimbal must not hide behind the tile's "PTZ" label."""
+    from sherlock.camera import ObsbotCamera
+    from sherlock.camera.insta360 import FakeTransport, Tuning
+
+    dead = ObsbotCamera("hero", "synthetic", transport=FakeTransport(fail=True),
+                        tuning=Tuning(home_after_s=0, settle_s=0, cmd_timeout_s=1))
+    crop = FakePTZCamera("scout1", "synthetic")
+    with TestClient(make_app(SimpleNamespace(cfg=Config(), cameras={"hero": dead, "scout1": crop},
+                                             unavailable={}))) as client:
+        cams = {c["name"]: c for c in client.get("/cameras").json()["cameras"]}
+    assert cams["hero"]["warning"] == "PTZ OFFLINE" and "warning" not in cams["scout1"]
+    app_js = (pathlib.Path(STATIC) / "app.js").read_text()
+    assert "hero.warning" in app_js and "setInterval(refreshCameraWarnings" in app_js
+    assert '$("hero-note").textContent = heroNote()' in app_js
+    dead.close()

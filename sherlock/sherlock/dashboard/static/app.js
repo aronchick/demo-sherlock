@@ -107,6 +107,12 @@ const covered = { hero: false, scout1: false };
 // Cameras that did not open at startup (name -> reason), from /cameras.
 const unavailable = {};
 
+// The hero's own warning from /cameras (PTZ offline, tracking not switched off, gimbal
+// moving on its own): its tile says so instead of a plain "PTZ" it cannot deliver.
+let heroWarning = null;
+
+const heroNote = () => covered.hero ? "· LENS COVERED" : heroWarning ? `· ${heroWarning.label}` : "· PTZ";
+
 const live = c => !covered[c] && !(c in unavailable);
 
 const feedBuffer = [];
@@ -403,7 +409,7 @@ function setCovered(cam, on) {
   $("btn-cover").setAttribute("aria-pressed", on);
   $("btn-cover").textContent = on ? L.cover.replace("cover", "uncover").replace("Cover", "Uncover") : L.cover;
   $("cam-hero").dataset.covered = on;
-  $("hero-note").textContent = on ? "· LENS COVERED" : "· PTZ";
+  $("hero-note").textContent = heroNote();
 
   if (document.body.dataset.state === "clear" && connected) setPill("clear", `MONITORING · ${watching()}`);
 }
@@ -919,6 +925,26 @@ async function refreshMode() {
   }
 }
 
+function showCameraWarnings(cameras) {
+  const hero = cameras.find(c => c.name === "hero");
+
+  heroWarning = hero && hero.warning ? { label: hero.warning, why: hero.tracking || hero.ptz || "" } : null;
+  $("cam-hero").dataset.ptzWarning = !!heroWarning;
+  $("hero-note").title = heroWarning ? heroWarning.why : "";
+  $("hero-note").textContent = heroNote();
+}
+
+// A gimbal can fail or start moving on its own mid-demo, so the label is re-read.
+async function refreshCameraWarnings() {
+  try {
+    showCameraWarnings((await getJson("/cameras")).cameras || []);
+  } catch {
+    // No runtime: keep the last label.
+  }
+}
+
+setInterval(refreshCameraWarnings, 5000);
+
 async function boot() {
   await refreshMode();
 
@@ -926,6 +952,8 @@ async function boot() {
     const cams = await getJson("/cameras");
 
     for (const c of cams.cameras || []) if (c.name in covered) setCovered(c.name, !!c.covered);
+
+    showCameraWarnings(cams.cameras || []);
 
     for (const c of cams.unavailable || []) if (CAMS.includes(c.name)) markUnavailable(c.name, c.error);
   } catch {

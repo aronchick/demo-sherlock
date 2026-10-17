@@ -11,3 +11,15 @@ runs/
 build/
 .DS_Store
 results/ablation_stub_*.json
+# Phone photos and videos dropped at the repo root. They carry EXIF GPS and the
+# device model, and the checkpoint hook sweeps untracked files into commits.
+# Keep reference photos under data/ (ignored above).
+/IMG_*.jpeg
+/IMG_*.jpg
+/IMG_*.JPG
+/IMG_*.HEIC
+/IMG_*.heic
+/IMG_*.png
+/IMG_*.PNG
+/IMG_*.MOV
+/IMG_*.mov

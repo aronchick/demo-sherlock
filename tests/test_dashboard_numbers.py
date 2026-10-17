@@ -98,6 +98,16 @@ def scout():
     }
 
 
+def brev():
+    """The Brev H100 Gym reference row as gym/run_ablation.py records it."""
+    data = ablation()
+    data["runtime"] = "brev_vllm"
+    data["model_server"] = {"name": "vLLM", "version": "0.28.0", "reachable": True, "source": "detected",
+                            "host": "sherlock-h100", "label": "vLLM"}
+    data["summary_metrics"]["task_success"] = 1.0
+    return data
+
+
 def write(root, name, data, age=1):
     path = root / name
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -110,6 +120,7 @@ def test_missing_and_checked_in_stub_results_are_tbd(tmp_path):
     assert numbers.read_numbers(tmp_path) == {
         "director": None,
         "ablation": None,
+        "ablation_secondary": None,
         "scout": None,
     }
     # The checked-in benchmark is explicitly protocol-only evidence.
@@ -242,6 +253,11 @@ def test_results_say_where_they_were_measured():
     h100 = {"name": "vLLM", "version": "0.28.0", "host": "sherlock-h100", "hardware": "Brev, 1x H100 PCIe 80GB",
             "label": "Brev · vLLM", "source": "declared"}  # the producer's own label wins
     assert numbers.director_result({**benchmark(), "model_server": h100})["measured_on"] == "Brev · vLLM"
+    brev_gym = {"name": "vLLM", "host": "sherlock-h100", "label": "vLLM"}  # run_ablation.py's runtime says Brev
+    assert numbers.ablation_result(brev())["measured_on"] == "Brev · vLLM"
+    assert numbers.ablation_result({**brev(), "runtime": "brev_ollama"})["measured_on"] == "sherlock-h100 · vLLM"
+    assert numbers.ablation_result({**brev(), "model_server": {**brev_gym, "host": "laptop"},
+                                    "runtime": "local_vllm"})["measured_on"] == "local · vLLM"
     unknown = {"name": None, "host": "sherlock-h100", "label": "sherlock-h100", "reachable": True}
     assert numbers.director_result({**benchmark(), "model_server": unknown})["measured_on"] == "sherlock-h100"
     assert numbers.director_result({**benchmark(), "environment": "brev-l40s"})["measured_on"] == "brev-l40s"
@@ -332,6 +348,7 @@ def test_api_reads_updated_files_and_returns_only_summary(tmp_path, monkeypatch)
         assert client.get("/numbers").json() == {
             "director": None,
             "ablation": None,
+            "ablation_secondary": None,
             "scout": None,
         }
         data = benchmark()
@@ -425,3 +442,35 @@ def test_ablation_summary_inherits_server_metadata_and_rejects_stub_reference():
     assert result["runtime"] == "local_ollama" and result["model_server_label"] == "Ollama"
     data["results"][0]["execution_mode"] = "local_stub"
     assert numbers.ablation_result(data) is None
+
+
+@pytest.mark.parametrize("brev_age,local_age", [(1, 1), (1, 9), (9, 1)])
+def test_brev_gym_run_is_primary_and_local_secondary(tmp_path, brev_age, local_age):
+    """Both run directories present: the Brev reference row leads whatever the mtimes."""
+    local = {"execution_mode": "live_endpoint", "results": [{**ablation(), "ablation_id": "aaa"}, ablation()]}
+    write(tmp_path, "results/ablation_summary.json", local, local_age)
+    write(tmp_path, "results/brev_vllm/ablation_summary.json",
+          {"execution_mode": "live_endpoint", "results": [{**brev(), "ablation_id": "aaa"}, brev()]}, brev_age)
+    write(tmp_path, "results/brev_vllm/ablation_zzz.json", {**brev(), "ablation_id": "zzz"}, 99)
+    result = numbers.read_numbers(tmp_path)
+    primary, secondary = result["ablation"], result["ablation_secondary"]
+    assert primary["file"] == "brev_vllm/ablation_summary.json" and primary["config"] == "nemotron_lightning"
+    assert primary["task_success"] == 1.0 and primary["runtime"] == "brev_vllm"
+    assert primary["measured_on"] == "Brev · vLLM" and primary["model_server_label"] == "vLLM"
+    assert secondary["file"] == "ablation_summary.json" and secondary["task_success"] == 0.75
+    assert secondary["runtime"] == "local_ollama" and secondary["measured_on"] == "Ollama"
+
+
+@pytest.mark.parametrize("invalid", [None, {"execution_mode": "local_stub"},
+    {"execution_mode": "live_endpoint", "results": [{"ablation_id": "other"}]}])
+def test_brev_gym_falls_back_to_its_reference_file_then_to_local(tmp_path, invalid):
+    if invalid is not None:
+        write(tmp_path, "results/brev_vllm/ablation_summary.json", invalid)
+    local = write(tmp_path, "results/ablation_summary.json", {"execution_mode": "live_endpoint", "results": [ablation()]})
+    reference = write(tmp_path, "results/brev_vllm/ablation_nemotron_lightning.json", brev())
+    result = numbers.read_numbers(tmp_path)
+    assert result["ablation"]["file"] == "brev_vllm/ablation_nemotron_lightning.json"
+    assert result["ablation_secondary"]["file"] == local.name
+    reference.unlink()  # no Brev run: the local one leads, with nothing under it
+    result = numbers.read_numbers(tmp_path)
+    assert result["ablation"]["file"] == local.name and result["ablation_secondary"] is None

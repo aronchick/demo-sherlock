@@ -284,18 +284,25 @@ def test_ablation_artifacts_record_ollama_runtime_and_feed_numbers() -> None:
         assert payload["model_server"]["name"] == "Ollama"
         assert payload["model_server"]["host"] == "laptop"
 
+    # Both runs are checked in: the Brev H100 vLLM run leads the card, the local
+    # Ollama run is the secondary line, each from its summary's reference row.
     nums = read_numbers(repo_root)
-    assert nums["ablation"] is not None
-    assert nums["ablation"]["config"] == "nemotron_lightning"
-    summary = json.loads((results_dir / "ablation_summary.json").read_text())
-    reference = next(row for row in summary["results"] if row["ablation_id"] == "nemotron_lightning")
-    metrics = reference["summary_metrics"]
-    assert nums["ablation"]["file"] == "ablation_summary.json"
-    assert nums["ablation"]["tasks"] == metrics["num_tasks"]
-    assert nums["ablation"]["task_success"] == metrics["task_success"]
-    assert nums["ablation"]["tool_call_validity"] == metrics["tool_call_validity"]
-    assert nums["ablation"]["runtime"] == "local_ollama"
-    assert nums["ablation"]["model_server_label"] == "Ollama"
+    for key, directory, runtime, label, where in (
+        ("ablation", results_dir / "brev_vllm", "brev_vllm", "vLLM", "Brev · vLLM"),
+        ("ablation_secondary", results_dir, "local_ollama", "Ollama", "local · Ollama"),
+    ):
+        result = nums[key]
+        assert result is not None and result["config"] == "nemotron_lightning", key
+        summary = json.loads((directory / "ablation_summary.json").read_text())
+        reference = next(row for row in summary["results"] if row["ablation_id"] == "nemotron_lightning")
+        metrics = reference["summary_metrics"]
+        assert result["file"] == (directory / "ablation_summary.json").relative_to(results_dir).as_posix()
+        assert result["tasks"] == metrics["num_tasks"]
+        assert result["task_success"] == metrics["task_success"]
+        assert result["tool_call_validity"] == metrics["tool_call_validity"]
+        assert result["runtime"] == runtime
+        assert result["model_server_label"] == label
+        assert result["measured_on"] == where
 
 
 def test_brev_vllm_ablation_artifacts_record_vllm_runtime() -> None:

@@ -282,8 +282,12 @@ body[data-mode="live"] .mode b { color: var(--ok); }
 .measured dd span { flex: 0 1 auto; min-width: 0; color: var(--text-dim); overflow: hidden; text-overflow: ellipsis; }
 .measured dd i { font-style: normal; }
 .measured dd output { flex: none; max-width: 80%; margin-left: auto; overflow: hidden; text-overflow: ellipsis; }
+.measured dd[hidden] { display: none; }  /* author display: flex would beat the UA [hidden] rule */
 @container measured (max-width: 379px) {
   .measured dd i { display: none; }  /* the → in the value still reads before → after */
+}
+@container measured (max-height: 265px) {
+  .measured [data-rank="4"] { display: none; }  /* the full card with the secondary Gym line is 265px */
 }
 @container measured (max-height: 250px) {
   .measured { gap: 4px; padding: 7px 12px; }

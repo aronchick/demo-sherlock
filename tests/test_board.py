@@ -146,12 +146,12 @@ def test_every_measured_group_names_its_runtime(tmp_path, monkeypatch):
         "ablation": {"config": "nemotron_lightning", "tasks": 8, "task_success": 0.875, "tool_call_validity": 1.0,
                      "measured_on": "local · Ollama", "file": "a.json"},
         "scout": {"source": "coco", "split": "val", "boxes": 104, "before_precision": 0.9048, "after_precision": None,
-                  "before_recall": 0.1827, "after_recall": None, "measured_on": "local · mps", "file": "s.json"},
+                  "before_recall": 0.1827, "after_recall": None, "measured_on": "local · MPS", "file": "s.json"},
     }
     shown = run_numbers_js(page, local)
-    assert shown["number-director"] == ["Director", " · C8 · 8/8 OK", "runtime not recorded"]
+    assert shown["number-director"] == ["Director", " · C8 · 8/8", "runtime not recorded"]
     assert shown["number-ablation"] == ["NeMo Gym", " · 8 tasks", "local · Ollama"]
-    assert shown["number-scout"] == ["Scout", " · weapon · coco val n=104", "local · mps"]
+    assert shown["number-scout"] == ["Scout", " · weapon · coco val n=104", "local · MPS"]
     assert shown["number-precision"] == "90.5% → not measured"
     assert "vLLM" not in json.dumps(shown)
     brev = run_numbers_js(page, {"director": {**director, "measured_on": "brev-l40s · vLLM"}, "ablation": None, "scout": None})

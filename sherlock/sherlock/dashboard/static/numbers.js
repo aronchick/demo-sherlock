@@ -47,7 +47,7 @@ function renderMeasurements(data) {
   const scout = data.scout;
 
   resultHeading('number-director', 'Director', director
-    ? `C${director.concurrency} · ${director.succeeded}/${director.attempted} OK` : '', director);
+    ? `C${director.concurrency} · ${director.succeeded}/${director.attempted}` : '', director);
   measurementText('number-latency', director
     ? measuredNumber(director.p50_ms) + ' / ' + measuredNumber(director.p95_ms, ' ms')
     : NOT_MEASURED);

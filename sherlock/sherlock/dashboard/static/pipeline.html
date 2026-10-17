@@ -10,9 +10,8 @@
   :root {
     --bg: #171c23; --panel: #1f2630; --line: #2d3744;
     --ink: #e9edf1; --dim: #8894a3;
-    --scout: #6fb1e6; --director: #e8a33d; --tool: #c9cfd6; --analyst: #8fd19e; --verifier: #f08c8c;
-    --ok: #8fd19e; --bad: #f08c8c;
-    --laptop: rgba(111,177,230,.06); --cloud: rgba(232,163,61,.06);
+    --scout: #6fb1e6; --director: #e8a33d; --analyst: #8fd19e; --verifier: #f08c8c;
+    --weapon: #ff7a59; --benign: #7f8b99; --ok: #8fd19e; --bad: #f08c8c;
   }
   * { box-sizing: border-box; }
   html, body { height: 100%; margin: 0; overflow: hidden; background: var(--bg); color: var(--ink);
@@ -27,7 +26,9 @@
   header .ratio span { color: var(--dim); font-size: 13px; }
   main { display: grid; grid-template-columns: minmax(0,1.2fr) minmax(0,1fr); gap: 12px; min-height: 0; }
   .left { display: grid; grid-template-rows: minmax(0,1.7fr) minmax(0,1fr); gap: 12px; min-height: 0; }
-  .frame { position: relative; background: #000; border-radius: 8px; overflow: hidden; min-height: 0; border: 1px solid var(--line); }
+  .frame { position: relative; background: #000; border-radius: 8px; overflow: hidden; min-height: 0; border: 1px solid var(--line); transition: border-color .3s, box-shadow .3s; }
+  .frame.alert { border-color: var(--weapon); box-shadow: 0 0 0 1px var(--weapon), 0 0 28px rgba(255,122,89,.35); animation: alertpulse 1.2s ease-in-out 3; }
+  @keyframes alertpulse { 50% { box-shadow: 0 0 0 1px var(--weapon), 0 0 48px rgba(255,122,89,.6); } }
   .frame img { width: 100%; height: 100%; object-fit: contain; display: block; }
   .frame .tag { position: absolute; left: 10px; top: 8px; font-size: 11px; letter-spacing: .12em; text-transform: uppercase;
     color: var(--dim); background: rgba(23,28,35,.7); padding: 3px 7px; border-radius: 4px; }
@@ -36,8 +37,11 @@
   .frame .cover { position: absolute; inset: 0; background: rgba(10,12,15,.88); display: none; align-items: center; justify-content: center;
     color: var(--dim); font-size: 13px; letter-spacing: .1em; text-transform: uppercase; }
   .frame.covered .cover { display: flex; }
+  #wideFrame .tag { top: auto; bottom: 8px; }
+  #wideFrame .stamp { top: auto; bottom: 10px; }
   #cropFrame img { transition: transform .55s cubic-bezier(.2,.8,.2,1), filter .55s; transform-origin: center; }
   #cropFrame.iris img { transform: scale(1.5); filter: blur(5px); transition: none; }
+  #cropFrame.sealed img { filter: blur(14px) saturate(.4); }
   #cropFrame.flash::after, #wideFrame.flash::after { content: ""; position: absolute; inset: 0; background: #fff; animation: flash .45s ease-out forwards; pointer-events: none; }
   @keyframes flash { from { opacity: .55; } to { opacity: 0; } }
   .caption { position: absolute; left: 0; right: 0; bottom: 0; padding: 8px 12px; font-size: 13px; color: var(--ink);
@@ -48,6 +52,8 @@
     opacity: 0; transform: rotate(-8deg) scale(1.6); transition: opacity .25s, transform .25s cubic-bezier(.2,1.4,.4,1); }
   .stamp.on { opacity: 1; transform: rotate(-8deg) scale(1); }
   .stamp.ok { color: var(--ok); border-color: var(--ok); } .stamp.bad { color: var(--bad); border-color: var(--bad); }
+  .stamp.alert { color: var(--weapon); border-color: var(--weapon); font-size: 15px; }
+  .stamp.quiet { color: var(--benign); border-color: var(--benign); }
   .topo { position: relative; border-radius: 8px; min-height: 0; border: 1px solid var(--line); background: var(--panel); }
   footer { display: flex; align-items: center; gap: 8px; min-width: 0; }
   footer .stat { color: var(--dim); font-size: 12px; white-space: nowrap; }
@@ -72,11 +78,12 @@
       <div class="frame" id="wideFrame">
         <img id="wide" src="/stream/wide" alt="Live wide view">
         <span class="tag"><i></i>live · laptop</span>
+        <div class="stamp" id="wideStamp">alert</div>
         <div class="cover">lens covered</div>
       </div>
       <div class="frame" id="cropFrame">
         <img id="crop" src="/stream/crop" alt="Zoomed crop">
-        <span class="tag">zoom</span>
+        <span class="tag" id="cropTag">zoom</span>
         <div class="stamp" id="stamp">confirmed</div>
         <div class="caption" id="caption"></div>
       </div>
@@ -87,6 +94,8 @@
     <span class="stat">frames <b id="frames">0</b></span>
     <span class="stat">investigations <b id="investigations">0</b></span>
     <span class="stat">VLM calls <b id="vlm_calls">0</b></span>
+    <span class="stat">alerts <b id="alerts">0</b></span>
+    <span class="stat">ignored <b id="ignored">0</b></span>
     <span class="stat">recovered <b id="recoveries">0</b></span>
     <span class="stat">verified <b id="confirmed">0</b> / <b id="rejected">0</b></span>
     <span class="sp"></span>
@@ -100,33 +109,41 @@
 <script>
 'use strict';
 // ---------------------------------------------------------------------------
-// Everything below is driven by the existing SSE stream. Events arrive in bursts
-// (mock tools answer in a few ms), so they are turned into "beats" and played
-// back at a pace a human can follow. Pixels for the flying cards come from the
-// MJPEG <img> elements via drawImage, so what moves through the topology is
-// the actual crop the models saw.
+// Driven entirely by the existing SSE stream. Events arrive in bursts (mock
+// tools answer in a few ms), so each one becomes a "beat" played back at a pace
+// a human can follow. Nothing here hardcodes the tool chain: each tool event is
+// read for what it is (data.tool, data.result, the bbox in the message), so a
+// benign ignore, a weapon chain with a face crop, or an unknown object all play
+// out from the stream. Pixels for the flying cards come from the MJPEG <img>
+// elements via drawImage, so what moves through the topology is the real crop.
+// What crosses the laptop/cloud line: a metadata ticket to the Director, and
+// the zoomed crop(s) to the Analyst. The face crop is sealed straight into the
+// bucket: stored evidence, never analyzed, never labelled.
 // ---------------------------------------------------------------------------
 const $ = id => document.getElementById(id);
 const fx = $('fx'), ctx = fx.getContext('2d');
 const wideImg = $('wide'), cropImg = $('crop');
-const COLORS = { scout: '#6fb1e6', director: '#e8a33d', analyst: '#8fd19e', verifier: '#f08c8c', bad: '#f08c8c', dim: '#8894a3', ink: '#e9edf1', local: 'rgba(111,177,230,.45)' };
+const C = { scout: '#6fb1e6', director: '#e8a33d', analyst: '#8fd19e', verifier: '#f08c8c', weapon: '#ff7a59', benign: '#7f8b99',
+  bad: '#f08c8c', dim: '#8894a3', ink: '#e9edf1', local: 'rgba(111,177,230,.45)' };
+const threatColor = t => t === 'weapon' ? C.weapon : t === 'benign' ? C.benign : C.scout;
 
 // ---- layout ----------------------------------------------------------------
 const NODE_DEFS = [
-  { id: 'scout',    side: 'laptop', fx: 0.24, fy: 0.16, label: 'scout',    sub: 'YOLO nano · 10 ms',   color: COLORS.scout },
-  { id: 'camera',   side: 'laptop', fx: 0.24, fy: 0.52, label: 'camera',   sub: 'pan · tilt · zoom',    color: COLORS.scout },
-  { id: 'director', side: 'cloud',  fx: 0.75, fy: 0.16, label: 'director', sub: 'Nemotron · decides',   color: COLORS.director },
-  { id: 'analyst',  side: 'cloud',  fx: 0.75, fy: 0.52, label: 'analyst',  sub: 'VLM · reads the crop', color: COLORS.analyst },
-  { id: 'verifier', side: 'cloud',  fx: 0.75, fy: 0.74, label: 'verifier', sub: 'VLM · second opinion', color: COLORS.verifier },
-  { id: 'bucket',   side: 'cloud',  fx: 0.75, fy: 0.925, label: 'bucket',  sub: 'S3 · evidence',        color: COLORS.dim, shelf: true },
+  { id: 'scout',    fx: 0.24, fy: 0.16,  label: 'scout',    sub: 'YOLO nano · 10 ms',   color: C.scout },
+  { id: 'camera',   fx: 0.24, fy: 0.52,  label: 'camera',   sub: 'pan · tilt · zoom',    color: C.scout },
+  { id: 'director', fx: 0.75, fy: 0.16,  label: 'director', sub: 'Nemotron · decides',   color: C.director },
+  { id: 'analyst',  fx: 0.75, fy: 0.52,  label: 'analyst',  sub: 'VLM · reads the crop', color: C.analyst },
+  { id: 'verifier', fx: 0.75, fy: 0.74,  label: 'verifier', sub: 'VLM · second opinion', color: C.verifier },
+  { id: 'bucket',   fx: 0.75, fy: 0.925, label: 'bucket',   sub: 'S3 · evidence',        color: C.dim, shelf: true },
 ];
 const EDGE_DEFS = {
-  frames:  { from: 'camera',   to: 'scout',    bend: 0,    color: COLORS.local },
-  uplink:  { from: 'scout',    to: 'director', bend: -0.12, color: COLORS.scout },
-  lookat:  { from: 'director', to: 'camera',   bend: 0.18,  color: COLORS.director },
-  crop:    { from: 'camera',   to: 'analyst',  bend: 0.10,  color: COLORS.analyst },
-  judge:   { from: 'analyst',  to: 'verifier', bend: 0,     color: COLORS.verifier },
-  store:   { from: 'verifier', to: 'bucket',   bend: 0,     color: COLORS.dim },
+  frames:  { from: 'camera',   to: 'scout',    bend: 0,     color: C.local },
+  uplink:  { from: 'scout',    to: 'director', bend: -0.12, color: C.scout },
+  lookat:  { from: 'director', to: 'camera',   bend: 0.18,  color: C.director },
+  crop:    { from: 'camera',   to: 'analyst',  bend: 0.10,  color: C.analyst },
+  seal:    { from: 'camera',   to: 'bucket',   bend: 0.22,  color: C.dim },
+  judge:   { from: 'analyst',  to: 'verifier', bend: 0,     color: C.verifier },
+  store:   { from: 'verifier', to: 'bucket',   bend: 0,     color: C.dim },
 };
 const L = { nodes: {}, edges: {}, r: 26, topo: null, divider: 0, shelf: null };
 
@@ -139,16 +156,15 @@ function layout() {
   L.topo = t;
   L.r = Math.max(18, Math.min(30, t.width * 0.058));
   L.divider = t.left + t.width * 0.495;
-  for (const n of NODE_DEFS) L.nodes[n.id] = { ...n, x: t.left + t.width * n.fx, y: t.top + t.height * n.fy, glow: 0, tint: null };
-  const b = L.nodes.bucket;
+  for (const n of NODE_DEFS) L.nodes[n.id] = { ...n, x: t.left + t.width * n.fx, y: t.top + t.height * n.fy, glow: 0, tint: null, badge: null };
   L.shelf = { w: Math.min(t.width * 0.42, 260), h: L.r * 2.1 };
-  b.y = t.top + t.height - L.shelf.h / 2 - 14;
+  L.nodes.bucket.y = t.top + t.height - L.shelf.h / 2 - 14;
   for (const [k, e] of Object.entries(EDGE_DEFS)) {
     const a = L.nodes[e.from], c = L.nodes[e.to];
     const mx = (a.x + c.x) / 2, my = (a.y + c.y) / 2;
     const dx = c.x - a.x, dy = c.y - a.y, len = Math.hypot(dx, dy) || 1;
-    const nx = -dy / len, ny = dx / len;                   // perpendicular
-    L.edges[k] = { ...e, ax: a.x, ay: a.y, cx: mx + nx * e.bend * len, cy: my + ny * e.bend * len, bx: c.x, by: c.y, len, hot: 0 };
+    const nx = -dy / len, ny = dx / len;
+    L.edges[k] = { ...e, ax: a.x, ay: a.y, cx: mx + nx * e.bend * len, cy: my + ny * e.bend * len, bx: c.x, by: c.y, len, hot: 0, tint: null };
   }
 }
 addEventListener('resize', layout);
@@ -157,14 +173,9 @@ function edgePoint(e, t) {
   const u = 1 - t;
   return { x: u * u * e.ax + 2 * u * t * e.cx + t * t * e.bx, y: u * u * e.ay + 2 * u * t * e.cy + t * t * e.by };
 }
-// Trim the path so particles start and end at the node rim, not the centre.
-function trimmed(e, t) {
-  const pad = (L.r + 4) / e.len;
-  return edgePoint(e, pad + t * (1 - 2 * pad));
-}
+function trimmed(e, t) { const pad = (L.r + 4) / e.len; return edgePoint(e, pad + t * (1 - 2 * pad)); }
 
 // ---- video geometry ----------------------------------------------------------
-// Scout boxes are in wide-frame pixels; the <img> is letterboxed with object-fit.
 function imgMap(img) {
   const r = img.getBoundingClientRect();
   const nw = img.naturalWidth || 1280, nh = img.naturalHeight || 720;
@@ -179,12 +190,10 @@ function bboxToPage(img, bb) {
 function zoomWindow(bb, nw, nh) {
   const bw = Math.max(bb[2] - bb[0], 1), bh = Math.max(bb[3] - bb[1], 1);
   const z = Math.max(1, Math.min(4, 0.8 * Math.min(nw / bw, nh / bh)));
-  const cw = nw / z, ch = nh / z;
-  const cx = (bb[0] + bb[2]) / 2, cy = (bb[1] + bb[3]) / 2;
+  const cw = nw / z, ch = nh / z, cx = (bb[0] + bb[2]) / 2, cy = (bb[1] + bb[3]) / 2;
   const x0 = Math.min(Math.max(cx - cw / 2, 0), nw - cw), y0 = Math.min(Math.max(cy - ch / 2, 0), nh - ch);
   return [x0, y0, x0 + cw, y0 + ch];
 }
-// Lift pixels off a live stream. Returns a canvas or null if the stream is not up yet.
 function grab(img, bb, size = 160) {
   const nw = img.naturalWidth, nh = img.naturalHeight;
   if (!nw || !nh) return null;
@@ -200,24 +209,23 @@ function grab(img, bb, size = 160) {
 // ---- animated state ----------------------------------------------------------
 const S = {
   particles: [], cards: [], bursts: [], shelf: [],
-  box: null,          // { bb, color, alpha } on the wide feed
-  zoom: null,         // { from, to, t } zoom window animating on the wide feed
-  flash: 0, sweep: 0, frames: 0, tick: 0, ambient: 0.6,
-  latency: {},        // node id -> { ms, t }
+  boxes: [],        // [{ bb, color, alpha, dash, label }] on the wide feed
+  zoom: null, docked: null,
+  frames: 0, ambient: 0.6, latency: {},
 };
 const now = () => performance.now();
 const ease = t => t < .5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
 const easeOut = t => 1 - Math.pow(1 - t, 3);
+const wait = ms => new Promise(r => setTimeout(r, ms));
 
 function flow(edge, ms, color) {
   const e = L.edges[edge];
   e.hot = Math.max(e.hot, now() + ms);
-  if (color) e.tint = color;
-  // seed immediately so the stream reads as a burst, not a trickle
+  e.tint = color || null;
   for (let i = 0; i < 6; i++) spawnParticle(e, Math.random() * 0.15);
 }
 function spawnParticle(e, t0 = 0) {
-  S.particles.push({ e, t: t0, v: 0.0045 + Math.random() * 0.004, j: (Math.random() - .5) * 10, size: 1.2 + Math.random() * 1.8, a: 1 });
+  S.particles.push({ e, t: t0, v: 0.0045 + Math.random() * 0.004, j: (Math.random() - .5) * 10, size: 1.2 + Math.random() * 1.8 });
 }
 function burst(x, y, color, n = 26) {
   for (let i = 0; i < n; i++) {
@@ -225,17 +233,33 @@ function burst(x, y, color, n = 26) {
     S.bursts.push({ x, y, vx: Math.cos(ang) * sp, vy: Math.sin(ang) * sp, a: 1, color, size: 1.5 + Math.random() * 2 });
   }
 }
-function glow(id, amount = 1, tint) { const n = L.nodes[id]; n.glow = Math.max(n.glow, amount); if (tint) n.tint = tint; }
+function glow(id, amount = 1, tint) { const n = L.nodes[id]; n.glow = Math.max(n.glow, amount); n.tint = tint || null; }
+function badge(id, text, color, ms = 2600) { const n = L.nodes[id]; n.badge = { text, color, until: now() + ms }; }
 function latency(id, ms) { if (ms) S.latency[id] = { ms: Math.round(ms), t: now() }; }
-
-// A card is a bitmap travelling through a list of page-space waypoints.
-function sendCard(bitmap, points, ms, opts = {}) {
-  return new Promise(res => {
-    S.cards.push({ bmp: bitmap, pts: points, t0: now(), ms, w: opts.w || 64, done: res, stamp: opts.stamp || null, color: opts.color || COLORS.ink });
-  });
-}
 function nodeXY(id) { const n = L.nodes[id]; return { x: n.x, y: n.y }; }
 function centerOf(el) { const r = el.getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; }
+function sendCard(bmp, points, ms, o = {}) {
+  return new Promise(res => S.cards.push({ bmp, pts: points, t0: now(), ms, w: o.w || 64, done: res,
+    text: o.text || null, color: o.color || C.ink, blur: !!o.blur, stamp: o.stamp === undefined ? null : o.stamp }));
+}
+function flash(el) { el.classList.remove('flash'); void el.offsetWidth; el.classList.add('flash'); }
+function setStamp(el, text, cls) { el.textContent = text; el.className = 'stamp' + (cls ? ' on ' + cls : ''); }
+function caption(text) { const c = $('caption'); c.textContent = text; c.classList.toggle('on', !!text); }
+function shelfSlot(i) {
+  const b = L.nodes.bucket, sh = L.shelf, cell = (sh.w - 16) / 8;
+  return { x: b.x - sh.w / 2 + 8 + cell * i + cell / 2, y: b.y, w: cell - 4, h: sh.h - 14 };
+}
+function shelve(item) {
+  S.shelf.push(item);
+  if (S.shelf.length > 8) S.shelf.shift();
+}
+// Stored evidence, when the server exposes it, replaces the client grab (progressive; 404 is fine).
+function loadEvidence(item, incident, name) {
+  if (!incident || !name) return;
+  const img = new Image();
+  img.onload = () => { item.bmp = img; };
+  img.src = `/evidence/${encodeURIComponent(incident)}/${name}.jpg`;
+}
 
 // ---- beats: the choreography queue --------------------------------------------
 const Q = []; let playing = false;
@@ -245,27 +269,54 @@ async function drain() {
   while (Q.length) { try { await Q.shift()(); } catch (e) { console.error(e); } }
   playing = false;
 }
-const wait = ms => new Promise(r => setTimeout(r, ms));
 
-let current = { card: null, bb: null, cropBmp: null, verdict: null };
+// Per-incident memory, filled from events only.
+let cur = { bb: null, head: null, threat: 'unknown', label: '', color: C.scout, card: null, crop: null, face: null, verdict: null, looks: 0 };
 
+function toolName(ev) { return (ev.data && ev.data.tool) || ((ev.msg || '').match(/^([a-z_]+)/) || [])[1] || ''; }
+function bboxIn(ev) {
+  const d = ev.data || {};
+  if (Array.isArray(d.bbox) && d.bbox.length === 4) return d.bbox;
+  const m = (ev.msg || '').match(/bbox=\[([^\]]+)\]/);
+  return m ? m[1].split(',').map(Number) : null;
+}
+const same = (a, b) => a && b && a.every((v, i) => Math.abs(v - b[i]) < 2);
+
+let pendingScout = null;
 function onScout(ev) {
-  const bb = ev.data.bbox;
+  const d = ev.data || {};
+  if (!d.bbox) return;
+  // The second camera reports the same object a few ms later and the orchestrator
+  // drops it as a duplicate; hold the beat so a dropped detection never lifts a card.
+  if (pendingScout) { clearTimeout(pendingScout.timer); playScout(pendingScout.ev); }   // a new one flushes the last
+  pendingScout = { ev, key: `${d.label} on ${d.camera}`, timer: setTimeout(() => { pendingScout = null; playScout(ev); }, 150) };
+}
+function playScout(ev) {
+  const d = ev.data || {};
+  const bb = d.bbox;
+  const threat = d.threat || 'unknown', color = threatColor(threat);
   beat(async () => {
-    current = { card: grab(wideImg, bb), bb, cropBmp: null, verdict: null };
-    S.box = { bb, color: COLORS.scout, alpha: 1 };
-    S.zoom = null;
-    S.flash = 1; $('wideFrame').classList.remove('flash'); void $('wideFrame').offsetWidth; $('wideFrame').classList.add('flash');
-    $('stamp').classList.remove('on'); $('caption').classList.remove('on');
+    cur = { bb, head: d.head || null, person: d.person || null, threat, label: d.label || '', color,
+      card: grab(wideImg, bb), crop: null, face: null, verdict: null, looks: 0, incident: null };
+    S.boxes = [{ bb, color, alpha: 1, label: (d.label || '').toUpperCase(), weight: threat === 'weapon' ? 2.5 : 2 }];
+    if (d.person) S.boxes.push({ bb: d.person, color: hexA(C.ink, .55), alpha: 1, weight: 1 });
+    if (d.head) S.boxes.push({ bb: d.head, color: C.director, alpha: 1, dash: true, weight: 1 });
+    S.zoom = null; S.docked = null;
+    flash($('wideFrame')); $('wideFrame').classList.remove('alert');
+    setStamp($('stamp'), '', ''); setStamp($('wideStamp'), '', ''); caption('');
+    $('cropFrame').classList.remove('sealed'); $('cropTag').textContent = 'zoom';
+    glow('scout', 1, color); latency('scout', ev.latency_ms);
     const p = bboxToPage(wideImg, bb);
-    glow('scout', 1); latency('scout', ev.latency_ms);
-    await sendCard(current.card, [{ x: p.x + p.w / 2, y: p.y + p.h / 2 }, nodeXY('scout')], 650, { w: 72 });
-    burst(L.nodes.scout.x, L.nodes.scout.y, COLORS.scout, 14);
+    const dock = { x: L.nodes.scout.x - L.r - 34, y: L.nodes.scout.y };
+    await sendCard(cur.card, [{ x: p.x + p.w / 2, y: p.y + p.h / 2 }, dock], 650, { w: 72, color });
+    S.docked = { bmp: cur.card, ...dock, alpha: 1, color };            // the pixels stay on the laptop
+    burst(L.nodes.scout.x, L.nodes.scout.y, color, 14);
   });
-  beat(async () => {                       // only the crop crosses the line
-    flow('uplink', 900, COLORS.scout);
+  beat(async () => {                                                    // only a ticket crosses the line
+    flow('uplink', 850, color);
     glow('director', 0.6);
-    await sendCard(current.card, [nodeXY('scout'), edgePoint(L.edges.uplink, 0.5), nodeXY('director')], 950, { w: 56 });
+    await sendCard(null, [nodeXY('scout'), edgePoint(L.edges.uplink, 0.5), nodeXY('director')], 900,
+      { text: `${cur.label || 'object'} · ${threat}`, color });
     glow('director', 1);
   });
 }
@@ -273,95 +324,142 @@ function onDirector(ev) {
   const m = ev.msg || '';
   beat(async () => {
     glow('director', 1); latency('director', ev.latency_ms);
-    if (/failed, trying next|unreachable|budget/i.test(m)) burst(L.nodes.director.x, L.nodes.director.y, COLORS.bad, 20);
+    if (/benign/i.test(m) && /ignore/i.test(m)) badge('director', 'ignore', C.benign);
+    if (/recovering|failed|unreachable|budget/i.test(m)) burst(L.nodes.director.x, L.nodes.director.y, C.bad, 20);
     await wait(/->|look_at|snapshot/i.test(m) ? 350 : 500);
   });
 }
 function onTool(ev) {
-  const m = ev.msg || '';
-  if (/FAILED|error/i.test(m)) {
+  const m = ev.msg || '', name = toolName(ev), d = ev.data || {};
+  if (/refused/i.test(m)) {                                             // benign: the snapshot is refused, no VLM call
+    beat(async () => { badge('camera', 'no VLM call', C.benign); glow('camera', .6, C.benign); await wait(500); });
+    return;
+  }
+  if (/FAILED|error|corrupted/i.test(m)) {
     beat(async () => {
-      const where = /snapshot/.test(m) ? 'analyst' : 'camera';
-      const e = /snapshot/.test(m) ? L.edges.crop : L.edges.lookat;
+      const where = name === 'snapshot' ? 'analyst' : name === 'verify' ? 'verifier' : 'camera';
+      const e = name === 'snapshot' ? L.edges.crop : L.edges.lookat;
       const p = edgePoint(e, 0.55);
-      burst(p.x, p.y, COLORS.bad, 40);
-      glow(where, 1, COLORS.bad);
-      if (S.box) S.box.color = COLORS.bad;
+      burst(p.x, p.y, /corrupted/i.test(m) ? C.director : C.bad, 40);
+      glow(where, 1, C.bad); badge(where, /corrupted/i.test(m) ? 'bad args' : 'failed', C.bad, 1800);
+      for (const b of S.boxes) b.flashColor = C.bad;
       await wait(800);
-      if (S.box) S.box.color = COLORS.scout;
+      for (const b of S.boxes) b.flashColor = null;
       L.nodes[where].tint = null;
     });
     return;
   }
-  if (/^look_at/.test(m)) {
-    beat(async () => {                     // instruction comes back down; the camera obeys
-      flow('lookat', 800, COLORS.director);
-      latency('camera', ev.latency_ms);
+  if (name === 'look_at') {
+    const bb = bboxIn(ev) || (cur.looks === 0 ? cur.bb : cur.head);
+    beat(async () => {
+      const isHead = cur.head && same(bb, cur.head);
+      cur.looks++;
+      flow('lookat', 800, C.director); latency('camera', ev.latency_ms);
       await wait(380);
-      glow('camera', 1, COLORS.director);
-      const m2 = imgMap(wideImg);
-      const bb = (ev.data && ev.data.bbox) || current.bb;
-      if (bb) S.zoom = { from: [0, 0, m2.nw, m2.nh], to: zoomWindow(bb, m2.nw, m2.nh), t0: now(), ms: 700 };
-      const cf = $('cropFrame');
-      cf.classList.add('iris'); void cf.offsetWidth; cf.classList.remove('iris');
+      glow('camera', 1, C.director);
+      const mm = imgMap(wideImg);
+      if (bb) S.zoom = { from: S.zoom ? S.zoom.to : [0, 0, mm.nw, mm.nh], to: zoomWindow(bb, mm.nw, mm.nh), t0: now(), ms: 700, color: isHead ? C.director : cur.color };
+      $('cropTag').textContent = isHead ? 'zoom · face' : 'zoom';
+      $('cropFrame').classList.toggle('sealed', !!isHead);
+      const cf = $('cropFrame'); cf.classList.add('iris'); void cf.offsetWidth; cf.classList.remove('iris');
       await wait(600);
     });
+    return;
   }
-  if (/^snapshot/.test(m)) latency('camera', ev.latency_ms);
+  if (name === 'snapshot') {
+    latency('camera', ev.latency_ms);
+    const eid = d.result && d.result.evidence_id;
+    if (eid === 'face_crop' || /subject=.?face/.test(m)) {              // evidence only: sealed, never analyzed
+      beat(async () => {
+        cur.face = grab(cropImg, null, 200);
+        flash($('cropFrame'));
+        caption('face crop · stored as evidence · not analyzed');
+        await sendCard(cur.face, [centerOf(cropImg), nodeXY('camera')], 500, { w: 72, blur: true, color: C.dim });
+        flow('seal', 1100, C.dim);
+        const slot = shelfSlot(Math.min(S.shelf.length, 7));
+        await sendCard(cur.face, [nodeXY('camera'), edgePoint(L.edges.seal, 0.5), { x: slot.x, y: slot.y }], 1150, { w: 56, blur: true, color: C.dim });
+        const item = { bmp: cur.face, kind: 'face', color: C.dim };
+        shelve(item); cur.faceItem = item;
+        burst(slot.x, slot.y, C.dim, 10);
+        await wait(300);
+      });
+    }
+    return;
+  }
+  if (name === 'verify') latency('verifier', ev.latency_ms);
 }
 function onAnalyst(ev) {
-  beat(async () => {                       // the zoomed crop is the second (and last) thing to leave the laptop
-    current.cropBmp = grab(cropImg, null, 200) || current.card;
-    const cf = $('cropFrame'); cf.classList.remove('flash'); void cf.offsetWidth; cf.classList.add('flash');
-    await sendCard(current.cropBmp, [centerOf(cropImg), nodeXY('camera')], 500, { w: 72 });
-    flow('crop', 900, COLORS.analyst);
+  beat(async () => {                                                    // the zoomed crop is what leaves the laptop
+    cur.crop = grab(cropImg, null, 200) || cur.card;
+    flash($('cropFrame'));
+    await sendCard(cur.crop, [centerOf(cropImg), nodeXY('camera')], 500, { w: 72, color: cur.color });
+    flow('crop', 900, cur.color);
     glow('analyst', 0.6);
-    await sendCard(current.cropBmp, [nodeXY('camera'), edgePoint(L.edges.crop, 0.5), nodeXY('analyst')], 900, { w: 60 });
+    await sendCard(cur.crop, [nodeXY('camera'), edgePoint(L.edges.crop, 0.5), nodeXY('analyst')], 900, { w: 60, color: cur.color });
     glow('analyst', 1); latency('analyst', ev.latency_ms);
-    const cap = $('caption'); cap.textContent = ev.msg; cap.classList.add('on');
+    caption(ev.msg);
     await wait(650);
   });
 }
 function onVerifier(ev) {
   const ok = /^CONFIRMED/.test(ev.msg || '');
   beat(async () => {
-    flow('judge', 700, COLORS.verifier);
-    await sendCard(current.cropBmp || current.card, [nodeXY('analyst'), nodeXY('verifier')], 700, { w: 56 });
-    current.verdict = ok;
-    glow('verifier', 1, ok ? COLORS.analyst : COLORS.bad); latency('verifier', ev.latency_ms);
-    burst(L.nodes.verifier.x, L.nodes.verifier.y, ok ? COLORS.analyst : COLORS.bad, ok ? 18 : 34);
-    const st = $('stamp'); st.textContent = ok ? 'confirmed' : 'rejected'; st.className = 'stamp on ' + (ok ? 'ok' : 'bad');
+    flow('judge', 700, C.verifier);
+    await sendCard(cur.crop || cur.card, [nodeXY('analyst'), nodeXY('verifier')], 700, { w: 56, color: cur.color });
+    cur.verdict = ok;
+    glow('verifier', 1, ok ? C.analyst : C.bad); latency('verifier', ev.latency_ms);
+    burst(L.nodes.verifier.x, L.nodes.verifier.y, ok ? C.analyst : C.bad, ok ? 18 : 34);
+    setStamp($('stamp'), ok ? 'confirmed' : 'rejected', ok ? 'ok' : 'bad');
     await wait(700);
     L.nodes.verifier.tint = null;
   });
 }
 function onReport(ev) {
+  const d = ev.data || {}, action = d.action || 'log';
   beat(async () => {
-    flow('store', 700, COLORS.dim);
-    const bmp = current.cropBmp || current.card;
-    const b = L.nodes.bucket;
-    const slot = shelfSlot(Math.min(S.shelf.length, 7));
-    await sendCard(bmp, [nodeXY('verifier'), { x: slot.x, y: slot.y }], 750, { w: 48, stamp: current.verdict });
-    S.shelf.push({ bmp, ok: current.verdict });
-    if (S.shelf.length > 8) S.shelf.shift();
     latency('bucket', ev.latency_ms);
-    const cap = $('caption');
-    if (ev.data && ev.data.claim) { cap.textContent = ev.data.claim; cap.classList.add('on'); }
-    burst(slot.x, slot.y, COLORS.dim, 10);
+    const calls = d.vlm_calls !== undefined ? ` · ${d.vlm_calls} VLM call${d.vlm_calls === 1 ? '' : 's'}` : '';
+    if (action === 'ignore') {                                          // nothing stored, nothing analyzed
+      flow('lookat', 500, C.benign); glow('scout', .8, C.benign);
+      setStamp($('wideStamp'), 'ignored', 'quiet');
+      caption(`${d.label || cur.label || 'object'} · benign · ignored${calls}`);
+      if (S.docked) S.docked.fade = true;
+      for (const b of S.boxes) b.alpha = 0.99;
+      burst(L.nodes.scout.x - L.r - 34, L.nodes.scout.y, C.benign, 16);
+      await wait(900);
+      return;
+    }
+    const bmp = cur.crop || cur.card;
+    const color = action === 'alert' ? C.weapon : C.dim;
+    flow('store', 700, color);
+    const slot = shelfSlot(Math.min(S.shelf.length, 7));
+    await sendCard(bmp, [nodeXY('verifier'), { x: slot.x, y: slot.y }], 750, { w: 48, stamp: cur.verdict, color });
+    const item = { bmp, kind: action, color, ok: cur.verdict };
+    shelve(item);
+    const names = Array.isArray(d.evidence) ? d.evidence : [];
+    loadEvidence(item, d.incident, names.find(n => n !== 'face_crop'));
+    if (cur.faceItem) loadEvidence(cur.faceItem, d.incident, names.find(n => n === 'face_crop'));
+    burst(slot.x, slot.y, color, 10);
+    if (action === 'alert') {
+      $('wideFrame').classList.add('alert');
+      setStamp($('wideStamp'), 'alert', 'alert');
+      badge('bucket', 'alert', C.weapon, 4000);
+    } else {
+      setStamp($('wideStamp'), 'logged', 'quiet');
+    }
+    const verdict = d.verified === true ? ' · verified' : d.verified === false ? ' · not verified' : '';
+    caption(`${d.claim || ''}${verdict}${calls}`);
+    if (S.docked) S.docked.fade = true;
     await wait(500);
-    if (S.box) S.box.alpha = 0; S.zoom = null;
+    for (const b of S.boxes) b.alpha = 0.99;
+    S.zoom = null;
   });
-}
-function shelfSlot(i) {
-  const b = L.nodes.bucket, sh = L.shelf, cell = (sh.w - 16) / 8;
-  return { x: b.x - sh.w / 2 + 8 + cell * i + cell / 2, y: b.y, w: cell - 4, h: sh.h - 14 };
 }
 
 // ---- SSE ----------------------------------------------------------------------
 const es = new EventSource('/events');
 es.onmessage = e => {
-  const ev = JSON.parse(e.data);
-  const m = ev.msg || '';
+  const ev = JSON.parse(e.data), m = ev.msg || '';
   switch (ev.stage) {
     case 'scout': return onScout(ev);
     case 'director': return onDirector(ev);
@@ -371,7 +469,11 @@ es.onmessage = e => {
     case 'system':
       if (m.startsWith('REPORT')) return onReport(ev);
       if (/covered$/.test(m) && /^hero /.test(m)) $('wideFrame').classList.toggle('covered', !/uncovered/.test(m));
-      if (/will fail/.test(m)) { glow('camera', 1, COLORS.bad); setTimeout(() => L.nodes.camera.tint = null, 1200); }
+      if (/will fail|corrupted arguments/.test(m)) { glow('camera', 1, C.bad); badge('camera', /fail/.test(m) ? 'armed: fail' : 'armed: garbage', C.bad, 1500); }
+      if (/already handled/.test(m)) {
+        if (pendingScout && m.startsWith(pendingScout.key + ' ')) { clearTimeout(pendingScout.timer); pendingScout = null; }
+        badge('scout', 'duplicate', C.benign, 1500);
+      }
       return;
   }
 };
@@ -381,7 +483,7 @@ es.addEventListener('stats', e => {
   for (const k in s) { const el = $(k); if (el) el.textContent = s[k]; }
   $('avoided').textContent = s.vlm_calls_avoided;
   const d = s.frames - lastFrames; lastFrames = s.frames;
-  S.ambient = Math.min(1.4, 0.2 + d / 20);     // more frames per tick, denser local stream
+  S.ambient = Math.min(1.4, 0.2 + d / 20);
   S.frames = s.frames;
 });
 const post = url => fetch(url, { method: 'POST' });
@@ -393,37 +495,56 @@ async function toggleCover() {
 }
 
 // ---- render loop ----------------------------------------------------------------
+function hexA(hex, a) {
+  if (hex.startsWith('rgba')) return hex;
+  const n = parseInt(hex.slice(1), 16);
+  return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${a})`;
+}
 function roundRect(x, y, w, h, r) {
   ctx.beginPath(); ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r);
   ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath();
 }
-function drawCardImage(bmp, cx, cy, w, color, alpha = 1) {
-  const h = bmp ? w * bmp.height / bmp.width : w * 0.75;
+function drawCard(c, cx, cy, w, alpha = 1) {
+  if (c.text) {                                                          // a ticket: words, not pixels
+    ctx.save(); ctx.globalAlpha = alpha;
+    ctx.font = '500 10px "IBM Plex Mono"'; const tw = ctx.measureText(c.text).width + 16, th = 18;
+    ctx.shadowColor = 'rgba(0,0,0,.6)'; ctx.shadowBlur = 10; ctx.shadowOffsetY = 3;
+    ctx.fillStyle = '#0d1116'; roundRect(cx - tw / 2, cy - th / 2, tw, th, 9); ctx.fill();
+    ctx.shadowColor = 'transparent'; ctx.strokeStyle = c.color; ctx.lineWidth = 1.2; ctx.stroke();
+    ctx.fillStyle = c.color; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(c.text, cx, cy + 0.5);
+    ctx.restore(); return th;
+  }
+  const bmp = c.bmp, bw = bmp ? (bmp.naturalWidth || bmp.width) : 4, bh = bmp ? (bmp.naturalHeight || bmp.height) : 3;
+  const k = w / Math.max(bw, bh); w = bw * k; const h = bh * k;      // w bounds the longer side
   ctx.save(); ctx.globalAlpha = alpha;
   ctx.shadowColor = 'rgba(0,0,0,.6)'; ctx.shadowBlur = 14; ctx.shadowOffsetY = 4;
   ctx.fillStyle = '#0d1116'; roundRect(cx - w / 2 - 2, cy - h / 2 - 2, w + 4, h + 4, 4); ctx.fill();
   ctx.shadowColor = 'transparent';
-  if (bmp) ctx.drawImage(bmp, cx - w / 2, cy - h / 2, w, h);
-  ctx.strokeStyle = color; ctx.lineWidth = 1.2; roundRect(cx - w / 2 - 2, cy - h / 2 - 2, w + 4, h + 4, 4); ctx.stroke();
+  if (bmp) {
+    if (c.blur) { ctx.save(); roundRect(cx - w / 2, cy - h / 2, w, h, 2); ctx.clip(); ctx.filter = 'blur(3px) saturate(.5)'; ctx.drawImage(bmp, cx - w / 2 - 3, cy - h / 2 - 3, w + 6, h + 6); ctx.restore(); }
+    else ctx.drawImage(bmp, cx - w / 2, cy - h / 2, w, h);
+  }
+  ctx.strokeStyle = c.color; ctx.lineWidth = 1.2;
+  if (c.blur) ctx.setLineDash([3, 3]);
+  roundRect(cx - w / 2 - 2, cy - h / 2 - 2, w + 4, h + 4, 4); ctx.stroke(); ctx.setLineDash([]);
+  if (c.stamp !== null && c.stamp !== undefined) { ctx.strokeStyle = c.stamp ? C.analyst : C.bad; ctx.lineWidth = 2; ctx.strokeRect(cx - w / 2, cy - h / 2, w, h); }
   ctx.restore();
   return h;
 }
 function drawTopo(t) {
   const T = L.topo, r = L.r;
-  // two halves with a hard boundary; the boundary is the story
   ctx.save();
   ctx.fillStyle = 'rgba(111,177,230,.045)'; roundRect(T.left + 1, T.top + 1, L.divider - T.left - 1, T.height - 2, 8); ctx.fill();
   ctx.fillStyle = 'rgba(232,163,61,.045)'; roundRect(L.divider, T.top + 1, T.right - L.divider - 1, T.height - 2, 8); ctx.fill();
   ctx.setLineDash([3, 6]); ctx.strokeStyle = 'rgba(233,237,241,.28)'; ctx.lineWidth = 1;
   ctx.beginPath(); ctx.moveTo(L.divider, T.top + 10); ctx.lineTo(L.divider, T.bottom - 10); ctx.stroke(); ctx.setLineDash([]);
-  ctx.font = '600 10px "IBM Plex Sans"'; ctx.textAlign = 'center'; ctx.textBaseline = 'top'; ctx.fillStyle = COLORS.dim;
+  ctx.font = '600 10px "IBM Plex Sans"'; ctx.textAlign = 'center'; ctx.textBaseline = 'top'; ctx.fillStyle = C.dim;
   ctx.fillText('L A P T O P', (T.left + L.divider) / 2, T.top + 10);
   ctx.fillText('C L O U D', (L.divider + T.right) / 2, T.top + 10);
   ctx.save(); ctx.translate(L.divider, (T.top + T.bottom) / 2); ctx.rotate(-Math.PI / 2);
   ctx.fillStyle = 'rgba(233,237,241,.4)'; ctx.font = '500 9px "IBM Plex Mono"';
   ctx.fillText('crops only · never the frame', 0, -4); ctx.restore();
 
-  // edges
   for (const e of Object.values(L.edges)) {
     const hot = e.hot > t;
     ctx.strokeStyle = hot ? e.tint || e.color : 'rgba(233,237,241,.09)'; ctx.lineWidth = hot ? 1.4 : 1;
@@ -432,20 +553,22 @@ function drawTopo(t) {
     for (let i = 1; i <= 24; i++) { const p = trimmed(e, i / 24); ctx.lineTo(p.x, p.y); }
     ctx.stroke(); ctx.globalAlpha = 1;
   }
-  // particles
   for (const p of S.particles) {
     const q = trimmed(p.e, p.t);
     const dx = p.e.bx - p.e.ax, dy = p.e.by - p.e.ay, len = Math.hypot(dx, dy) || 1;
     const px = q.x + (-dy / len) * p.j * Math.sin(p.t * 6), py = q.y + (dx / len) * p.j * Math.sin(p.t * 6);
-    ctx.globalAlpha = Math.min(1, p.a) * (1 - Math.abs(p.t - 0.5) * 0.4);
+    ctx.globalAlpha = 1 - Math.abs(p.t - 0.5) * 0.4;
     ctx.fillStyle = p.e.tint || p.e.color; ctx.beginPath(); ctx.arc(px, py, p.size, 0, Math.PI * 2); ctx.fill();
   }
   ctx.globalAlpha = 1;
-  // nodes
+  if (S.docked) {
+    drawCard({ bmp: S.docked.bmp, color: S.docked.color }, S.docked.x, S.docked.y, 44, S.docked.alpha);
+    if (S.docked.fade) { S.docked.alpha *= 0.93; if (S.docked.alpha < 0.03) S.docked = null; }
+  }
   ctx.textAlign = 'center';
   for (const n of Object.values(L.nodes)) {
     const col = n.tint || n.color;
-    if (n.shelf) { drawShelf(n, col); continue; }
+    if (n.shelf) { drawShelf(n, t); continue; }
     if (n.glow > 0.01) {
       const g = ctx.createRadialGradient(n.x, n.y, r * 0.6, n.x, n.y, r * 2.4);
       g.addColorStop(0, hexA(col, 0.35 * n.glow)); g.addColorStop(1, hexA(col, 0));
@@ -453,100 +576,108 @@ function drawTopo(t) {
     }
     ctx.fillStyle = '#141920'; ctx.beginPath(); ctx.arc(n.x, n.y, r, 0, Math.PI * 2); ctx.fill();
     ctx.strokeStyle = col; ctx.lineWidth = 1.5 + n.glow * 1.5; ctx.globalAlpha = 0.55 + n.glow * 0.45; ctx.stroke(); ctx.globalAlpha = 1;
-    if (n.id === 'scout') {                  // the always-on model: a sweep hand that never stops
-      const a = (t / 900) % (Math.PI * 2) * 1;
-      ctx.strokeStyle = COLORS.scout; ctx.lineWidth = 2; ctx.globalAlpha = 0.9;
+    if (n.id === 'scout') {
+      const a = (t / 900) % (Math.PI * 2);
+      ctx.strokeStyle = C.scout; ctx.lineWidth = 2; ctx.globalAlpha = 0.9;
       ctx.beginPath(); ctx.arc(n.x, n.y, r - 5, a, a + 0.9); ctx.stroke(); ctx.globalAlpha = 1;
-      ctx.fillStyle = COLORS.ink; ctx.font = '500 10px "IBM Plex Mono"'; ctx.textBaseline = 'middle';
+      ctx.fillStyle = C.ink; ctx.font = '500 10px "IBM Plex Mono"'; ctx.textBaseline = 'middle';
       ctx.fillText(String(S.frames), n.x, n.y + 1);
     } else if (n.id === 'camera') {
       ctx.strokeStyle = col; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(n.x, n.y, r * 0.42, 0, Math.PI * 2); ctx.stroke();
       ctx.beginPath(); ctx.arc(n.x, n.y, r * 0.16, 0, Math.PI * 2); ctx.fillStyle = col; ctx.fill();
-    } else {                                   // a model: three quiet bars that light up when it thinks
+    } else {
       for (let i = -1; i <= 1; i++) {
         const h = r * (0.35 + (n.glow > 0.05 ? 0.35 * Math.abs(Math.sin(t / 140 + i)) : 0.15 * (1 + i * 0.3)));
         ctx.fillStyle = hexA(col, 0.5 + n.glow * 0.5); ctx.fillRect(n.x + i * 7 - 2, n.y - h / 2, 4, h);
       }
     }
-    ctx.fillStyle = COLORS.ink; ctx.font = '600 11px "IBM Plex Sans"'; ctx.textBaseline = 'top';
+    ctx.fillStyle = C.ink; ctx.font = '600 11px "IBM Plex Sans"'; ctx.textBaseline = 'top';
     ctx.fillText(n.label.toUpperCase(), n.x, n.y + r + 7);
-    ctx.fillStyle = COLORS.dim; ctx.font = '10px "IBM Plex Sans"'; ctx.fillText(n.sub, n.x, n.y + r + 21);
+    ctx.fillStyle = C.dim; ctx.font = '10px "IBM Plex Sans"'; ctx.fillText(n.sub, n.x, n.y + r + 21);
     const lat = S.latency[n.id];
     if (lat && t - lat.t < 4000) {
       ctx.globalAlpha = Math.min(1, (4000 - (t - lat.t)) / 800);
-      ctx.fillStyle = col; ctx.font = '500 10px "IBM Plex Mono"'; ctx.textBaseline = 'top';
+      ctx.fillStyle = col; ctx.font = '500 10px "IBM Plex Mono"';
       ctx.fillText((lat.ms < 1 ? '<1' : lat.ms) + ' ms', n.x, n.y + r + 35); ctx.globalAlpha = 1;
     }
+    drawBadge(n, t);
     n.glow *= 0.965;
   }
   ctx.restore();
 }
-function drawShelf(n, col) {
+function drawBadge(n, t) {
+  if (!n.badge || n.badge.until < t) return;
+  const a = Math.min(1, (n.badge.until - t) / 500);
+  ctx.save(); ctx.globalAlpha = a; ctx.font = '600 9px "IBM Plex Sans Condensed"';
+  const text = n.badge.text.toUpperCase(), w = ctx.measureText(text).width + 12, h = 15;
+  const x = n.x + L.r * 0.7, y = n.y - L.r - 4;
+  ctx.fillStyle = '#0d1116'; roundRect(x, y, w, h, 3); ctx.fill();
+  ctx.strokeStyle = n.badge.color; ctx.lineWidth = 1; ctx.stroke();
+  ctx.fillStyle = n.badge.color; ctx.textAlign = 'left'; ctx.textBaseline = 'middle'; ctx.fillText(text, x + 6, y + h / 2 + 0.5);
+  ctx.restore();
+}
+function drawShelf(n, t) {
   const sh = L.shelf, x = n.x - sh.w / 2, y = n.y - sh.h / 2;
   ctx.fillStyle = '#141920'; roundRect(x, y, sh.w, sh.h, 6); ctx.fill();
-  ctx.strokeStyle = hexA(COLORS.dim, 0.7 + n.glow * 0.3); ctx.lineWidth = 1.5; ctx.stroke();
+  ctx.strokeStyle = hexA(C.dim, 0.7 + n.glow * 0.3); ctx.lineWidth = 1.5; ctx.stroke();
   for (let i = 0; i < 8; i++) {
     const s = shelfSlot(i), item = S.shelf[i];
     if (item && item.bmp) {
-      const k = Math.min(s.w / item.bmp.width, s.h / item.bmp.height);
-      const w = item.bmp.width * k, h = item.bmp.height * k;
-      ctx.drawImage(item.bmp, s.x - w / 2, s.y - h / 2, w, h);
-      ctx.strokeStyle = item.ok ? COLORS.analyst : COLORS.bad; ctx.lineWidth = 1; ctx.strokeRect(s.x - w / 2, s.y - h / 2, w, h);
+      drawCard({ bmp: item.bmp, color: item.color, blur: item.kind === 'face' }, s.x, s.y, Math.min(s.w, s.h) - 4, 1);
     } else {
       ctx.strokeStyle = 'rgba(233,237,241,.08)'; ctx.setLineDash([2, 3]); ctx.strokeRect(s.x - s.w / 2, s.y - s.h / 2, s.w, s.h); ctx.setLineDash([]);
     }
   }
-  ctx.fillStyle = COLORS.ink; ctx.font = '600 11px "IBM Plex Sans"'; ctx.textBaseline = 'bottom'; ctx.textAlign = 'left';
+  ctx.fillStyle = C.ink; ctx.font = '600 11px "IBM Plex Sans"'; ctx.textBaseline = 'bottom'; ctx.textAlign = 'left';
   ctx.fillText(n.label.toUpperCase(), x, y - 6);
-  ctx.fillStyle = COLORS.dim; ctx.font = '10px "IBM Plex Sans"'; ctx.textAlign = 'right';
+  ctx.fillStyle = C.dim; ctx.font = '10px "IBM Plex Sans"'; ctx.textAlign = 'right';
   ctx.fillText(n.sub, x + sh.w, y - 6); ctx.textAlign = 'center';
+  drawBadge({ ...n, x: x + sh.w - 30, y: y + 4 }, t);
   n.glow *= 0.965;
 }
 function drawFeed(t) {
   const m = imgMap(wideImg), R = m.r;
   if (!R.width) return;
   ctx.save(); ctx.beginPath(); ctx.rect(R.left, R.top, R.width, R.height); ctx.clip();
-  // the sweep: a soft band that says "every frame is being looked at"
   const sy = R.top + ((t / 2800) % 1) * (R.height + 80) - 40;
   const g = ctx.createLinearGradient(0, sy - 40, 0, sy + 40);
   g.addColorStop(0, 'rgba(111,177,230,0)'); g.addColorStop(0.5, 'rgba(111,177,230,.09)'); g.addColorStop(1, 'rgba(111,177,230,0)');
   ctx.fillStyle = g; ctx.fillRect(R.left, sy - 40, R.width, 80);
-  // viewfinder corners
   ctx.strokeStyle = 'rgba(233,237,241,.35)'; ctx.lineWidth = 1.5; const c = 14, pad = 10;
   for (const [x, y, sx, sy2] of [[R.left + pad, R.top + pad, 1, 1], [R.right - pad, R.top + pad, -1, 1], [R.left + pad, R.bottom - pad, 1, -1], [R.right - pad, R.bottom - pad, -1, -1]]) {
     ctx.beginPath(); ctx.moveTo(x, y + sy2 * c); ctx.lineTo(x, y); ctx.lineTo(x + sx * c, y); ctx.stroke();
   }
-  // zoom window converging on the target
   if (S.zoom) {
     const k = easeOut(Math.min(1, (t - S.zoom.t0) / S.zoom.ms));
     const bb = S.zoom.from.map((v, i) => v + (S.zoom.to[i] - v) * k);
     const p = bboxToPage(wideImg, bb);
-    ctx.setLineDash([6, 5]); ctx.strokeStyle = COLORS.director; ctx.lineWidth = 1.5; ctx.strokeRect(p.x, p.y, p.w, p.h); ctx.setLineDash([]);
+    ctx.setLineDash([6, 5]); ctx.strokeStyle = S.zoom.color || C.director; ctx.lineWidth = 1.5; ctx.strokeRect(p.x, p.y, p.w, p.h); ctx.setLineDash([]);
     ctx.fillStyle = 'rgba(0,0,0,.35)';
     ctx.fillRect(R.left, R.top, R.width, p.y - R.top); ctx.fillRect(R.left, p.y + p.h, R.width, R.bottom - p.y - p.h);
     ctx.fillRect(R.left, p.y, p.x - R.left, p.h); ctx.fillRect(p.x + p.w, p.y, R.right - p.x - p.w, p.h);
   }
-  // scout box
-  if (S.box && S.box.alpha > 0.01) {
-    const p = bboxToPage(wideImg, S.box.bb);
-    ctx.globalAlpha = S.box.alpha; ctx.strokeStyle = S.box.color; ctx.lineWidth = 2;
-    const pulse = 1 + 0.03 * Math.sin(t / 120);
+  for (const b of S.boxes) {
+    if (b.alpha < 0.02) continue;
+    const p = bboxToPage(wideImg, b.bb), color = b.flashColor || b.color;
+    ctx.globalAlpha = b.alpha; ctx.strokeStyle = color; ctx.lineWidth = b.weight || 2;
+    if (b.dash) ctx.setLineDash([4, 4]);
+    const pulse = b.dash ? 1 : 1 + 0.03 * Math.sin(t / 120);
     const w = p.w * pulse, h = p.h * pulse, x = p.x + (p.w - w) / 2, y = p.y + (p.h - h) / 2;
-    ctx.strokeRect(x, y, w, h);
-    ctx.fillStyle = hexA(S.box.color, 0.12); ctx.fillRect(x, y, w, h);
+    ctx.strokeRect(x, y, w, h); ctx.setLineDash([]);
+    if (!b.dash && b.label) {
+      ctx.fillStyle = hexA(color, 0.12); ctx.fillRect(x, y, w, h);
+      ctx.font = '600 10px "IBM Plex Sans Condensed"'; const tw = ctx.measureText(b.label).width + 10;
+      ctx.fillStyle = color; ctx.fillRect(x, y - 15, tw, 15);
+      ctx.fillStyle = '#141920'; ctx.textAlign = 'left'; ctx.textBaseline = 'middle'; ctx.fillText(b.label, x + 5, y - 7);
+    }
     ctx.globalAlpha = 1;
-    if (S.box.alpha < 1) S.box.alpha *= 0.9;
+    if (b.alpha < 1) b.alpha *= 0.9;
   }
+  S.boxes = S.boxes.filter(b => b.alpha >= 0.02);
   ctx.restore();
-}
-function hexA(hex, a) {
-  if (hex.startsWith('rgba')) return hex;
-  const n = parseInt(hex.slice(1), 16);
-  return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${a})`;
 }
 function step(t) {
   ctx.clearRect(0, 0, innerWidth, innerHeight);
-  // ambient: frames pouring from the camera into the scout, forever, never crossing the line
   if (Math.random() < S.ambient * 0.35) spawnParticle(L.edges.frames);
   for (const e of Object.values(L.edges)) if (e.hot > t && Math.random() < 0.6) spawnParticle(e);
   for (const p of S.particles) p.t += p.v;
@@ -559,17 +690,13 @@ function step(t) {
   drawTopo(t);
   for (const b of S.bursts) { ctx.globalAlpha = b.a; ctx.fillStyle = b.color; ctx.beginPath(); ctx.arc(b.x, b.y, b.size, 0, Math.PI * 2); ctx.fill(); }
   ctx.globalAlpha = 1;
-  // cards on top of everything
   for (const c of S.cards) {
     const k = ease(Math.min(1, (t - c.t0) / c.ms));
     const segs = c.pts.length - 1, f = k * segs, i = Math.min(segs - 1, Math.floor(f)), u = f - i;
     const a = c.pts[i], b = c.pts[i + 1];
     const x = a.x + (b.x - a.x) * u, y = a.y + (b.y - a.y) * u;
-    const scale = 1 - 0.25 * Math.sin(k * Math.PI);          // shrinks mid-flight: it is leaving
-    const h = drawCardImage(c.bmp, x, y, c.w * scale, c.color);
-    if (c.stamp !== null && c.stamp !== undefined) {
-      ctx.strokeStyle = c.stamp ? COLORS.analyst : COLORS.bad; ctx.lineWidth = 2; ctx.strokeRect(x - c.w * scale / 2, y - h / 2, c.w * scale, h);
-    }
+    const scale = c.text ? 1 : 1 - 0.25 * Math.sin(k * Math.PI);
+    drawCard(c, x, y, c.w * scale);
     if (k >= 1) { c.finished = true; c.done(); }
   }
   S.cards = S.cards.filter(c => !c.finished);

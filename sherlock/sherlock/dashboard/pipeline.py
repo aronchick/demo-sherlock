@@ -68,6 +68,11 @@ def topology_page() -> str:
     return _render("topology.html")
 
 
+@router.get("/slides", response_class=HTMLResponse)
+def slides_page() -> str:
+    return (STATIC / "slides.html").read_text()
+
+
 @router.get("/phone", response_class=HTMLResponse)
 @router.get("/custody", response_class=HTMLResponse)
 def incident_page() -> str:
@@ -85,7 +90,7 @@ def pipeline_font(name: str) -> FileResponse:
 @router.get("/pipeline/assets/{name}")
 def pipeline_asset(name: str) -> FileResponse:
     allowed = {"pipeline-models.js", "pipeline-models.css", "brand-nvidia.svg",
-               "brand-huggingface.svg", "brand-ultralytics.svg", "incidents.js", "incidents.css", "custody-detail.js", "phone.js", "phone.css", "casefile.css"}
+               "brand-huggingface.svg", "brand-ultralytics.svg", "incidents.js", "incidents.css", "custody-detail.js", "phone.js", "phone.css", "casefile.css", "slides.css", "slides.js"}
     if name not in allowed:
         raise HTTPException(status_code=404)
     return FileResponse(STATIC / name, headers={"Cache-Control": "no-cache"})

@@ -438,6 +438,8 @@ def mac_instructions(args, eps):
 
 def parser():
     cli = argparse.ArgumentParser(description=__doc__)
+    cli.add_argument("--no-instructions", action="store_true",
+                     help="Suppress standalone Mac setup hints when called by a wrapper")
     cli.add_argument(
         "--mode", choices=("models", "smoke", "sweep", "ab"), default="sweep"
     )
@@ -571,7 +573,8 @@ def run(args):
         if args.stub:
             print("STUB ONLY: readiness, smoke, sweep and comparison plumbing; no serving performance evidence.")
         else:
-            mac_instructions(args, eps)
+            if not args.no_instructions:
+                mac_instructions(args, eps)
         return 0
     except (
         OSError,

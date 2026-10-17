@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sherlock · Briefing</title>
+<link rel="stylesheet" href="/pipeline/assets/slides.css">
+<script src="/pipeline/assets/slides.js" defer></script>
+</head>
+<body>
+<header><a href="/" target="sherlock-board">SHERLOCK</a><span>Camera intelligence / Case briefing</span><nav aria-label="Demo tabs"><a href="/" target="sherlock-board">Board</a><a href="/phone" target="sherlock-phone">Phone</a><a href="/custody" target="sherlock-evidence">Evidence</a></nav></header>
+<main>
+<section id="problem" aria-labelledby="problem-title">
+<p class="eyebrow">01 / The problem</p>
+<h1 id="problem-title">More cameras.<br>Limited human attention.</h1>
+<p class="lead">An object detection is a lead. An investigator needs context.</p>
+<div class="ledger"><p><b>At the camera</b><span>Continuous video, fleeting objects, incomplete views.</span></p><p><b>In the cloud</b><span>Sending every frame adds bandwidth and model work.</span></p><p><b>For the team</b><span>Every false alarm takes attention from a real incident.</span></p></div>
+<p class="closing">Find the detail that matters. Preserve the evidence behind it.</p>
+</section>
+<section id="camera-loop" aria-labelledby="loop-title" hidden>
+<p class="eyebrow">02 / Watch the camera respond</p>
+<h1 id="loop-title">Detect. Decide. Zoom.</h1>
+<p class="lead">Follow the short loop from a local detection to a closer look.</p>
+<ol class="sequence"><li><span class="step">01 / Local</span><h2>YOLO</h2><p>Detect an object.<br>Send a small detection ticket.</p></li><li><span class="step">02 / NVIDIA Brev</span><h2>Nemotron Director</h2><p>Choose a camera tool.<br>Request the close-up.</p><small>Red Hat AI FP8 model</small></li><li><span class="step">03 / Camera</span><h2>Zoom in</h2><p>Capture the object detail.<br>Link it to the original scene.</p></li></ol>
+<a class="demo-link" href="/" target="sherlock-board">Open the camera board →</a>
+</section>
+<section id="evidence" aria-labelledby="evidence-title" hidden>
+<p class="eyebrow">03 / From close-up to a case</p>
+<h1 id="evidence-title">A closer look.<br>An accountable decision.</h1>
+<div class="evidence-layout"><div><h2>Check the object</h2><p>Only the masked object crop reaches the vision models. The Verifier checks the claim first; the Analyst describes a confirmed result.</p><h2>Keep the human in the loop</h2><p>Review the location and pictures on the phone. Investigate, notify the team in the demo, then resolve.</p></div><div class="case-note"><span class="eyebrow">Evidence record</span><h2>Trace it back.</h2><p>Original scene and object evidence stay linked. A confirmed alert also retains the face crop for human review.</p><p>Local Ed25519 signatures, image hashes and a revision chain make changes inspectable.</p><a href="/custody" target="sherlock-evidence">Inspect a case →</a></div></div>
+</section>
+<section id="impact" aria-labelledby="impact-title" hidden>
+<p class="eyebrow">04 / The projected difference</p>
+<h1 id="impact-title">Less to transmit.<br>More to act on.</h1>
+<div class="ledger"><p><b>Selective escalation</b><span>Fewer uploaded frames and model calls than analyzing every frame.</span></p><p><b>Focused review</b><span>Faster triage with a close-up, location and supporting scene.</span></p><p><b>Inspectable evidence</b><span>Each decision linked to its source images and signed history.</span></p></div>
+<p class="qualification">Projected benefits. Measure bandwidth, calls, latency and false alerts against a full-frame baseline.</p>
+<a class="repo" href="https://github.com/aronchick/demo-sherlock" target="sherlock-repository" rel="noopener">github.com/aronchick/demo-sherlock ↗</a>
+</section>
+</main>
+<footer><span id="slide-status" aria-live="polite" aria-atomic="true">01 / 04</span><span class="key-help">← → or Space to advance</span><div><button id="previous" type="button" aria-label="Previous slide">← Back</button><button id="next" type="button" aria-label="Next slide">Next →</button></div></footer>
+</body>
+</html>

@@ -154,3 +154,24 @@ expanso-down:
 # Delete the five jobs from Expanso Cloud
 expanso-clean:
     scripts/expanso.sh clean
+
+# Configure the existing H100 from this Mac; exact running models are reused.
+brev-up instance="sherlock-h100":
+    uv run --no-project scripts/brev_machine.py up {{quote(instance)}}
+
+# Keep this terminal open: tunnel both endpoints and verify inference.
+brev-connect instance="sherlock-h100":
+    uv run --no-project scripts/brev_machine.py connect {{quote(instance)}}
+
+# Run the local cameras/UI against the verified Brev tunnel, preserving .env.
+brev-live *args:
+    uv run --no-project scripts/brev_machine.py live -- {{args}}
+
+# Read the actual Brev instance inventory.
+brev-status:
+    uv run --no-project scripts/brev_machine.py status
+
+# Stop an explicitly named old machine only after replacement inference passes.
+brev-retire old replacement:
+    uv run --no-project scripts/brev_machine.py retire \
+        {{quote(old)}} {{quote(replacement)}}

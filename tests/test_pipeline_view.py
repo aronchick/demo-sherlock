@@ -168,3 +168,15 @@ def test_a_synthetic_run_never_labels_the_scout_yolo(tmp_path, monkeypatch):
     shown = scout_cards(_page_cfg(client.get("/").text), [backend])
     assert shown[backend]["name"] == "Scene input"
     assert "yolo" not in json.dumps(shown).lower()
+
+
+def test_recording_briefing_routes_and_navigation():
+    client = TestClient(mount_pipeline(FastAPI()))
+    response = client.get("/slides")
+    assert response.status_code == 200
+    assert 'id="camera-loop"' in response.text
+    assert 'id="impact"' in response.text
+    assert 'https://github.com/aronchick/demo-sherlock' in response.text
+    for name in ("slides.css", "slides.js"):
+        assert client.get(f"/pipeline/assets/{name}").status_code == 200
+    assert 'href="/slides"' in client.get("/").text

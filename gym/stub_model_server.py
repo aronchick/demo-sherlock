@@ -472,6 +472,12 @@ def create_stub_app() -> FastAPI:
                 "prompt_tokens": 180,
                 "completion_tokens": 64 if enable_thinking else 24,
                 "total_tokens": 244 if enable_thinking else 204,
+                "prompt_tokens_details": {
+                    "cached_tokens": 0,
+                },
+                "completion_tokens_details": {
+                    "reasoning_tokens": 32 if enable_thinking else 0,
+                },
             },
         }
 

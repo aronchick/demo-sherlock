@@ -484,14 +484,14 @@ just check       # lint, then the test suite
 
 The test gate runs from a clean environment. `uv sync` builds it from `pyproject.toml` and `uv.lock`: the app, benchmark and test-only dependencies (the `dev` group mirrors `requirements-dev.txt`, which stays for plain `pip` installs, except that ultralytics is the optional `yolo` extra):
 ```bash
-uv sync
-just test        # uv run pytest
+uv sync --extra gym
+just test        # uv run --extra gym pytest
 ```
 Two scout fine-tune tests need ultralytics and skip without it; `uv run --extra yolo pytest` runs them.
 
 ## NeMo Gym ablation
 
-Sherlock includes a native [NeMo Gym](https://github.com/NVIDIA-NeMo/Gym) (`nemo-gym==0.7.0`) environment and multi-metric verifier under `gym/` for single-component agent ablations. The 8 scripted tasks (`gym/resources_servers/sherlock/data/tasks.jsonl`) and the verifier (`SherlockResourcesServer.verify`) stay fixed while YAML configs swap one Director agent component at a time:
+Sherlock includes a native [NeMo Gym](https://github.com/NVIDIA-NeMo/Gym) (`nemo-gym==0.7.0`, installed via the `gym` optional extra on Python >= 3.13.14) environment and multi-metric verifier under `gym/` for single-component agent ablations. The 8 scripted tasks (`gym/resources_servers/sherlock/data/tasks.jsonl`) and the verifier (`SherlockResourcesServer.verify`) stay fixed while YAML configs swap one Director agent component at a time:
 
 1. **System prompt (`prompt_v1` vs `nemotron_lightning`)**: `gym/prompts/system_v1.yaml` vs `gym/prompts/system_v2.yaml` (adds zero-snapshot benign filtering and the two-crop weapon + head/face protocol).
 2. **Tool descriptions (`terse_tools` vs `nemotron_lightning`)**: `terse` (3-word tool strings, stripped parameter hints) vs `verbose` (`sherlock.tools.TOOL_SCHEMAS`).
@@ -502,26 +502,38 @@ Every configuration pairs the Director with `HuggingFaceTB/SmolVLM-Instruct` (2.
 
 ### Run one ablation with one command
 
+Each YAML config declares its target endpoint variable via `endpoint_env_var`: the 4 Nemotron 3.5 Lightning configs (`prompt_v1`, `terse_tools`, `thinking_on`, `nemotron_lightning`) read `DIRECTOR_BASE_URL`, and `qwen_director` reads `QWEN_DIRECTOR_BASE_URL`. When running `python -m gym.run_ablation --all` in live mode, any config whose declared endpoint variable is unset is skipped with a clear status message instead of failing.
+
 ```bash
-# Local end-to-end validation (uses the built-in OpenAI-compatible stub when DIRECTOR_BASE_URL is unset):
-uv run python -m gym.run_ablation --config gym/configs/ablation_nemotron_lightning.yaml
-
-# Run against a live Brev vLLM or Ollama endpoint:
-DIRECTOR_BASE_URL=https://<brev-host>/v1 uv run python -m gym.run_ablation --config gym/configs/ablation_nemotron_lightning.yaml
-
-# Run all 5 YAML ablations and write results/ablation_*.json:
-uv run python -m gym.run_ablation --all
+# Local end-to-end validation (uses the built-in OpenAI-compatible stub when no endpoint env var is set):
+uv run --extra gym python -m gym.run_ablation --config gym/configs/ablation_nemotron_lightning.yaml
+uv run --extra gym python -m gym.run_ablation --all --stub
 ```
 
-### Ablation metrics (live runs pending Brev `DIRECTOR_BASE_URL` endpoint; local stub validation artifacts in `results/ablation_stub_*.json`)
+#### Live Brev ablation run order (keeps active generative models <= 33B on each step)
 
-| Ablation Config | Swapped Component | Director Model | Total Gen Params (card / tensors) | Prompt | Tools | Thinking | Tool-Call Validity | Task Success | Steps to Report | Time to Report (ms) |
-|---|---|---|---:|---|---|---|---:|---:|---:|---:|
-| `prompt_v1` | System prompt (`v1`) | `Nemotron-3.5-Lightning-30B-A3B-NVFP4` | 32.25B / 33.82B | `system_v1` | `verbose` | `off` | TBD (live run pending) | TBD (live run pending) | TBD (live run pending) | TBD (live run pending) |
-| `terse_tools` | Tool schemas (`terse`) | `Nemotron-3.5-Lightning-30B-A3B-NVFP4` | 32.25B / 33.82B | `system_v2` | `terse` | `off` | TBD (live run pending) | TBD (live run pending) | TBD (live run pending) | TBD (live run pending) |
-| `thinking_on` | Thinking (`on`) | `Nemotron-3.5-Lightning-30B-A3B-NVFP4` | 32.25B / 33.82B | `system_v2` | `verbose` | `on` | TBD (live run pending) | TBD (live run pending) | TBD (live run pending) | TBD (live run pending) |
-| `qwen_director` | Model (`Qwen2.5-7B`) | `Qwen2.5-7B-Instruct` | 9.86B / 9.86B | `system_v2` | `verbose` | `off` | TBD (live run pending) | TBD (live run pending) | TBD (live run pending) | TBD (live run pending) |
-| `nemotron_lightning` | Reference (`v2` + `verbose` + `off`) | `Nemotron-3.5-Lightning-30B-A3B-NVFP4` | 32.25B / 33.82B | `system_v2` | `verbose` | `off` | TBD (live run pending) | TBD (live run pending) | TBD (live run pending) | TBD (live run pending) |
+1. **Run the 4 Nemotron 3.5 Lightning configs (`prompt_v1`, `terse_tools`, `thinking_on`, `nemotron_lightning`)**:
+   Start the default Lightning + SmolVLM containers (`30B + 2.25B = 32.25B` model card) on the Brev host and run `--all` with `DIRECTOR_BASE_URL` set (`qwen_director` is automatically skipped because `QWEN_DIRECTOR_BASE_URL` is unset):
+   ```bash
+   bash brev/serve.sh
+   DIRECTOR_BASE_URL=http://127.0.0.1:8001/v1 uv run --extra gym python -m gym.run_ablation --all
+   ```
+2. **Swap Director to `Qwen/Qwen2.5-7B-Instruct` and run `qwen_director`**:
+   Switch the `director` container on `:8001` to `Qwen/Qwen2.5-7B-Instruct` (`vllm/vllm-openai:v0.28.0` with `--enable-auto-tool-choice --tool-call-parser hermes`). Replacing the `director` container instead of running both Directors simultaneously keeps active generative models at `7.62B + 2.25B = 9.86B <= 33B`:
+   ```bash
+   DIRECTOR_PRESET=qwen bash brev/serve.sh
+   QWEN_DIRECTOR_BASE_URL=http://127.0.0.1:8001/v1 uv run --extra gym python -m gym.run_ablation --all
+   ```
+
+### Ablation metrics (live runs pending Brev endpoints; local stub validation artifacts in `results/ablation_stub_*.json`)
+
+| Ablation Config | Endpoint Env Var | Swapped Component | Director Model | Total Gen Params (card / tensors) | Prompt | Tools | Thinking | Tool-Call Validity | Task Success | Steps to Report | Time to Report (ms) |
+|---|---|---|---|---:|---|---|---|---:|---:|---:|---:|
+| `prompt_v1` | `DIRECTOR_BASE_URL` | System prompt (`v1`) | `Nemotron-3.5-Lightning-30B-A3B-NVFP4` | 32.25B / 33.82B | `system_v1` | `verbose` | `off` | TBD (live run pending) | TBD (live run pending) | TBD (live run pending) | TBD (live run pending) |
+| `terse_tools` | `DIRECTOR_BASE_URL` | Tool schemas (`terse`) | `Nemotron-3.5-Lightning-30B-A3B-NVFP4` | 32.25B / 33.82B | `system_v2` | `terse` | `off` | TBD (live run pending) | TBD (live run pending) | TBD (live run pending) | TBD (live run pending) |
+| `thinking_on` | `DIRECTOR_BASE_URL` | Thinking (`on`) | `Nemotron-3.5-Lightning-30B-A3B-NVFP4` | 32.25B / 33.82B | `system_v2` | `verbose` | `on` | TBD (live run pending) | TBD (live run pending) | TBD (live run pending) | TBD (live run pending) |
+| `nemotron_lightning` | `DIRECTOR_BASE_URL` | Reference (`v2` + `verbose` + `off`) | `Nemotron-3.5-Lightning-30B-A3B-NVFP4` | 32.25B / 33.82B | `system_v2` | `verbose` | `off` | TBD (live run pending) | TBD (live run pending) | TBD (live run pending) | TBD (live run pending) |
+| `qwen_director` | `QWEN_DIRECTOR_BASE_URL` | Model (`Qwen2.5-7B`) | `Qwen2.5-7B-Instruct` | 9.86B / 9.86B | `system_v2` | `verbose` | `off` | TBD (live run pending) | TBD (live run pending) | TBD (live run pending) | TBD (live run pending) |
 
 ## Demo script (3 min)
 

@@ -18,6 +18,7 @@ import time
 from pathlib import Path
 from typing import Any
 
+import nemo_gym.server_utils as ng_server_utils
 import uvicorn
 from nemo_gym.config_types import BaseServerConfig
 from nemo_gym.server_utils import (
@@ -30,6 +31,7 @@ from nemo_gym.server_utils import (
 from omegaconf import OmegaConf
 from responses_api_models.vllm_model.app import VLLMModel, VLLMModelConfig
 
+from gym import ensure_nemo_gym_usage_compat
 from gym.resources_servers.sherlock.app import (
     SherlockResourcesServer,
     SherlockResourcesServerConfig,
@@ -40,15 +42,36 @@ from gym.responses_api_agents.sherlock_agent.app import (
 )
 from gym.stub_model_server import create_stub_app
 
+ensure_nemo_gym_usage_compat()
+
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
 DEFAULT_CONFIG_ORDER = [
     "gym/configs/ablation_prompt_v1.yaml",
     "gym/configs/ablation_terse_tools.yaml",
     "gym/configs/ablation_thinking_on.yaml",
-    "gym/configs/ablation_qwen_director.yaml",
     "gym/configs/ablation_nemotron_lightning.yaml",
+    "gym/configs/ablation_qwen_director.yaml",
 ]
+
+
+def _resolve_config_file(config_path: str | Path) -> Path:
+    cfg_file = Path(config_path)
+    if not cfg_file.is_file():
+        cfg_file = REPO_ROOT / config_path
+    if not cfg_file.is_file():
+        raise FileNotFoundError(f"Ablation config not found: {config_path}")
+    return cfg_file
+
+
+def get_config_endpoint_info(config_path: str | Path) -> tuple[str, str]:
+    """Return (ablation_id, endpoint_env_var) declared in an ablation YAML config."""
+    cfg_file = _resolve_config_file(config_path)
+    raw_cfg = OmegaConf.load(cfg_file)
+    agent_cfg = raw_cfg.sherlock_agent.responses_api_agents.sherlock_agent
+    ablation_id = str(getattr(agent_cfg, "ablation_id", cfg_file.stem))
+    endpoint_env_var = str(getattr(agent_cfg, "endpoint_env_var", "DIRECTOR_BASE_URL"))
+    return ablation_id, endpoint_env_var
 
 
 def _allocate_free_ports(count: int) -> list[int]:
@@ -106,26 +129,47 @@ def _prepare_gym_fastapi_app(server: Any) -> Any:
     return app
 
 
+def _validate_agent_run_response(
+    verified: Any,
+    status_code: int,
+    scene_id: str,
+    ablation_id: str,
+) -> dict[str, Any]:
+    """Validate the response returned by sherlock_agent /run and fail with a clear error."""
+    if status_code >= 400 or not isinstance(verified, dict) or "task_success" not in verified:
+        raise RuntimeError(
+            f"Agent '/run' failed on scene {scene_id!r} for ablation "
+            f"{ablation_id!r} (HTTP {status_code}): {verified}"
+        )
+    return verified
+
+
 async def run_single_ablation(
     config_path: str | Path,
     use_stub: bool | None = None,
     output_dir: str | Path = "results",
 ) -> dict[str, Any]:
     """Run one NeMo Gym YAML ablation configuration end-to-end and save JSON results."""
-    cfg_file = Path(config_path)
-    if not cfg_file.is_file():
-        cfg_file = REPO_ROOT / config_path
-    if not cfg_file.is_file():
-        raise FileNotFoundError(f"Ablation config not found: {config_path}")
+    ensure_nemo_gym_usage_compat()
+    cfg_file = _resolve_config_file(config_path)
 
     raw_cfg = OmegaConf.load(cfg_file)
     resolved_dict: dict[str, Any] = OmegaConf.to_container(raw_cfg, resolve=True)  # type: ignore[assignment]
 
-    env_director_url = os.environ.get("DIRECTOR_BASE_URL", "").strip()
+    agent_block = resolved_dict["sherlock_agent"]["responses_api_agents"]["sherlock_agent"]
+    endpoint_env_var = str(agent_block.get("endpoint_env_var") or "DIRECTOR_BASE_URL")
+    env_director_url = os.environ.get(endpoint_env_var, "").strip()
+
     if use_stub is None:
         effective_use_stub = not bool(env_director_url)
     else:
         effective_use_stub = use_stub
+
+    if not effective_use_stub and not env_director_url:
+        raise RuntimeError(
+            f"Ablation {agent_block.get('ablation_id')!r} ({config_path}) requires "
+            f"environment variable {endpoint_env_var} to be set for live execution."
+        )
 
     ports = _allocate_free_ports(4)
     res_port, model_port, agent_port, stub_port = ports
@@ -145,7 +189,6 @@ async def run_single_ablation(
     elif env_director_url:
         model_block["base_url"] = env_director_url
 
-    agent_block = resolved_dict["sherlock_agent"]["responses_api_agents"]["sherlock_agent"]
     agent_block["host"] = host
     agent_block["port"] = agent_port
 
@@ -156,6 +199,13 @@ async def run_single_ablation(
         global_config_dict=global_config_dict,
     )
 
+    existing_client = getattr(ng_server_utils, "_GLOBAL_AIOHTTP_CLIENT", None)
+    if existing_client is not None and (
+        existing_client.closed
+        or getattr(existing_client, "_loop", None) is not asyncio.get_running_loop()
+    ):
+        ng_server_utils._GLOBAL_AIOHTTP_CLIENT = None
+        ng_server_utils._GLOBAL_AIOHTTP_CLIENT_QUEUE_TELEMETRY = False
     if not is_global_aiohttp_client_setup():
         set_global_aiohttp_client(GlobalAIOHTTPAsyncClientConfig())
 
@@ -205,7 +255,17 @@ async def run_single_ablation(
                 url_path="/run",
                 json=payload,
             )
-            verified = await resp.json()
+            raw_text = await resp.text()
+            try:
+                raw_verified = json.loads(raw_text)
+            except (json.JSONDecodeError, TypeError):
+                raw_verified = raw_text
+            verified = _validate_agent_run_response(
+                verified=raw_verified,
+                status_code=getattr(resp, "status", 200),
+                scene_id=str(payload.get("scene_id", f"task_{idx}")),
+                ablation_id=agent_config.ablation_id,
+            )
             verified["_ng_task_index"] = payload["_ng_task_index"]
             verified["_ng_rollout_index"] = payload["_ng_rollout_index"]
             verify_results.append(verified)
@@ -216,9 +276,23 @@ async def run_single_ablation(
             url_path="/aggregate_metrics",
             json={"verify_responses": verify_results},
         )
-        agg_payload = await agg_resp.json()
+        agg_text = await agg_resp.text()
+        try:
+            agg_payload = json.loads(agg_text)
+        except (json.JSONDecodeError, TypeError):
+            agg_payload = agg_text
+        if getattr(agg_resp, "status", 200) >= 400 or not isinstance(agg_payload, dict):
+            raise RuntimeError(
+                f"Resources server '/aggregate_metrics' failed for ablation "
+                f"{agent_config.ablation_id!r} (HTTP {getattr(agg_resp, 'status', 200)}): {agg_payload}"
+            )
     finally:
         await _stop_uvicorn_servers(running_servers)
+        active_client = getattr(ng_server_utils, "_GLOBAL_AIOHTTP_CLIENT", None)
+        if active_client is not None and not active_client.closed:
+            await active_client.close()
+        ng_server_utils._GLOBAL_AIOHTTP_CLIENT = None
+        ng_server_utils._GLOBAL_AIOHTTP_CLIENT_QUEUE_TELEMETRY = False
 
     n = max(1, len(verify_results))
     avg_tool_validity = sum(float(r["tool_call_validity"]) for r in verify_results) / n
@@ -258,6 +332,7 @@ async def run_single_ablation(
         "config_path": str(Path(config_path)),
         "ablation_component": agent_config.ablation_component,
         "ablation_description": agent_config.ablation_description,
+        "endpoint_env_var": endpoint_env_var,
         "execution_mode": "local_stub" if effective_use_stub else "live_endpoint",
         "director_base_url": "local_stub" if effective_use_stub else env_director_url,
         "agent_components": {
@@ -271,6 +346,7 @@ async def run_single_ablation(
             "prompt_config": agent_config.prompt_config,
             "tool_descriptions": agent_config.tool_descriptions,
             "max_steps": agent_config.max_steps,
+            "endpoint_env_var": endpoint_env_var,
         },
         "summary_metrics": {
             "num_tasks": len(verify_results),
@@ -295,11 +371,13 @@ async def run_single_ablation(
         "per_scene": per_scene,
     }
 
-    out_dir = REPO_ROOT / output_dir
+    out_dir = Path(output_dir) if Path(output_dir).is_absolute() else REPO_ROOT / output_dir
     out_dir.mkdir(parents=True, exist_ok=True)
     file_prefix = "ablation_stub" if effective_use_stub else "ablation"
     out_path = out_dir / f"{file_prefix}_{agent_config.ablation_id}.json"
     out_path.write_text(json.dumps(artifact, indent=2) + "\n")
+    if not effective_use_stub and (out_dir / "ablation_summary.json").is_file():
+        _write_summary_file(out_dir, [artifact], [])
     return artifact
 
 
@@ -323,46 +401,133 @@ def format_markdown_table(results: list[dict[str, Any]]) -> str:
     return "\n".join(lines)
 
 
-async def _async_main(args: argparse.Namespace) -> None:
-    config_paths = DEFAULT_CONFIG_ORDER if args.all else [args.config]
+def _summary_row(r: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "ablation_id": r["ablation_id"],
+        "config_path": r["config_path"],
+        "ablation_component": r["ablation_component"],
+        "endpoint_env_var": r.get("endpoint_env_var", "DIRECTOR_BASE_URL"),
+        "agent_components": r["agent_components"],
+        "summary_metrics": r["summary_metrics"],
+    }
+
+
+def _write_summary_file(
+    out_dir: Path,
+    results: list[dict[str, Any]],
+    skipped: list[dict[str, str]],
+) -> None:
+    if not results:
+        return
+    mode = results[0]["execution_mode"]
+    is_stub = mode == "local_stub"
+    file_prefix = "ablation_stub" if is_stub else "ablation"
+    summary_name = "ablation_stub_summary.json" if is_stub else "ablation_summary.json"
+    summary_path = out_dir / summary_name
+
+    by_id: dict[str, dict[str, Any]] = {r["ablation_id"]: r for r in results}
+    for cfg_path in DEFAULT_CONFIG_ORDER:
+        ablation_id, _ = get_config_endpoint_info(cfg_path)
+        if ablation_id in by_id:
+            continue
+        existing_path = out_dir / f"{file_prefix}_{ablation_id}.json"
+        if not existing_path.is_file():
+            continue
+        try:
+            existing = json.loads(existing_path.read_text())
+        except (OSError, ValueError):
+            continue
+        if isinstance(existing, dict) and existing.get("execution_mode") == mode:
+            by_id[ablation_id] = existing
+
+    ordered_ids = [get_config_endpoint_info(p)[0] for p in DEFAULT_CONFIG_ORDER]
+    merged_results = [by_id[aid] for aid in ordered_ids if aid in by_id] + [
+        r for aid, r in by_id.items() if aid not in ordered_ids
+    ]
+
+    summary_path.write_text(
+        json.dumps(
+            {
+                "framework": "NeMo Gym v0.7.0 (native resources_server + responses_api_agent + vllm_model)",
+                "execution_mode": mode,
+                "num_configs": len(merged_results),
+                "num_skipped": len(skipped),
+                "skipped_configs": skipped,
+                "num_scenes_per_config": results[0]["summary_metrics"]["num_tasks"],
+                "results": [_summary_row(r) for r in merged_results],
+            },
+            indent=2,
+        )
+        + "\n"
+    )
+
+
+async def run_all_ablations(
+    config_paths: list[str] | None = None,
+    force_stub: bool = False,
+    output_dir: str | Path = "results",
+) -> tuple[list[dict[str, Any]], list[dict[str, str]]]:
+    """Run all configured ablations, skipping any config whose endpoint_env_var is unset in live mode."""
+    paths = list(config_paths) if config_paths is not None else list(DEFAULT_CONFIG_ORDER)
+    endpoint_infos = [(cfg_path, *get_config_endpoint_info(cfg_path)) for cfg_path in paths]
+
+    known_env_vars = {get_config_endpoint_info(p)[1] for p in DEFAULT_CONFIG_ORDER} | {
+        env_var for _, _, env_var in endpoint_infos
+    }
+    any_endpoint_set = any(
+        bool(os.environ.get(env_var, "").strip()) for env_var in known_env_vars
+    )
+    live_mode = not force_stub and any_endpoint_set
+
     results: list[dict[str, Any]] = []
-    for cfg_path in config_paths:
+    skipped: list[dict[str, str]] = []
+
+    for cfg_path, ablation_id, endpoint_env_var in endpoint_infos:
+        endpoint_url = os.environ.get(endpoint_env_var, "").strip()
+        if live_mode and not endpoint_url:
+            print(
+                f"Skipping ablation '{ablation_id}' ({cfg_path}): "
+                f"endpoint env var {endpoint_env_var} is not set.",
+                flush=True,
+            )
+            skipped.append(
+                {
+                    "ablation_id": ablation_id,
+                    "config_path": str(cfg_path),
+                    "endpoint_env_var": endpoint_env_var,
+                    "reason": f"{endpoint_env_var} is not set",
+                }
+            )
+            continue
+
         res = await run_single_ablation(
             config_path=cfg_path,
-            use_stub=True if args.stub else None,
-            output_dir=args.output_dir,
+            use_stub=not live_mode,
+            output_dir=output_dir,
         )
         results.append(res)
 
-    if args.all or len(results) > 1:
-        out_dir = REPO_ROOT / args.output_dir
-        is_stub = results[0]["execution_mode"] == "local_stub"
-        summary_name = "ablation_stub_summary.json" if is_stub else "ablation_summary.json"
-        summary_path = out_dir / summary_name
-        summary_path.write_text(
-            json.dumps(
-                {
-                    "framework": "NeMo Gym v0.7.0 (native resources_server + responses_api_agent + vllm_model)",
-                    "execution_mode": results[0]["execution_mode"],
-                    "num_configs": len(results),
-                    "num_scenes_per_config": results[0]["summary_metrics"]["num_tasks"],
-                    "results": [
-                        {
-                            "ablation_id": r["ablation_id"],
-                            "config_path": r["config_path"],
-                            "ablation_component": r["ablation_component"],
-                            "agent_components": r["agent_components"],
-                            "summary_metrics": r["summary_metrics"],
-                        }
-                        for r in results
-                    ],
-                },
-                indent=2,
-            )
-            + "\n"
-        )
+    out_dir = Path(output_dir) if Path(output_dir).is_absolute() else REPO_ROOT / output_dir
+    _write_summary_file(out_dir, results, skipped)
+    return results, skipped
 
-    print(format_markdown_table(results))
+
+async def _async_main(args: argparse.Namespace) -> None:
+    if args.all:
+        results, _skipped = await run_all_ablations(
+            force_stub=bool(args.stub),
+            output_dir=args.output_dir,
+        )
+    else:
+        res = await run_single_ablation(
+            config_path=args.config,
+            use_stub=True if args.stub else None,
+            output_dir=args.output_dir,
+        )
+        results = [res]
+
+    if results:
+        print(format_markdown_table(results))
 
 
 def main() -> None:

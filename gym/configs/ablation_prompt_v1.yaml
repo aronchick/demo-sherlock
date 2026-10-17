@@ -46,6 +46,7 @@ sherlock_agent:
       ablation_id: prompt_v1
       ablation_component: "System Prompt (system_v1 vs system_v2)"
       ablation_description: "Use minimal v1 system prompt without benign-skip or 2-crop weapon rules; hold model, tools (verbose), thinking (off) fixed"
+      endpoint_env_var: DIRECTOR_BASE_URL
       director_model_name: nvidia/NVIDIA-Nemotron-3.5-Lightning-30B-A3B-NVFP4
       director_params_b: 30.0
       vlm_model_name: HuggingFaceTB/SmolVLM-Instruct

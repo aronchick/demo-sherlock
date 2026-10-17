@@ -2,16 +2,24 @@
 from __future__ import annotations
 
 import asyncio
+import json
 from pathlib import Path
 
+import pytest
 from omegaconf import OmegaConf
 
 from gym.run_ablation import (
     DEFAULT_CONFIG_ORDER,
     REPO_ROOT,
+    _allocate_free_ports,
+    _start_uvicorn_server,
+    _stop_uvicorn_servers,
     format_markdown_table,
+    get_config_endpoint_info,
+    run_all_ablations,
     run_single_ablation,
 )
+from gym.stub_model_server import create_stub_app
 
 
 def _load_agent_and_model_cfg(rel_path: str) -> tuple[dict, dict, dict]:
@@ -26,13 +34,22 @@ def _load_agent_and_model_cfg(rel_path: str) -> tuple[dict, dict, dict]:
 def test_all_ablation_configs_keep_generative_models_within_33b_and_share_fixed_env() -> None:
     base_res, _base_model, _base_agent = _load_agent_and_model_cfg("gym/configs/ablation_nemotron_lightning.yaml")
 
-    for rel_path in DEFAULT_CONFIG_ORDER:
+    expected_env_vars = [
+        ("gym/configs/ablation_prompt_v1.yaml", "prompt_v1", "DIRECTOR_BASE_URL"),
+        ("gym/configs/ablation_terse_tools.yaml", "terse_tools", "DIRECTOR_BASE_URL"),
+        ("gym/configs/ablation_thinking_on.yaml", "thinking_on", "DIRECTOR_BASE_URL"),
+        ("gym/configs/ablation_nemotron_lightning.yaml", "nemotron_lightning", "DIRECTOR_BASE_URL"),
+        ("gym/configs/ablation_qwen_director.yaml", "qwen_director", "QWEN_DIRECTOR_BASE_URL"),
+    ]
+    assert [p for p, _, _ in expected_env_vars] == DEFAULT_CONFIG_ORDER
+
+    for rel_path, expected_id, expected_env in expected_env_vars:
         res_cfg, _model_cfg, agent_cfg = _load_agent_and_model_cfg(rel_path)
-        # Fixed tasks and fixed verifier across all ablations
         assert res_cfg["entrypoint"] == base_res["entrypoint"] == "app.py"
         assert res_cfg["datasets"] == base_res["datasets"]
+        assert agent_cfg["endpoint_env_var"] == expected_env
+        assert get_config_endpoint_info(rel_path) == (expected_id, expected_env)
 
-        # Total generative parameter budget <= 33B on every config
         total_b = float(agent_cfg["director_params_b"]) + float(agent_cfg["vlm_params_b"])
         assert total_b <= 33.0, f"{rel_path} exceeds 33B budget: {total_b}B"
 
@@ -107,3 +124,57 @@ def test_end_to_end_ablation_pipeline_with_local_stub(tmp_path: Path) -> None:
         assert "Tool-Call Validity" in table
 
     asyncio.run(_run())
+
+
+def test_run_all_ablations_skips_configs_with_unset_endpoint_env_var(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    async def _run() -> None:
+        port = _allocate_free_ports(1)[0]
+        srv = await _start_uvicorn_server(create_stub_app(), "127.0.0.1", port)
+        try:
+            subset = [
+                "gym/configs/ablation_nemotron_lightning.yaml",
+                "gym/configs/ablation_qwen_director.yaml",
+            ]
+            # Step 1: DIRECTOR_BASE_URL set, QWEN_DIRECTOR_BASE_URL unset -> qwen_director skipped cleanly
+            monkeypatch.setenv("DIRECTOR_BASE_URL", f"http://127.0.0.1:{port}/v1")
+            monkeypatch.delenv("QWEN_DIRECTOR_BASE_URL", raising=False)
+
+            results_step1, skipped_step1 = await run_all_ablations(
+                config_paths=subset,
+                output_dir=tmp_path,
+            )
+            captured_step1 = capsys.readouterr().out
+            assert [r["ablation_id"] for r in results_step1] == ["nemotron_lightning"]
+            assert results_step1[0]["execution_mode"] == "live_endpoint"
+            assert len(skipped_step1) == 1
+            assert skipped_step1[0]["ablation_id"] == "qwen_director"
+            assert skipped_step1[0]["endpoint_env_var"] == "QWEN_DIRECTOR_BASE_URL"
+            assert "Skipping ablation 'qwen_director'" in captured_step1
+            assert "QWEN_DIRECTOR_BASE_URL is not set" in captured_step1
+
+            # Step 2: QWEN_DIRECTOR_BASE_URL set, DIRECTOR_BASE_URL unset -> nemotron_lightning skipped, summary merges both
+            monkeypatch.delenv("DIRECTOR_BASE_URL", raising=False)
+            monkeypatch.setenv("QWEN_DIRECTOR_BASE_URL", f"http://127.0.0.1:{port}/v1")
+
+            results_step2, skipped_step2 = await run_all_ablations(
+                config_paths=subset,
+                output_dir=tmp_path,
+            )
+            assert [r["ablation_id"] for r in results_step2] == ["qwen_director"]
+            assert len(skipped_step2) == 1
+            assert skipped_step2[0]["ablation_id"] == "nemotron_lightning"
+
+            summary = json.loads((tmp_path / "ablation_summary.json").read_text())
+            assert [r["ablation_id"] for r in summary["results"]] == [
+                "nemotron_lightning",
+                "qwen_director",
+            ]
+        finally:
+            await _stop_uvicorn_servers([srv])
+
+    asyncio.run(_run())
+

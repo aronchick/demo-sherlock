@@ -15,11 +15,11 @@
   }
   * { box-sizing: border-box; }
   html, body { height: 100%; margin: 0; background: var(--bg); color: var(--ink);
-    font: 15px/1.45 "IBM Plex Sans", sans-serif; overflow: hidden; }
+    font: 15px/1.45 "IBM Plex Sans", sans-serif; }
   /* Camera column = two stacked 16:9 tiles that exactly fill the height between
      header (48px) and footer (44px): (100vh - padding - rows - gaps) * 8/9. */
   .grid { display: grid; height: 100%; grid-template-columns: min(calc((100vh - 152px) * 0.8889), 62vw) minmax(0, 1fr);
-    grid-template-rows: 48px minmax(0, 1fr) 44px; gap: 12px; padding: 12px; }
+    grid-template-rows: 48px minmax(360px, 1fr) auto 44px; gap: 12px; padding: 12px; }
   header { grid-column: 1 / -1; display: flex; align-items: center; gap: 18px; min-width: 0; }
   header h1 { margin: 0; font: 600 28px "IBM Plex Sans Condensed", sans-serif; letter-spacing: .01em; }
   header .tag { color: var(--dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
@@ -77,6 +77,17 @@
   .ev.report.alert { background: var(--alert-bg); }
   .ev.report.ignore { background: #2b333e; }
 
+  .numbers { grid-column: 1 / -1; border-top: 1px solid var(--line); padding: 8px 0 0; min-width: 0; }
+  .numbers-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 16px; margin-bottom: 4px; }
+  .numbers h2 { margin: 0; font: 600 18px "IBM Plex Sans Condensed", sans-serif; }
+  .numbers-head span { color: var(--dim); font-size: 12px; }
+  .number-row { display: grid; grid-template-columns: 230px minmax(0, 1fr); gap: 4px 16px; padding: 3px 0; }
+  .number-label { color: var(--dim); font-size: 13px; overflow-wrap: anywhere; }
+  .number-values { display: flex; flex-wrap: wrap; gap: 4px 24px; min-width: 0; font-size: 13px; }
+  .number-values span { overflow-wrap: anywhere; }
+  .number-values small { color: var(--dim); font-size: inherit; margin-right: 6px; }
+  .number-values output { font-weight: 600; font-variant-numeric: tabular-nums; }
+
   footer { grid-column: 1 / -1; display: flex; gap: 14px; align-items: center; min-width: 0; overflow: hidden; }
   footer .stat { color: var(--dim); font-size: 14px; white-space: nowrap; }
   footer .stat b { color: var(--ink); font-weight: 600; }
@@ -89,6 +100,9 @@
   @media (max-width: 900px) {
     html, body { overflow: auto; }
     .grid { height: auto; grid-template-columns: minmax(0, 1fr); grid-template-rows: auto; }
+    header { flex-wrap: wrap; gap: 8px 12px; }
+    header .tag { flex-basis: 100%; order: 4; white-space: normal; }
+    .number-row { grid-template-columns: minmax(0, 1fr); padding: 6px 0; }
     footer { flex-wrap: wrap; }
     .cams { grid-template-rows: 220px 220px; } .log { height: 420px; flex: none; }
   }
@@ -125,6 +139,33 @@
       <div class="inc-meta" id="inc-meta"></div>
     </article>
     <section class="log" id="log" aria-live="polite" aria-label="Event log"></section>
+  </section>
+
+  <section class="numbers" id="numbers" aria-labelledby="numbers-title">
+    <div class="numbers-head"><h2 id="numbers-title">Measured results</h2><span id="numbers-status">No measured results yet</span></div>
+    <div class="number-row">
+      <span class="number-label" id="number-director">Director</span>
+      <div class="number-values">
+        <span><small>End-to-end p50 / p95</small><output id="number-latency">TBD</output></span>
+        <span><small>Throughput</small><output id="number-throughput">TBD</output></span>
+        <span title="Cache on versus off at the same concurrency. Negative means lower latency."><small>Prefix cache · p95 change</small><output id="number-cache">TBD</output></span>
+      </div>
+    </div>
+    <div class="number-row">
+      <span class="number-label" id="number-ablation">NeMo Gym</span>
+      <div class="number-values">
+        <span><small>Config</small><output id="number-ablation-config">TBD</output></span>
+        <span><small>Task success</small><output id="number-success">TBD</output></span>
+        <span><small>Valid tool calls</small><output id="number-validity">TBD</output></span>
+      </div>
+    </div>
+    <div class="number-row">
+      <span class="number-label" id="number-scout">Scout · weapon</span>
+      <div class="number-values">
+        <span><small>Precision before → after</small><output id="number-precision">TBD</output></span>
+        <span><small>Recall before → after</small><output id="number-recall">TBD</output></span>
+      </div>
+    </div>
   </section>
 
   <footer>
@@ -295,5 +336,6 @@
 
   fetch('/reports').then(r => r.json()).then(restoreLastIncident);
 </script>
+<script src="/numbers.js" defer></script>
 </body>
 </html>

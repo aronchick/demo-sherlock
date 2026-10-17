@@ -1,0 +1,17 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "broken-image",
+        "value": "*",
+        "files": [
+          "sherlock/sherlock/dashboard/static/index.html"
+        ],
+        "createdAt": "2026-10-17T16:38:59.173Z",
+        "reason": "Code inspection: pre-existing hidden weapon and face img elements get evidence URLs on incident events; no visible broken placeholders."
+      }
+    ]
+  }
+}

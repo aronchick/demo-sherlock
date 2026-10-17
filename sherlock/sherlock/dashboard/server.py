@@ -16,6 +16,7 @@ from fastapi.responses import (
 
 from ..events import BUS
 from ..orchestrator import Sherlock
+from .numbers import read_numbers
 
 STATIC = pathlib.Path(__file__).parent / "static"
 _INCIDENT_ID = re.compile(r"^[0-9]{8}-[0-9]{6}-[0-9]{3,}$")
@@ -28,6 +29,14 @@ def make_app(sherlock: Sherlock) -> FastAPI:
     @app.get("/", response_class=HTMLResponse)
     def index():
         return (STATIC / "index.html").read_text()
+
+    @app.get("/numbers")
+    def numbers():
+        return JSONResponse(read_numbers(), headers={"Cache-Control": "no-store"})
+
+    @app.get("/numbers.js")
+    def numbers_script():
+        return FileResponse(STATIC / "numbers.js", media_type="application/javascript")
 
     @app.get("/events")
     async def events():

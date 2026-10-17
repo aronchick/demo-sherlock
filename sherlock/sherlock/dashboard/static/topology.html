@@ -128,7 +128,6 @@ const port = r => { try { const p = new URL((M[r] || {}).url).port; return p ? '
 $('r-director').textContent += port('director');
 $('r-vlm').textContent += port('analyst');
 const SV = CFG.servers || {}, runs = ['director', 'analyst', 'verifier'].map(r => SV[r]);
-const named = s => s && s.name ? s.name : s && s.reachable ? 'unidentified' : 'unreachable';
 const COUNT = ['no', 'one', 'two', 'three'];
 if (CFG.mock) {
   $('mode').textContent = 'mock run · everything on this laptop';
@@ -141,11 +140,15 @@ if (CFG.mock) {
     const versions = [...new Set(runs.map(s => s.version).filter(Boolean))].map(v => 'v' + v);
     $('serverSub').textContent = [...versions, (COUNT[SV.endpoints] || SV.endpoints) + (SV.endpoints === 1 ? ' server' : ' servers')].join(' · ');
   } else {
-    const vlm = named(SV.analyst) === named(SV.verifier) ? named(SV.analyst) : named(SV.analyst) + ' / ' + named(SV.verifier);
-    $('serverSub').textContent = 'Director: ' + named(SV.director) + ' · VLM: ' + vlm;
+    const vlm = SV.analyst.label === SV.verifier.label ? SV.analyst.label : SV.analyst.label + ' / ' + SV.verifier.label;
+    $('serverSub').textContent = 'Director: ' + SV.director.label + ' · VLM: ' + vlm;
   }
   $('mode').textContent = 'live · models on ' + hosts.join(', ');
   $('brevSub').textContent = hosts.join(', ') + ' · models behind OpenAI-compatible URLs';
+  if (SV.local) {                                    // every endpoint is on this laptop: no Brev box in this run
+    $('brev').classList.add('off');
+    $('brevSub').textContent = 'not in this run: the Director, Analyst and Verifier run on this laptop';
+  }
 }
 $('expanso').classList.toggle('live', CFG.expanso);
 $('expansoText').textContent = (CFG.expanso ? 'connected · ' : 'not connected in this run · ') + 'Expanso Edge processes this data on the laptop; Expanso Cloud deploys and monitors it, no image data';

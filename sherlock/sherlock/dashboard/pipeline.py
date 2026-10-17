@@ -6,24 +6,17 @@ from __future__ import annotations
 import json
 import os
 import pathlib
-from urllib.parse import urlsplit
 
 from fastapi import APIRouter, FastAPI, HTTPException
 from fastapi.responses import FileResponse, HTMLResponse
 
 from ..config import Config
-from .model_servers import describe
+from .model_servers import describe, where
 
 STATIC = pathlib.Path(__file__).parent / "static"
 FONTS = STATIC / "fonts"
 
 router = APIRouter()
-
-
-def _where(base_url: str) -> str:
-    """Where an OpenAI-compatible endpoint lives, for the page: this laptop or a remote host."""
-    host = urlsplit(base_url).hostname or ""
-    return "laptop" if host in {"localhost", "127.0.0.1", "::1", ""} else host
 
 
 def page_config() -> dict:
@@ -39,7 +32,6 @@ def page_config() -> dict:
     server itself; None in a mock run. The pages name a runtime only from this.
     """
     cfg = Config()
-    brev = os.environ.get("BREV_HOST", "").strip()
     endpoints = {
         "director": cfg.director,
         "analyst": cfg.analyst,
@@ -49,10 +41,7 @@ def page_config() -> dict:
         "scout": {"model": cfg.yolo_model if cfg.scout_backend == "yolo" else cfg.scout_backend, "where": "laptop"},
     }
     for role, ep in endpoints.items():
-        where = _where(ep.base_url)
-        if where == "laptop" and brev:
-            where = brev  # tunnelled
-        models[role] = {"model": ep.model, "where": where, "url": ep.base_url}
+        models[role] = {"model": ep.model, "where": where(ep.base_url), "url": ep.base_url}
     return {
         "mock": cfg.mock,
         "expanso": os.environ.get("SHERLOCK_EXPANSO") == "connected",

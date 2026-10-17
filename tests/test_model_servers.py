@@ -32,7 +32,9 @@ OTHER = {"/v1/models": {"object": "list", "data": [{"id": "some-model", "object"
 
 
 @pytest.fixture(autouse=True)
-def fresh_cache():
+def fresh_cache(monkeypatch):
+    for key in ("MODEL_SERVER", "DIRECTOR_MODEL_SERVER", "ANALYST_MODEL_SERVER", "VERIFIER_MODEL_SERVER", "BREV_HOST"):
+        monkeypatch.delenv(key, raising=False)
     model_servers.clear_cache()
     yield
     model_servers.clear_cache()
@@ -98,9 +100,10 @@ def test_local_fallback_mode_names_ollama_and_mlx_vlm_not_vllm():
                      analyst=vlm, verifier=Endpoint(vlm.base_url, vlm.model))
         r = TestClient(make_app(SimpleNamespace(cfg=cfg, cameras={}))).get("/mode")
     servers = r.json()["servers"]
-    assert servers["director"] == {"name": "Ollama", "version": "0.40.5", "reachable": True}
-    assert servers["analyst"]["name"] == servers["verifier"]["name"] == "mlx-vlm"
-    assert servers["endpoints"] == 2 and servers["vlm_shared"] is True
+    assert servers["director"] == {"name": "Ollama", "version": "0.40.5", "reachable": True,
+                                   "source": "detected", "host": "laptop", "label": "Ollama"}
+    assert servers["analyst"]["label"] == servers["verifier"]["label"] == "mlx-vlm"
+    assert servers["endpoints"] == 2 and servers["vlm_shared"] is True and servers["local"] is True
     assert "vLLM" not in r.text
 
 
@@ -121,8 +124,39 @@ def test_the_pages_carry_what_each_server_said(monkeypatch):
         client = TestClient(mount_pipeline(make_app(SimpleNamespace(cfg=Config(), cameras={}))))
         for path in ("/", "/topology"):
             cfg = json.loads(re.search(r"const CFG = (\{.*?\});\n", client.get(path).text).group(1))
-            assert cfg["servers"]["director"] == {"name": "vLLM", "version": "0.28.0", "reachable": True}
+            assert cfg["servers"]["director"]["label"] == "vLLM" and cfg["servers"]["director"]["version"] == "0.28.0"
             assert cfg["servers"]["endpoints"] == 1
+
+
+def test_an_unknown_server_is_shown_by_its_host_never_as_vllm():
+    with fake_server(OTHER) as root:
+        assert model_servers.server("director", Endpoint(root + "/v1", "m"))["label"] == "laptop"
+    gone = model_servers.server("analyst", Endpoint(closed_port_url(), "m"))
+    assert gone["label"] == "laptop (not answering)" and gone["name"] is None
+
+
+def test_model_server_env_declares_the_runtime_without_asking(monkeypatch):
+    def refuse(ep):
+        raise AssertionError("a declared server must not be probed")
+
+    monkeypatch.setattr(model_servers, "_probe", refuse)
+    monkeypatch.setenv("MODEL_SERVER", "vLLM")
+    monkeypatch.setenv("ANALYST_MODEL_SERVER", "mlx-vlm")  # per role wins over MODEL_SERVER
+    ep = Endpoint("http://127.0.0.1:9/v1", "m")
+    assert model_servers.server("director", ep) == {"name": "vLLM", "version": None, "reachable": None,
+                                                     "source": "declared", "host": "laptop", "label": "vLLM"}
+    assert model_servers.server("analyst", ep)["label"] == "mlx-vlm"
+
+
+def test_local_means_every_endpoint_is_on_this_laptop(monkeypatch):
+    monkeypatch.setenv("MODEL_SERVER", "vLLM")  # no probes: only where the endpoints point matters
+    local = Endpoint("http://127.0.0.1:8001/v1", "m")
+    assert model_servers.describe(Config(mock=False, director=local, analyst=local, verifier=local))["local"] is True
+    remote = Endpoint("https://gpu.brev.example/v1", "m")
+    assert model_servers.describe(Config(mock=False, director=remote, analyst=local, verifier=local))["local"] is False
+    monkeypatch.setenv("BREV_HOST", "brev-box")  # a tunnel: localhost is really the GPU box
+    tunnelled = model_servers.describe(Config(mock=False, director=local, analyst=local, verifier=local))
+    assert tunnelled["local"] is False and tunnelled["director"]["host"] == "brev-box"
 
 
 @pytest.mark.parametrize("page", ["app.js", "topology.html", "pipeline.html"])

@@ -35,24 +35,18 @@ let MODE = "mock", L = LABELS.mock;
 
 const COUNT = ["no", "one", "two", "three"];
 
-// The runtime named on the badge is whatever /mode found answering at each
-// endpoint, never the plan: a runtime is named only when its own server says so.
-function serverName(s) {
-  if (s && s.name) return s.name;
-
-  return s && s.reachable ? "an unidentified server" : "an unreachable server";
-}
-
+// The badge uses the server's own labels (/mode servers): a runtime is named only
+// when its server said so or MODEL_SERVER declares it; otherwise the host is shown.
 function liveBadge(servers) {
   if (!servers) return LABELS.live.badge[1];
 
   const d = servers.director, a = servers.analyst, v = servers.verifier, n = servers.endpoints;
 
-  if (d && d.name && [a, v].every(s => s && s.name === d.name)) return `${d.name} · ${COUNT[n] || n} model server${n === 1 ? "" : "s"}`;
+  if (d.name && [a, v].every(s => s.name === d.name)) return `${d.name} · ${COUNT[n] || n} model server${n === 1 ? "" : "s"}`;
 
-  const vlm = serverName(a) === serverName(v) ? serverName(a) : `${serverName(a)} + ${serverName(v)}`;
+  const vlm = a.label === v.label ? a.label : `${a.label} + ${v.label}`;
 
-  return `Director on ${serverName(d)} · VLM on ${vlm}`;
+  return `Director on ${d.label} · VLM on ${vlm}`;
 }
 
 function setBadge([tag, text]) {

@@ -185,6 +185,49 @@ memory on the H100. This benchmark does not change `serve.sh`.
 a local streaming stub. Stub results test the measurement code and must
 not be submitted as vLLM performance evidence.
 
+### Verifier verdicts
+
+SmolVLM models ignore the Verifier prompt's "reply with JSON" instruction.
+In a local bake-off on 50 open COCO crops, SmolVLM-Instruct and
+SmolVLM-500M answered with `True.` or `Supports.` in 100 of 100 calls each,
+which the old parser read as "not supported" for every real weapon. Both
+models also lean towards yes. So `Verifier.check` now:
+
+1. constrains the reply with vLLM 0.28 structured outputs
+   (`response_format={"type": "json_schema", ...}`, boolean `supported`
+   first), and
+2. requests `logprobs` / `top_logprobs` and decides on the log-odds at the
+   verdict token, `log P(true) - log P(false)`, against a per-model threshold.
+
+vLLM reports raw logprobs (before temperature) taken after the grammar
+mask, so this margin is the model's logit difference between `true` and
+`false`. Thresholds fitted on that bake-off: **3.31** for
+`HuggingFaceTB/SmolVLM-500M-Instruct`, **0.56** for
+`HuggingFaceTB/SmolVLM-Instruct`. Other models use 0.0 (argmax).
+`VERIFIER_MARGIN` overrides the threshold. Retune it on room photos before
+the final demo.
+
+Endpoints without these features still work. A field refused with HTTP
+400/422/501 is dropped for the rest of the run, one feature at a time, and
+the warning names it. Each verdict records the mode that decided it, in
+the dashboard event and the console line:
+
+| Mode | Endpoint support | Decision |
+|---|---|---|
+| `margin` | structured outputs + logprobs (vLLM 0.28) | log-odds > threshold |
+| `constrained` | structured outputs, no logprobs | the generated boolean |
+| `text` | neither (or ignored) | JSON in the reply if any, else a leading `true`/`yes`/`supports` or `false`/`no` |
+
+llama.cpp's current server parses the same `response_format` and
+`logprobs` fields, so it should run in `margin` mode. Ollama and MLX servers
+land in whichever row their version supports. Check the logged mode in a
+rehearsal before trusting a verdict.
+
+The prompt text is unchanged, so the benchmark's workload hash and the
+NeMo Gym schemas are too. Benchmark VLM traffic still sends the plain
+prompt without `response_format` or `logprobs`, so its VLM latency
+excludes grammar overhead.
+
 ### Parameter budget and speculation
 
 Configuration A's model-card budget is approximately **32.25B** generative

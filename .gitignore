@@ -10,3 +10,4 @@ runs/
 *.egg-info/
 build/
 .DS_Store
+results/ablation_stub_*.json

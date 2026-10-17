@@ -7,11 +7,47 @@ from pathlib import Path
 
 import pytest
 
-pytest.importorskip("nemo_gym")
+from gym import (
+    MIN_GYM_PYTHON,
+    ensure_nemo_gym_usage_compat,
+    format_missing_nemo_gym_error,
+    raise_missing_nemo_gym,
+)
+
+
+def test_missing_nemo_gym_error_message_and_python_version_pin() -> None:
+    """Verify .python-version pins >= 3.13.14 and missing nemo_gym gives a clear message."""
+    repo_root = Path(__file__).resolve().parents[1]
+    py_ver_str = (repo_root / ".python-version").read_text().strip()
+    parts = [int(p) for p in py_ver_str.split(".")]
+    assert len(parts) == 3, f".python-version must specify major.minor.patch, got {py_ver_str!r}"
+    assert tuple(parts) >= MIN_GYM_PYTHON, (
+        f".python-version {py_ver_str!r} is below NeMo Gym minimum {MIN_GYM_PYTHON}"
+    )
+
+    msg_old = format_missing_nemo_gym_error((3, 13, 5))
+    assert "install the gym extra on Python >= 3.13.14" in msg_old
+    assert "3.13.5" in msg_old
+
+    msg_new = format_missing_nemo_gym_error((3, 13, 14))
+    assert "install the gym extra on Python >= 3.13.14" in msg_new
+
+    with pytest.raises(
+        ModuleNotFoundError,
+        match=r"install the gym extra on Python >= 3\.13\.14",
+    ):
+        raise_missing_nemo_gym(ModuleNotFoundError("No module named 'nemo_gym'"), cli=False)
+
+    with pytest.raises(
+        SystemExit,
+        match=r"install the gym extra on Python >= 3\.13\.14",
+    ):
+        raise_missing_nemo_gym(ModuleNotFoundError("No module named 'nemo_gym'"), cli=True)
 
 
 def test_nemo_gym_usage_compat_accepts_vllm_028_and_stub_usage() -> None:
     """Verify NeMo Gym usage conversion succeeds for both stub and vLLM 0.28 usage payloads."""
+    pytest.importorskip("nemo_gym")
     from nemo_gym.openai_utils import (
         NeMoGymChatCompletion,
         NeMoGymResponseCreateParamsNonStreaming,
@@ -19,8 +55,6 @@ def test_nemo_gym_usage_compat_accepts_vllm_028_and_stub_usage() -> None:
         NeMoGymResponseUsage,
     )
     from nemo_gym.responses_converter import ResponsesConverter
-
-    from gym import ensure_nemo_gym_usage_compat
 
     ensure_nemo_gym_usage_compat()
 
@@ -88,6 +122,7 @@ def test_nemo_gym_usage_compat_accepts_vllm_028_and_stub_usage() -> None:
 
 def test_validate_agent_run_response_raises_clear_runtime_error_on_error_string() -> None:
     """When agent /run returns an error string or HTTP >= 400, fail with RuntimeError, not TypeError."""
+    pytest.importorskip("nemo_gym")
     from gym.run_ablation import _validate_agent_run_response
 
     with pytest.raises(
@@ -108,6 +143,7 @@ def test_ablation_smoke_single_config_and_endpoint_skip(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     """Run one config end-to-end in stub mode and verify --all skips unset endpoint env vars."""
+    pytest.importorskip("nemo_gym")
     from gym.run_ablation import (
         DEFAULT_CONFIG_ORDER,
         get_config_endpoint_info,

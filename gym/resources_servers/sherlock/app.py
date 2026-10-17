@@ -6,18 +6,9 @@ import time
 from typing import Any
 
 from fastapi import Body, FastAPI, Request
-from nemo_gym.base_resources_server import (
-    BaseMultiRewardVerifyResponse,
-    BaseResourcesServerConfig,
-    BaseRunRequest,
-    BaseSeedSessionRequest,
-    BaseSeedSessionResponse,
-    BaseVerifyRequest,
-    SimpleResourcesServer,
-)
-from nemo_gym.server_utils import SESSION_ID_KEY
 from pydantic import PrivateAttr
 
+from gym import raise_missing_nemo_gym
 from gym.resources_servers.sherlock.scenes import (
     SCENES_BY_ID,
     SceneEpisodeState,
@@ -25,6 +16,20 @@ from gym.resources_servers.sherlock.scenes import (
     get_scene,
     score_episode,
 )
+
+try:
+    from nemo_gym.base_resources_server import (
+        BaseMultiRewardVerifyResponse,
+        BaseResourcesServerConfig,
+        BaseRunRequest,
+        BaseSeedSessionRequest,
+        BaseSeedSessionResponse,
+        BaseVerifyRequest,
+        SimpleResourcesServer,
+    )
+    from nemo_gym.server_utils import SESSION_ID_KEY
+except ModuleNotFoundError as _ng_exc:
+    raise_missing_nemo_gym(_ng_exc, cli=(__name__ == "__main__"))
 
 
 class SherlockResourcesServerConfig(BaseResourcesServerConfig):

@@ -159,21 +159,24 @@ def scout_result(data):
     if data.get("split") not in {"test", "val"}:
         return None
     before, after = mapping(data.get("before")), mapping(data.get("after"))
+    baseline_only = data.get("evaluation_scope") == "baseline_only" and data.get("after") is None
     if (
         not text(before.get("model"))
-        or not text(after.get("model"))
+        or (not baseline_only and not text(after.get("model")))
         or not no_stub(before)
         or not no_stub(after)
     ):
         return None
-    for source in ("room", "all"):
+    for source in ("room", "coco", "all"):
         b = mapping(mapping(before.get(source)).get("weapon"))
         a = mapping(mapping(after.get(source)).get("weapon"))
-        counts = [count(row.get(key)) for row in (b, a) for key in ("tp", "fn")]
-        if None in counts or not sum(counts[:2]) or sum(counts[:2]) != sum(counts[2:]):
+        counts = [count(row.get(key)) for row in ((b,) if baseline_only else (b, a)) for key in ("tp", "fn")]
+        if None in counts or not sum(counts[:2]) or (not baseline_only and sum(counts[:2]) != sum(counts[2:])):
             continue
         return {
             "source": source,
+            "environment": text(data.get("environment")),
+            "device": text(data.get("device")),
             "split": data["split"],
             "boxes": sum(counts[:2]),
             "before_precision": number(b.get("precision"), maximum=1),
@@ -218,7 +221,7 @@ def read_numbers(root=None):
         "ablation": latest(root, results.glob("ablation_*.json"), ablation_result),
         "scout": latest(
             root,
-            [root / "runs/scout/eval.json", *results.glob("scout_eval*.json")],
+        [root / "runs/scout/eval.json", root / "runs/scout/eval_baseline.json", *results.glob("scout_eval*.json")],
             scout_result,
         ),
     }

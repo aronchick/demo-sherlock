@@ -410,6 +410,28 @@ per epoch, so the MPS default of 30 epochs takes about 19 minutes and `--epochs 
 mAP50 on the COCO validation images was already 0.45 after 3 epochs. On a CUDA box
 `train_scout.py` switches to 60 epochs at batch 64 by itself; copy `data/scout/` over first.
 
+To measure only the stock Scout before fine-tuning, use an explicitly labelled
+local baseline. The dashboard leaves the after values unmeasured:
+
+```bash
+uv run --extra yolo scripts/eval_scout.py --baseline-only \
+  --measured --device mps --environment local \
+  --dataset data/scout_baseline_eval --split val \
+  --out results/scout_eval_local_mps_baseline.json
+```
+
+The dataset must contain images and reviewed ground-truth labels in its `val`
+folders. COCO validation results describe stock-model behavior on COCO, not
+in-room performance or fine-tuning improvement. Baseline-only output defaults
+to `runs/scout/eval_baseline.json`, preserving a complete before/after report.
+
+The [local MPS baseline](results/scout_eval_local_mps_baseline.json) measured
+stock YOLOv8n on 107 licensed COCO val2017 images: weapon precision **90.48%**,
+recall **18.27%** (19 TP, 2 FP, 85 FN; confidence 0.35, IoU 0.5). All selected
+images were evaluated as `val`; the report records their source URLs and hashes.
+The weapon mapping covers knives, scissors and baseball bats, not firearms.
+After remains unmeasured until the fine-tuned model is evaluated on the same data.
+
 `eval_scout.py` prints precision and recall per class, before (stock YOLOv8n, COCO names mapped) vs after,
 on the held-out test photos, at the 0.35 confidence the runtime Scout uses. Its last line is the number for
 the video: `Scout weapon detection (room test photos, conf 0.35): recall X% -> Y%, precision ...`.

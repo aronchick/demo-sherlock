@@ -294,7 +294,7 @@ def eval_args(tmp_path, monkeypatch):
     sd.write_labels(labels, [(1, (20, 10, 44, 80))], 96, 96)
 
     # Exercise the real reader/scorer/writer without optional Torch or downloads.
-    def predict(model, images, _conf, _imgsz):
+    def predict(model, images, _conf, _imgsz, _device):
         predictions = [("weapon", 0.9, (20, 10, 44, 80))] if model == "tuned.pt" else []
         return dict.fromkeys(images, predictions)
 
@@ -366,3 +366,17 @@ def test_smoke_train_and_eval_on_cpu(tmp_path):
     assert written["split"] == "test" and written["evidence_kind"] == "model_evaluation"
     assert written["execution_mode"] == "smoke"
     assert scout_result(written) is None
+
+
+def test_baseline_only_measured_has_no_after(tmp_path, eval_args):
+    args = eval_args[2:]
+    report = eval_scout.main([*args, "--baseline-only", "--measured", "--device", "mps"])
+    assert report["after"] is None
+    assert report["evaluation_scope"] == "baseline_only"
+    assert report["environment"] == "local" and report["device"] == "mps"
+    assert not (tmp_path / "runs/scout/eval.json").exists()
+    result = read_numbers(tmp_path)["scout"]
+    assert result["before_precision"] == 0 and result["after_precision"] is None
+    assert result["after_recall"] is None and result["device"] == "mps"
+    with pytest.raises(ValueError, match="cannot be published"):
+        publish_scout_hf.measured_headline(report)

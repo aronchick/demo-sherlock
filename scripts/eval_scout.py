@@ -13,7 +13,9 @@ separately: the room is where the demo runs, COCO shows nothing else broke.
 Pass --smoke for pipeline checks or evaluations of smoke-trained weights; these
 reports are labelled smoke and excluded from the dashboard's measured results.
 Use --measured explicitly for real evaluations, including real CPU evaluations.
-Smoke output defaults to eval_smoke.json, preserving the measured eval.json."""
+Smoke output defaults to eval_smoke.json, preserving the measured eval.json.
+Use --baseline-only instead of --after to leave fine-tuned results unmeasured;
+its default output is eval_baseline.json. --device mps selects local Apple GPU inference."""
 from __future__ import annotations
 
 import argparse
@@ -51,14 +53,15 @@ def ground_truth(dataset: Path, split: str) -> dict[Path, list[tuple[str, tuple]
 
 
 def predict(model_path: str, images: list[Path], conf: float = RUNTIME_CONF,
-            imgsz: int = 640) -> dict[Path, list[tuple[str, float, tuple]]]:
+            imgsz: int = 640, device: str | None = None) -> dict[Path, list[tuple[str, float, tuple]]]:
     from ultralytics import YOLO  # lazy: torch is heavy
 
     model = YOLO(model_path)
     out: dict[Path, list[tuple[str, float, tuple]]] = {}
     for i in range(0, len(images), 16):
         batch = images[i:i + 16]
-        for img, res in zip(batch, model.predict([str(p) for p in batch], conf=conf, imgsz=imgsz, verbose=False),
+        for img, res in zip(batch, model.predict([str(p) for p in batch], conf=conf, imgsz=imgsz,
+                                               device=device, verbose=False),
                             strict=True):
             out[img] = [(sc, float(b.conf), tuple(b.xyxy[0].tolist())) for b in res.boxes
                         if (sc := scout_class(res.names[int(b.cls)])) is not None]
@@ -107,12 +110,16 @@ def headline(before: dict, after: dict) -> str:
 
 def main(argv: list[str] | None = None) -> dict:
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    p.add_argument("--after", required=True, help="fine-tuned weights, e.g. runs/scout/weights/best.pt")
+    evaluation = p.add_mutually_exclusive_group(required=True)
+    evaluation.add_argument("--after", help="fine-tuned weights, e.g. runs/scout/weights/best.pt")
+    evaluation.add_argument("--baseline-only", action="store_true", help="measure stock Scout; leave after unmeasured")
     p.add_argument("--before", default="yolov8n.pt", help="stock weights the runtime Scout uses today")
     p.add_argument("--dataset", type=Path, default=ROOT / "data" / "scout")
     p.add_argument("--split", default="test")
     p.add_argument("--conf", type=float, default=RUNTIME_CONF)
     p.add_argument("--imgsz", type=int, default=640)
+    p.add_argument("--device", help="inference device, e.g. mps or cpu")
+    p.add_argument("--environment", default="local", help="where inference ran")
     mode = p.add_mutually_exclusive_group(required=True)
     mode.add_argument("--smoke", action="store_true",
                       help="label a pipeline/test evaluation as smoke, never dashboard evidence")
@@ -122,25 +129,29 @@ def main(argv: list[str] | None = None) -> dict:
                    help="default: runs/scout/eval.json, or eval_smoke.json with --smoke")
     a = p.parse_args(argv)
     if a.out is None:
-        a.out = ROOT / "runs" / "scout" / ("eval_smoke.json" if a.smoke else "eval.json")
+        name = "eval_smoke.json" if a.smoke else "eval_baseline.json" if a.baseline_only else "eval.json"
+        a.out = ROOT / "runs" / "scout" / name
     gts = ground_truth(a.dataset, a.split)
     if not gts:
         raise SystemExit(f"no images in {a.dataset / 'images' / a.split}")
     images = list(gts)
-    before = score(predict(a.before, images, a.conf, a.imgsz), gts)
-    after = score(predict(a.after, images, a.conf, a.imgsz), gts)
+    before = score(predict(a.before, images, a.conf, a.imgsz, a.device), gts)
+    after = None if a.baseline_only else score(predict(a.after, images, a.conf, a.imgsz, a.device), gts)
     sources = defaultdict(int)
     for img in images:
         sources[source_of(img)] += 1
     # Both modes run model inference; smoke scores are not measured demo evidence.
     report = {"evidence_kind": "model_evaluation",
               "execution_mode": "smoke" if a.smoke else "measured",
+              "evaluation_scope": "baseline_only" if a.baseline_only else "before_after",
+              "environment": a.environment, "device": a.device or "auto", "imgsz": a.imgsz,
               "split": a.split, "conf": a.conf, "iou": 0.5, "images": dict(sources),
-              "before": {"model": a.before, **before}, "after": {"model": a.after, **after},
-              "headline": headline(before, after)}
+              "before": {"model": a.before, **before},
+              "after": None if after is None else {"model": a.after, **after},
+              "headline": "Scout baseline only; after not measured" if after is None else headline(before, after)}
     a.out.parent.mkdir(parents=True, exist_ok=True)
     a.out.write_text(json.dumps(report, indent=2))
-    print(table(before, after))
+    print(json.dumps(before, indent=2) if after is None else table(before, after))
     print(f"\n{report['headline']}\nwritten to {a.out}")
     return report
 

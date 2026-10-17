@@ -344,3 +344,18 @@ def test_ab_delta_rejects_missing_or_different_workload_hash(field, value):
     result = numbers.director_result(data)
     assert result["prefix_cache_p95_change_pct"] is None
     assert result["p95_ms"] == 400
+
+
+@pytest.mark.parametrize("scope", [None, "before_after", "baseline_only"])
+def test_scout_partial_requires_explicit_baseline_scope(scope):
+    data = scout()
+    data["after"] = None
+    data["evaluation_scope"] = scope
+    result = numbers.scout_result(data)
+    if scope == "baseline_only":
+        assert result["before_precision"] == 0.667
+        assert result["after_precision"] is None
+        data["execution_mode"] = "smoke"
+        assert numbers.scout_result(data) is None
+    else:
+        assert result is None

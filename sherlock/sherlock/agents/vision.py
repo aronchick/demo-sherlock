@@ -3,7 +3,6 @@ Both talk to any OpenAI-compatible vision endpoint (Ollama /v1, vLLM)."""
 from __future__ import annotations
 
 import base64
-import json
 import logging
 import math
 import os
@@ -60,122 +59,89 @@ class Analyst:
         return {"description": text}
 
 
-# Log-odds margin, log P(true) - log P(false) at the JSON verdict token, that a claim must exceed
-# to count as supported. Fitted per model on the open-COCO bake-off (true vs false claims on 50
-# Director-style crops). Other models decide by argmax (0.0). VERIFIER_MARGIN overrides.
-MARGIN_DEFAULTS = {"HuggingFaceTB/SmolVLM-500M-Instruct": 3.31,
-                   "HuggingFaceTB/SmolVLM-Instruct": 0.56}
-
-# "supported" comes first so the verdict is the first value the model commits to.
-VERDICT_SCHEMA = {"type": "object",
-                  "properties": {"supported": {"type": "boolean"},
-                                 "confidence": {"type": "number"},
-                                 "reason": {"type": "string"}},
-                  "required": ["supported", "confidence", "reason"],
-                  "additionalProperties": False}
-_FITTED = {k.lower(): v for k, v in MARGIN_DEFAULTS.items()}
+# The Verifier asks a yes/no question. Small VLMs ignore a JSON-verdict instruction ('True.',
+# 'Supports.') and lean towards yes under it, but answer a plain question well: on the open-COCO
+# bake-off (50 Director-style crops, a true and a false claim each) SmolVLM-500M scored 94/100
+# by argmax this way, against 74/100 for a schema-constrained JSON verdict with a tuned threshold.
 TOP_LOGPROBS = 10
 # How OpenAI-compatible servers refuse a request field they do not implement.
 _REFUSED = (400, 422, 501)
-_JSON_VERDICT = re.compile(r'"supported"\s*:\s*"?(true|false)\b', re.IGNORECASE)
+_LEADING = re.compile(r"\W*(?:answer:\s*)?(yes|no|true|false)\b")
 
 
-def _bool(v) -> bool | None:
-    """A JSON verdict as a bool; the string "false" must not read as truthy."""
-    if isinstance(v, bool):
-        return v
-    if isinstance(v, str) and v.strip().lower() in ("true", "false"):
-        return v.strip().lower() == "true"
-    return None
+def _word(token: str) -> str:
+    return re.sub(r"\W", "", token).lower()
 
 
-def _lenient(text: str) -> bool | None:
-    """Verdict from free text. Small VLMs answer this prompt with 'True.' or 'Supports.'
-    rather than JSON; None means the reply holds no verdict at all (e.g. '0-1')."""
-    if m := _JSON_VERDICT.search(text):
-        return m.group(1).lower() == "true"
-    t = text.strip().lower()
-    if re.match(r"\W*(answer:\s*)?(true|yes|supports?|supported)\b", t):
-        return True
-    if re.match(r"\W*(answer:\s*)?(false|no|unsupported|not supported)\b", t) or \
-            re.search(r"\b(does not|doesn't) show\b", t):
-        return False
+def _leading_verdict(text: str) -> bool | None:
+    """The reply's first word as a verdict ('Yes.', 'No, it is a cup.', 'Answer: yes');
+    None when the reply does not open with one."""
+    if m := _LEADING.match(text.strip().lower()):
+        return m.group(1) in ("yes", "true")
     return None
 
 
 def _verdict_margin(tokens) -> float | None:
-    """log P(true) - log P(false) where the model fills `"supported":`. Spellings such as
-    ' true' and 'true' are pooled. A side missing from top_logprobs is bounded by the
-    smallest listed logprob. None when the reply has no such token or no alternatives."""
-    seen = ""
+    """log P(yes) - log P(no) at the reply's first word, pooling spellings (' Yes', 'yes',
+    'YES') over top_logprobs and the sampled token. A side missing from the list is bounded
+    by the smallest listed logprob. None when the reply does not open with yes or no, or the
+    server lists no alternatives."""
     for t in tokens:
-        if t.token.strip().lower() in ("true", "false") and re.search(r'"supported"\s*:\s*$', seen):
-            alts = list(t.top_logprobs or [])
-            if len(alts) < 2:
-                return None
-            pooled: dict[str, float] = {}
-            for a in alts:
-                word = a.token.strip().lower()
-                if word in ("true", "false"):
-                    pooled[word] = float(np.logaddexp(pooled.get(word, -np.inf), a.logprob))
-            floor = min(a.logprob for a in alts)
-            return pooled.get("true", floor) - pooled.get("false", floor)
-        seen += t.token
+        word = _word(t.token)
+        if not word:
+            continue  # leading whitespace or punctuation
+        if word not in ("yes", "no"):
+            return None
+        alts = {a.token: a.logprob for a in (t.top_logprobs or [])}
+        if len(alts) < 2:
+            return None
+        alts.setdefault(t.token, t.logprob)
+        pooled: dict[str, float] = {}
+        for tok, lp in alts.items():
+            if (w := _word(tok)) in ("yes", "no"):
+                pooled[w] = float(np.logaddexp(pooled.get(w, -np.inf), lp))
+        floor = min(alts.values())
+        return pooled.get("yes", floor) - pooled.get("no", floor)
     return None
 
 
-def margin_threshold(model: str) -> float:
-    if env := os.environ.get("VERIFIER_MARGIN"):
-        return float(env)
-    return _FITTED.get(model.lower(), 0.0)
+def margin_threshold() -> float:
+    """VERIFIER_MARGIN, else 0.0 (supported when yes is the likelier answer). Fitted on the
+    bake-off: SmolVLM-500M -2.75, SmolVLM-Instruct -1.88; re-tune on the room photos."""
+    return float(os.environ.get("VERIFIER_MARGIN") or 0.0)
 
 
 class Verifier:
-    """Checks the Director's weapon claim against the weapon crop only.
+    """Checks the Director's weapon claim against the weapon crop only, as a yes/no question.
 
-    Small VLMs ignore the prompt's JSON instruction ('True.', 'Supports.'), and they lean
-    towards yes, so the verdict is constrained to the JSON schema and decided from the
-    logprobs of its boolean. An endpoint that refuses a feature is retried without it, one
-    feature at a time, and every verdict records the mode that decided it:
-      margin       schema + logprobs: log-odds at the verdict token > threshold
-      constrained  schema, no logprobs: the boolean the model generated (argmax)
-      text         no schema: JSON in the reply if any, else a leading yes/no word"""
+    With logprobs (vLLM, llama.cpp) the verdict is the margin log P(yes) - log P(no) at the
+    reply's first word against VERIFIER_MARGIN. An endpoint that refuses logprobs is retried
+    without them, once and for good; without logprobs the verdict is the reply's first word.
+    A reply that is neither yes nor no is not support. Every verdict records its mode:
+      margin  logprobs at the first word, margin > threshold
+      text    the reply's first word"""
 
-    PROMPT = ("Claim about the object in this image: \"{claim}\". Does the image actually show that object? "
-              "Judge the object only; do not identify or describe any person. "
-              "Reply with JSON only: {{\"supported\": true|false, \"confidence\": 0-1, \"reason\": \"...\"}}")
+    PROMPT = ("Is the object in this image {claim}? Judge the object only; do not identify or "
+              "describe any person. Answer yes or no.")
 
     def __init__(self, ep: Endpoint):
         self.client = OpenAI(base_url=ep.base_url, api_key=ep.api_key)
         self.model = ep.model
-        self.threshold = margin_threshold(ep.model)
-        self.structured = self.logprobs = True  # dropped for good once the endpoint refuses them
-        if "VERIFIER_MARGIN" not in os.environ and ep.model.lower() not in _FITTED:
-            log.warning("verifier: no fitted margin for %r; deciding by argmax (0.0). "
-                        "Set VERIFIER_MARGIN to tune it.", ep.model)
+        self.threshold = margin_threshold()
+        self.logprobs = True  # dropped for good once the endpoint refuses them
 
     def _ask(self, img: np.ndarray, claim: str):
         while True:
-            extra: dict = {}
-            if self.structured:
-                extra["response_format"] = {"type": "json_schema",
-                                            "json_schema": {"name": "verdict", "schema": VERDICT_SCHEMA}}
-            if self.logprobs:
-                extra.update(logprobs=True, top_logprobs=TOP_LOGPROBS)
+            extra = {"logprobs": True, "top_logprobs": TOP_LOGPROBS} if self.logprobs else {}
             try:
-                return _vision_request(self.client, self.model, img, self.PROMPT.format(claim=claim), 120,
+                return _vision_request(self.client, self.model, img, self.PROMPT.format(claim=claim), 16,
                                        **extra)
             except APIStatusError as e:
-                if e.status_code not in _REFUSED or not (self.structured or self.logprobs):
+                if e.status_code not in _REFUSED or not self.logprobs:
                     raise
-                msg = str(e).lower()
-                blames_schema = any(k in msg for k in ("response_format", "json_schema", "structured", "grammar"))
-                if self.structured and (blames_schema or not self.logprobs):
-                    self.structured, dropped = False, "structured outputs"
-                else:
-                    self.logprobs, dropped = False, "logprobs"
-                log.warning("verifier: %s refused %s (HTTP %s); retrying without", self.model, dropped,
-                            e.status_code)
+                self.logprobs = False
+                log.warning("verifier: %s refused logprobs (HTTP %s); reading the reply's first word",
+                            self.model, e.status_code)
 
     def check(self, img: np.ndarray, claim: str) -> dict:
         t0 = time.perf_counter()
@@ -187,31 +153,18 @@ class Verifier:
             margin = _verdict_margin(tokens) if tokens else None
         except (AttributeError, TypeError, ValueError):  # a server's non-standard logprobs shape
             margin = None
-        m = re.search(r"\{.*\}", raw, re.DOTALL)
-        try:
-            data = json.loads(m.group(0)) if m else {}
-        except json.JSONDecodeError:
-            data = {}
-        data = data if isinstance(data, dict) else {}
-        generated = _bool(data.get("supported"))
-        if generated is None and (jm := _JSON_VERDICT.search(raw)):
-            generated = jm.group(1).lower() == "true"  # schema output cut off by max_tokens
-        try:
-            confidence = min(1.0, max(0.0, float(data.get("confidence", 0.0))))
-        except (TypeError, ValueError):
-            confidence = 0.0
+        if margin is not None and math.isnan(margin):
+            margin = None
         if margin is not None:
+            margin = max(-100.0, min(100.0, margin))  # finite, so events stay valid JSON
             mode, supported = "margin", margin > self.threshold
-            confidence = 1 / (1 + math.exp(-margin))  # P(true) among {true, false}
-        elif self.structured and generated is not None:
-            mode, supported = "constrained", generated
+            confidence = round(0.5 * (1 + math.tanh(margin / 2)), 3)  # P(yes) among {yes, no}
         else:
-            mode, supported = "text", bool(_lenient(raw))
-        out = {"supported": supported, "confidence": round(confidence, 3),
-               "reason": str(data.get("reason") or raw[:200]), "mode": mode,
-               "margin": None if margin is None else round(margin, 3)}
+            mode, supported, confidence = "text", _leading_verdict(raw) is True, None
+        out = {"supported": supported, "confidence": confidence, "reason": raw[:200] or "(empty reply)",
+               "mode": mode, "margin": None if margin is None else round(margin, 3)}
         BUS.bump("confirmed" if supported else "rejected")
-        how = f"margin {margin:+.2f} vs {self.threshold:.2f}" if margin is not None else mode
+        how = f"margin {margin:+.2f} vs {self.threshold:+.2f}" if margin is not None else "first word"
         BUS.emit("verifier", f"{'CONFIRMED' if supported else 'REJECTED'} ({how}): {out['reason']}",
                  (time.perf_counter() - t0) * 1000, **out)
         return out

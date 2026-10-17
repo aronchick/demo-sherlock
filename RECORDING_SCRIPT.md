@@ -1,9 +1,16 @@
 # Recording script: YOLO → Brev → camera zoom
 
-About 2:30. Record a successful run ahead of time and replay it in the browser
+About 4:00. Record a successful run ahead of time and replay it in the browser
 for narration. Lead with the camera response. Keep the first detection-to-zoom
 sequence at its original speed, in one continuous shot. Explain the model after the
 viewer has seen the camera react.
+
+**Length and additions.** The submission requires 3:00 to 5:00, on unlisted
+YouTube or Vimeo, with the presenter camera bubble on to show the team. The
+original take ran about 2:30. Sections marked **(added)** bring it to about
+4:00: the team introduction, the Verifier catching an injected Scout mistake,
+and the measured numbers. The original sections keep their wording; only their
+times moved.
 
 ## Playback plan
 
@@ -18,6 +25,19 @@ clickable: interact with the actual case pages for those shots. Browser event
 replay would be a separate feature; it is not required for this recording plan.
 Keep playback instructions out of the spoken narration. Use present tense
 without claiming “live” or “happening right now.” Narrate the execution captured.
+
+**(added)** Capture a second run for the Scout-mistake section, on the scripted
+scene with a test fault that makes the Scout call the cup a knife. With the
+Brev endpoints in `.env`:
+
+```bash
+SCOUT_MISLABEL=cup=knife VERIFIER_MARGIN=-1.0 \
+  CAMERAS="hero:fake:synthetic,scout1:fake:synthetic" \
+  uv run python run.py --synthetic
+```
+
+Capture from the second scene loop: the first request warms the models.
+Keep the `Scout mislabel injected` row in frame when it appears.
 
 ## Before recording
 
@@ -52,7 +72,17 @@ Director and return camera-control arrow play through to the close-up.
 If measured, add: “That took [measured interval] from detection to close-up.”
 Otherwise let the uninterrupted action demonstrate the response time.
 
-## 0:25–0:45 · Explain the gate
+## 0:25–0:40 · Introduce the team (added)
+
+**Screen:** Main board, presenter camera bubble in a corner. The bubble stays
+on for the whole video.
+
+> We're [team names], and this is Sherlock: a small detector watches every
+> frame, and bigger models only run when something is worth a closer look.
+
+Use the names of everyone on the team. Keep it to one sentence.
+
+## 0:40–1:00 · Explain the gate
 
 **Screen:** Keep the camera, Scout and Director visible. Show the benign object
 if it appears naturally; do not delay the opening payoff to wait for it.
@@ -62,7 +92,7 @@ if it appears naturally; do not delay the opening payoff to wait for it.
 > decides whether to ask the camera for a closer look. A benign cup can stop
 > here, with zero vision-model calls.
 
-## 0:45–1:05 · Explain the FP8 choice
+## 1:00–1:20 · Explain the FP8 choice
 
 **Screen:** Director box and NVIDIA Brev heading.
 
@@ -77,7 +107,7 @@ FP8 checkpoint a vision model, say it has half the weights, call it lossless,
 or claim a measured speedup without a comparison. The previous repo default was
 already NVFP4; the sixteen-to-eight comparison is with the BF16 base model.
 
-## 1:05–1:30 · Verify the object
+## 1:20–1:45 · Verify the object
 
 **Screen:** Close-up, then the Verifier and Analyst results.
 
@@ -89,7 +119,26 @@ already NVFP4; the sixteen-to-eight comparison is with the BF16 base model.
 > reviewer. The models only receive the masked object crop. The reviewer can
 > see who was holding the object and where it was in the scene.
 
-## 1:30–2:00 · Show the human response
+**(added)** If a face falls inside the close-up, the crop shows a flat grey
+patch there and the snapshot row reads `1 face masked`. Point at it: the face
+is filled before any model sees the crop.
+
+## 1:45–2:15 · The Verifier catches the Scout's mistake (added)
+
+**Screen:** The second captured run. The `Scout mislabel injected` row, the
+investigation, `REJECTED` from the Verifier, `face crop discarded: weapon
+claim not verified`, the incident logged rather than alerted; then the real
+knife's alert.
+
+> Small detectors make mistakes, so here we inject one: the Scout is told to
+> call this cup a knife. The Director investigates it like any knife. The
+> Verifier looks at the masked crop and says no, so Sherlock logs it for a
+> person instead of raising an alert, and the face crop is discarded. A few
+> seconds later the real knife gets a yes.
+
+Always say the mistake is injected; it is a test fault, not a detection.
+
+## 2:15–2:45 · Show the human response
 
 **Screen:** Click the phone indicator, select the notice, page through the
 images, then choose Investigate and Notify team.
@@ -101,7 +150,29 @@ images, then choose Investigate and Notify team.
 The phone delivery is a demonstration, not a real external message. Keep the
 app's response status visible; do not imply a real team received a notification.
 
-## 2:00–2:30 · Show the evidence and close
+## 2:45–3:30 · Show what we measured (added)
+
+**Screen:** The MEASURED card on `/log`, then the "Ablation metrics" table in
+the README.
+
+> We benchmarked the Director on vLLM on the H100, using the NVFP4 checkpoint
+> of the same model. One request at a time, it returns its tool call in about
+> 230 milliseconds at the median, and 99 percent of its tool responses are
+> valid. At sixteen at once it serves twelve requests a second.
+
+> Then we used NeMo Gym to test the Director on eight scripted incidents with
+> faults. The prompt is what matters: the old prompt fails all eight, ours
+> passes all eight in about a second and a half each. Thinking on passes the
+> same eight but takes more than twice as long, so it ships off. A Qwen 7B
+> Director also passes all eight, so this suite does not rank them.
+
+These H100 numbers ran the NVFP4 checkpoint, before the switch to FP8
+(README, "H100 results" and "Ablation metrics"). If FP8 measurements land
+before recording, use them and drop the NVFP4 clause. Never claim a
+prefix-cache gain (the A/B showed none) or that Nemotron beats Qwen. The card's Director headline is at sixteen
+concurrent requests; do not read it as the one-at-a-time figure.
+
+## 3:30–4:00 · Show the evidence and close
 
 **Screen:** Return to the board and click an evidence image for the summary.
 Open its full case file, expand the incident and show its timeline and signature.

@@ -76,8 +76,54 @@ uvx ruff@0.17.1 check .
 `ruff.toml` pins this exact version (`required-version`; other versions refuse to run) and spells out its rule set, so every machine gets the same answer.
 
 ## Demo script (3 min)
-1. Dashboard up, wide view showing the room, counter climbing with zero VLM calls.
-2. Judge holds up an object. Scout flags it, camera whirs over and zooms, Analyst reads the label, Verifier confirms. Point at latency per stage.
-3. Press **Break the next tool call** → Director gets an error, retries differently, still reports.
-4. Cover the hero lens → Director lists cameras, finishes on scout1.
-5. Close on the ratio: frames handled by a 10 ms model vs. VLM calls actually made.
+
+Use a red fedora with a black band and a black Red Hat / NVIDIA baseball cap.
+The fedora gives the audience an easy first object to recognize; the cap adds
+small lettering that gives the camera a reason to zoom.
+
+### Hat setup and rehearsal
+
+- Set `SCOUT_BACKEND=motion` for this sequence, with real Analyst and Verifier
+  endpoints. The default `yolov8n.pt` model has no hat class. The existing motion
+  scout can flag a newly introduced prop without knowing what it is; describe
+  its trigger as motion until the Analyst identifies the object.
+- Start with the props out of frame so the motion scout learns the background.
+  Introduce one hat at a time, hold it still through the investigation, and keep
+  the cap's lettering facing the camera. Between takes, remove the prop for at
+  least four seconds so the Scout's three-second tracking memory can expire.
+- Rehearse at the actual camera distance. Check that the crop contains the hat,
+  that the Analyst can read each name it reports, and that the Verifier checks
+  the resulting claim. Red fabric alone does not establish a Red Hat brand.
+  If the cap lettering is unreadable, report that uncertainty. Mock mode only
+  exercises the synthetic blue-box scenario and does not validate either hat.
+
+### Presenter sequence
+
+1. **0:00–0:20, wide view.** Show the quiet scene and the frame count before
+   introducing either prop. “Sherlock watches for a change before asking the
+   vision models to inspect a crop.”
+2. **0:20–1:00, red fedora.** Bring it into view and hold it still. Follow the
+   motion event, camera movement or software crop, Analyst description, and
+   Verifier verdict. A suitable claim, if supported by the crop, is “a red hat
+   with a black band.” Point at the per-stage latency.
+3. **1:00–1:40, black cap.** Remove the fedora, pause, then introduce the cap
+   with the lettering forward. “This hat is black. Let's see what the lettering
+   says.” Show the crop and actual result; name Red Hat and NVIDIA only if the
+   models read and verify them. Keep the expected names out of model prompts.
+4. **1:40–2:10, tool recovery.** Remove the cap, press **Break the next tool
+   call**, then reintroduce it after the tracking memory expires. Show the error
+   and the attempted recovery. With a second working camera, check whether the
+   Director finishes the investigation there.
+5. **2:10–2:40, camera fallback.** With both cameras able to see the prop, cover
+   the hero lens and introduce the fedora to scout1. Show which camera supplies
+   the evidence and whether its crop supports the report. Rehearse this step
+   only with a working second camera.
+6. **2:40–3:00, close.** Compare frames observed with VLM calls made. “The first
+   stage found a change. The vision models inspected the hat and checked the
+   claim.” Use the measured timings for this run; the YOLO timing above does
+   not describe the motion backend.
+
+If time allows, repeat the cap step with the lettering turned away. A fresh
+crop can support “black baseball cap”; it cannot establish hidden lettering.
+Inspect both the Analyst answer and Verifier verdict before calling that a
+successful uncertainty check.

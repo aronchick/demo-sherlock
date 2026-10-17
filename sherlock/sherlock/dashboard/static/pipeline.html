@@ -25,13 +25,13 @@
 
   /* ---- header ---------------------------------------------------------- */
   .bar { display: flex; align-items: flex-end; gap: 20px; min-width: 0; }
-  .eyebrow { font: 500 10.5px var(--mono); letter-spacing: .16em; text-transform: uppercase; color: var(--dim); }
+  .eyebrow { font: 500 11px var(--mono); letter-spacing: .16em; text-transform: uppercase; color: var(--dim); }
   .bar h1 { margin: 2px 0 0; font: 500 clamp(16px, 2.1vw, 22px)/1.15 var(--sans); letter-spacing: -.005em;
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .bar .head { min-width: 0; }
   .ratio { margin-left: auto; text-align: right; white-space: nowrap; }
   .ratio b { display: block; font: 500 clamp(26px, 3.6vw, 40px)/1 var(--mono); font-variant-numeric: tabular-nums; }
-  .ratio span { font: 500 10.5px var(--mono); letter-spacing: .12em; text-transform: uppercase; color: var(--dim); }
+  .ratio span { font: 500 11px var(--mono); letter-spacing: .12em; text-transform: uppercase; color: var(--dim); }
 
   /* ---- board ------------------------------------------------------------ */
   .board { position: relative; display: grid; min-height: 0; padding-top: 24px;
@@ -41,8 +41,8 @@
   .zone { position: relative; border: 1px solid var(--line); border-radius: 10px; background: rgba(255,255,255,.3);
     padding: 30px 12px 12px; }
   .zone > .zhead { position: absolute; left: 12px; top: 9px; right: 12px; display: flex; align-items: baseline; gap: 8px;
-    font: 500 10.5px var(--mono); letter-spacing: .14em; text-transform: uppercase; color: var(--ink); white-space: nowrap; }
-  .zone > .zhead small { font-size: 10px; letter-spacing: .04em; text-transform: none; color: var(--dim);
+    font: 500 11px var(--mono); letter-spacing: .14em; text-transform: uppercase; color: var(--ink); white-space: nowrap; }
+  .zone > .zhead small { font-size: 11px; letter-spacing: .04em; text-transform: none; color: var(--dim);
     overflow: hidden; text-overflow: ellipsis; }
   .laptop { grid-template-rows: auto minmax(0,1fr) auto; }
   .models { grid-template-rows: repeat(3, minmax(0,1fr)); gap: clamp(22px, 4.6vh, 44px); }
@@ -53,9 +53,9 @@
   /* ---- feeds -------------------------------------------------------------- */
   .frame { position: relative; display: grid; grid-template-rows: auto minmax(0,1fr); min-height: 0; background: var(--card);
     border: 1px solid var(--line); border-radius: 8px; overflow: hidden; transition: border-color .3s, box-shadow .3s; }
-  .frame .fh { display: flex; align-items: center; gap: 8px; padding: 6px 10px; font: 500 10.5px var(--mono);
+  .frame .fh { display: flex; align-items: center; gap: 8px; padding: 6px 10px; font: 500 11px var(--mono);
     letter-spacing: .14em; text-transform: uppercase; color: var(--ink); }
-  .frame .fh small { margin-left: auto; font-size: 10px; letter-spacing: .04em; text-transform: none; color: var(--dim); }
+  .frame .fh small { margin-left: auto; font-size: 11px; letter-spacing: .04em; text-transform: none; color: var(--dim); }
   .frame .fh i { width: 7px; height: 7px; border-radius: 50%; background: var(--scout); animation: blink 1.8s infinite; }
   @keyframes blink { 50% { opacity: .25; } }
   .view { position: relative; min-height: 0; background: #16181b; }
@@ -90,13 +90,13 @@
   .stage::before { content: ""; position: absolute; left: 0; top: 10px; bottom: 10px; width: 3px; border-radius: 0 3px 3px 0; background: var(--c); }
   .stage.hot { border-color: var(--tint, var(--c)); background: var(--card-hi);
     outline: 1px solid var(--tint, var(--c)); }
-  .stage .kind { font: 500 10px var(--mono); letter-spacing: .14em; text-transform: uppercase; color: var(--dim); }
+  .stage .kind { font: 500 11px var(--mono); letter-spacing: .14em; text-transform: uppercase; color: var(--dim); }
   .stage .name { font: 700 clamp(15px, 1.5vw, 18px)/1.2 var(--sans); }
   .stage .sub { font-size: 12px; color: var(--dim); }
-  .stage .ms { position: absolute; right: 10px; bottom: 7px; font: 500 10.5px var(--mono); color: var(--c); opacity: 0; transition: opacity .5s; }
+  .stage .ms { position: absolute; right: 10px; bottom: 7px; font: 500 11px var(--mono); color: var(--c); opacity: 0; transition: opacity .5s; }
   .stage .ms.on { opacity: 1; }
   .badge { position: absolute; right: 10px; top: -9px; padding: 1px 7px; background: var(--paper); border: 1px solid var(--c);
-    border-radius: 9px; color: var(--c); font: 500 9.5px var(--mono); letter-spacing: .1em; text-transform: uppercase;
+    border-radius: 9px; color: var(--c); font: 500 11px var(--mono); letter-spacing: .1em; text-transform: uppercase;
     opacity: 0; transition: opacity .3s; pointer-events: none; z-index: 2; }
   .badge.on { opacity: 1; }
   #b-camera { top: 5px; right: 96px; }     /* the feed card clips overflow, so this badge sits inside its header */
@@ -110,7 +110,7 @@
   .dest { position: relative; display: flex; flex-direction: column; justify-content: center; min-height: 0;
     background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 8px 14px 8px 16px; transition: border-color .3s, box-shadow .3s, background .3s; }
   .dest::before { content: ""; position: absolute; left: 0; top: 10px; bottom: 10px; width: 3px; border-radius: 0 3px 3px 0; background: var(--c); }
-  .dest .kind { font: 500 10px var(--mono); letter-spacing: .14em; text-transform: uppercase; color: var(--dim); }
+  .dest .kind { font: 500 11px var(--mono); letter-spacing: .14em; text-transform: uppercase; color: var(--dim); }
   .dest .num { font: 500 clamp(26px, 3.2vw, 38px)/1.05 var(--mono); font-variant-numeric: tabular-nums; }
   .dest .sub { font-size: 12px; color: var(--dim); }
   .dest.ping { border-color: var(--c); background: var(--card-hi); outline: 1px solid var(--c); }
@@ -119,15 +119,15 @@
 
   /* ---- incident record: the signature -------------------------------------------- */
   .record { display: grid; grid-template-columns: clamp(92px, 9vw, 120px) repeat(5, minmax(0,1fr)); gap: 8px; align-items: stretch; min-width: 0; }
-  .record .lede { align-self: center; font: 500 10.5px var(--mono); letter-spacing: .14em; text-transform: uppercase; color: var(--ink); }
-  .record .lede small { display: block; margin-top: 2px; font-size: 10px; letter-spacing: .02em; text-transform: none; color: var(--dim); }
+  .record .lede { align-self: center; font: 500 11px var(--mono); letter-spacing: .14em; text-transform: uppercase; color: var(--ink); }
+  .record .lede small { display: block; margin-top: 2px; font-size: 11px; letter-spacing: .02em; text-transform: none; color: var(--dim); }
   .cell { position: relative; min-width: 0; height: clamp(58px, 9.5vh, 84px); padding: 7px 10px 6px 13px; border: 1px dashed var(--rail);
     border-radius: 7px; overflow: hidden; }
   .cell::before { content: ""; position: absolute; left: 0; top: 8px; bottom: 8px; width: 3px; border-radius: 0 3px 3px 0; background: var(--rail); }
-  .cell .k { font: 500 9.5px var(--mono); letter-spacing: .14em; text-transform: uppercase; color: var(--faint); }
+  .cell .k { font: 500 11px var(--mono); letter-spacing: .14em; text-transform: uppercase; color: var(--faint); }
   .cell .v { margin-top: 2px; font-size: 13px; line-height: 1.3; color: var(--faint); display: -webkit-box; -webkit-box-orient: vertical;
     -webkit-line-clamp: 2; overflow: hidden; }
-  .cell .m { position: absolute; right: 9px; top: 6px; font: 500 9.5px var(--mono); color: var(--c, var(--dim)); }
+  .cell .m { position: absolute; right: 9px; top: 6px; font: 500 11px var(--mono); color: var(--c, var(--dim)); }
   .cell.on { border: 1px solid var(--line); background: var(--card); animation: cellin .35s ease-out; }
   .cell.on::before { background: var(--c); }
   .cell.on .k { color: var(--c); } .cell.on .v { color: var(--ink); }
@@ -137,7 +137,7 @@
   footer { display: flex; align-items: center; gap: 14px; min-width: 0; font: 400 11.5px var(--mono); color: var(--dim); white-space: nowrap; }
   footer .stat b { color: var(--ink); font-weight: 500; }
   footer .expanso { display: flex; align-items: center; gap: 7px; min-width: 0; flex: 1; overflow: hidden; text-overflow: ellipsis; color: var(--faint);
-    font-size: 10.5px; border-left: 1px solid var(--line); padding-left: 14px; }
+    font-size: 11px; border-left: 1px solid var(--line); padding-left: 14px; }
   footer .expanso i { flex: none; width: 7px; height: 7px; border-radius: 50%; border: 1.5px solid var(--faint); }
   footer .expanso.live i { background: var(--ok); border-color: var(--ok); }
   footer .expanso span { overflow: hidden; text-overflow: ellipsis; }
@@ -924,7 +924,7 @@ function drawLabel(e, hot) {
 function drawCard(c, cx, cy, w, alpha = 1) {
   if (c.text) {                                                          // a ticket: words, not pixels
     ctx.save(); ctx.globalAlpha = alpha;
-    ctx.font = `500 10.5px ${FONT.mono}`; const tw = ctx.measureText(c.text).width + 16, th = 19;
+    ctx.font = `500 11px ${FONT.mono}`; const tw = ctx.measureText(c.text).width + 16, th = 19;
     ctx.shadowColor = 'rgba(40,34,20,.22)'; ctx.shadowBlur = 8; ctx.shadowOffsetY = 2;
     ctx.fillStyle = C.card; roundRect(cx - tw / 2, cy - th / 2, tw, th, 9.5); ctx.fill();
     ctx.shadowColor = 'transparent'; ctx.strokeStyle = c.color; ctx.lineWidth = 1.3; ctx.stroke();
@@ -1023,7 +1023,7 @@ function drawFeed(t) {
     ctx.strokeRect(x, y, w, h); ctx.setLineDash([]);
     if (!b.dash && b.label) {
       ctx.fillStyle = hexA(color, 0.14); ctx.fillRect(x, y, w, h);
-      ctx.font = `500 10px ${FONT.mono}`; const tw = ctx.measureText(b.label).width + 10;
+      ctx.font = `500 11px ${FONT.mono}`; const tw = ctx.measureText(b.label).width + 10;
       ctx.fillStyle = color; ctx.fillRect(x, y - 15, tw, 15);
       ctx.fillStyle = '#fbf9f4'; ctx.textAlign = 'left'; ctx.textBaseline = 'middle'; ctx.fillText(b.label, x + 5, y - 7);
     }

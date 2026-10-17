@@ -177,6 +177,15 @@ def test_publish_is_a_dry_run_and_keeps_people_out(tmp_path, monkeypatch, capsys
     assert "license: agpl-3.0" in card and "o/sherlock-scout-data" in card
 
 
+def test_train_picks_cuda_then_mps_then_cpu(monkeypatch):
+    torch = pytest.importorskip("torch")
+    for cuda, mps, want in ((True, True, "cuda"), (False, True, "mps"), (False, False, "cpu")):
+        monkeypatch.setattr(torch.cuda, "is_available", lambda cuda=cuda: cuda)
+        monkeypatch.setattr(torch.backends.mps, "is_available", lambda mps=mps: mps)
+        assert train_scout.pick_device() == want
+    assert train_scout.PROFILES["mps"]["device"] == "mps" and train_scout.PROFILES["cuda"]["device"] == "0"
+
+
 # --- tiny CPU train + eval ------------------------------------------------------------
 @pytest.mark.skipif(importlib.util.find_spec("ultralytics") is None, reason="ultralytics not installed")
 def test_smoke_train_and_eval_on_cpu(tmp_path):

@@ -117,7 +117,7 @@ def _download(item: tuple[str, Path]) -> bool:
 
 
 def cmd_coco(a: argparse.Namespace) -> None:
-    files = [Path(f) for f in a.annotations] if a.annotations else fetch_annotations(DATA / "coco_cache")
+    files = [Path(f) for f in a.annotations] if a.annotations else fetch_annotations(a.cache)
     caps = {**DEFAULT_CAPS, **dict(a.cap or [])}
     out = a.out
     (out / "images").mkdir(parents=True, exist_ok=True)
@@ -241,6 +241,7 @@ def main(argv: list[str] | None = None) -> None:
                    type=lambda s: int(s) if s.isdigit() else s, help="max images per category")
     c.add_argument("--workers", type=int, default=16)
     c.add_argument("--out", type=Path, default=DATA / "coco_subset")
+    c.add_argument("--cache", type=Path, default=DATA / "coco_cache", help="where the annotation zip goes")
     c.set_defaults(fn=cmd_coco)
 
     pl = sub.add_parser("prelabel", help="draft labels for data/props with stock YOLOv8")

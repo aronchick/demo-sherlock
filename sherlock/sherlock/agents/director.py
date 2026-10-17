@@ -60,12 +60,16 @@ class Director:
         threat = getattr(detection, "threat", "unknown")
         budget = self.max_calls + (WEAPON_EXTRA_CALLS if threat == "weapon" else 0)
         head = getattr(detection, "head", None)
+        event = {"camera": detection.camera, "label": detection.label, "threat": threat,
+                 "confidence": round(detection.conf, 2), "bbox": list(detection.bbox),
+                 "head_bbox": list(head) if head else None,
+                 "cameras": self.tools.t_list_cameras()["cameras"]}
+        if threat == "weapon":
+            # The claim to verify, spelled out: left to compose it, Nemotron copied the
+            # prompt's "a knife" example for a Scout "scissors" (2 of 2 on 2026-10-17).
+            event["claim"] = weapon_claim(detection.label)
         msgs = [{"role": "system", "content": SYSTEM.format(max_calls=budget)},
-                {"role": "user", "content": json.dumps({
-                    "camera": detection.camera, "label": detection.label, "threat": threat,
-                    "confidence": round(detection.conf, 2), "bbox": list(detection.bbox),
-                    "head_bbox": list(head) if head else None,
-                    "cameras": self.tools.t_list_cameras()["cameras"]})}]
+                {"role": "user", "content": json.dumps(event)}]
         calls = 0
         while calls < budget:
             t0 = time.perf_counter()

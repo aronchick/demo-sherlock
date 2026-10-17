@@ -405,6 +405,9 @@ class Insta360Camera(Camera):
         # A transport call that outlived cmd_timeout_s is still running on its
         # thread. Until it returns, the transport is neither closed nor reused.
         self._stuck: threading.Thread | None = None
+        # After a failed move the gimbal may have taken some SETs and not others,
+        # so self.pose no longer describes it; the next move resends everything.
+        self._pose_unknown = False
         # Pose and size of the last frame handed to the Scout: detection bboxes
         # are in that frame, even if the gimbal has moved since.
         self._view_pose = replace(self.home)
@@ -525,6 +528,7 @@ class Insta360Camera(Camera):
         """Send `target` to the gimbal (caller holds the lock). Clamps to hardware
         limits, records the settle deadline, raises CameraError on any failure."""
         tn = self.tuning
+        force = force or self._pose_unknown
         try:
             self._release_stuck()
             if not self._connected:
@@ -543,6 +547,7 @@ class Insta360Camera(Camera):
                 self._io(lambda: self.transport.set_zoom(zoom_raw))
         except (TransportError, OSError) as e:
             self._connected = False
+            self._pose_unknown = True
             self.ptz_error = str(e)
             if self._stuck is None:  # a hung call is still using the transport
                 self._close_transport()
@@ -551,7 +556,7 @@ class Insta360Camera(Camera):
         settle = (tn.settle_s + travel / max(tn.slew_deg_s, 1e-6)
                   + abs(target.zoom - self.pose.zoom) * tn.zoom_settle_s)
         self._settle_until = max(self._settle_until, time.monotonic() + settle)
-        self.pose, self.ptz_error = target, None
+        self.pose, self.ptz_error, self._pose_unknown = target, None, False
 
     def _release_stuck(self) -> None:
         """Refuse while a timed-out call is still running; once it returns, close

@@ -29,6 +29,7 @@ from sherlock.camera.insta360 import (
     FakeTransport,
     MacUSBTransport,
     PTZRanges,
+    TransportError,
     Tuning,
     aim_at,
     parse_v4l2_ctrls,
@@ -250,6 +251,30 @@ def test_timed_out_set_quarantines_the_transport_until_it_returns():
     assert cam.move(pan=20).pan == 20
     tail = tr.log[tr.log.index("set 10 start"):]
     assert tail == ["set 10 start", "set 10 end", "close", "open", "set 20 start", "set 20 end"]
+
+
+class ZoomFailsTransport(FakeTransport):
+    """Pan/tilt SETs land; zoom SETs fail while `zoom_fails` is set."""
+
+    zoom_fails = False
+
+    def set_zoom(self, zoom: int) -> None:
+        if self.zoom_fails:
+            raise TransportError("simulated: zoom rejected")
+        super().set_zoom(zoom)
+
+
+def test_partial_failure_resends_the_whole_pose_on_the_next_move():
+    tr = ZoomFailsTransport()
+    cam = make(tr, units_per_deg=1)
+    tr.zoom_fails = True
+    with pytest.raises(CameraError):
+        cam.move(pan=30, zoom=2)  # pan reached the gimbal, zoom did not
+    assert tr.calls[-1] == ("pantilt", 30, 0)
+    tr.zoom_fails = False
+    tr.calls.clear()
+    assert cam.move(pan=0, zoom=1) == cam.home
+    assert tr.calls == [("pantilt", 0, 0), ("zoom", 100)]  # not skipped as "no change"
 
 
 def test_reconnects_when_the_gimbal_comes_back():

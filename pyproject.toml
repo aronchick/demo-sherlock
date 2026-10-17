@@ -48,3 +48,5 @@ where = ["sherlock"]
 
 [tool.setuptools.package-data]
 "sherlock.dashboard" = ["static/*", "static/fonts/*"]
+# The face detector every model-bound crop passes through (sherlock/privacy.py).
+"sherlock" = ["models/*"]

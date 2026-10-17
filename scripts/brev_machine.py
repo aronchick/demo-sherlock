@@ -66,6 +66,9 @@ def smoke(name):
 def require_free_ports(ports):
     for port in ports:
         with socket.socket() as listener:
+            # A stopped presenter can leave TIME_WAIT sockets for a minute.
+            # Match the server's reuse behavior while still rejecting listeners.
+            listener.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             try:
                 listener.bind(('127.0.0.1', port))
             except OSError as exc:

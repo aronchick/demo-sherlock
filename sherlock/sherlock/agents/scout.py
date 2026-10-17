@@ -96,23 +96,27 @@ class _Tracker:
         """Returns detections that have been stable for `dwell` seconds and not yet reported."""
         now = time.time()
         fresh: list[Detection] = []
+        for tid in [t for t, r in self.seen.items() if now - r["last"] > self.forget]:
+            del self.seen[tid]
+        used = set()
         for d in dets:
             match = None
             for tid, rec in self.seen.items():
-                if self.iou(rec["bbox"], d.bbox) > self.iou_thresh:
+                if tid not in used and rec["label"] == d.label and self.iou(rec["bbox"], d.bbox) > self.iou_thresh:
                     match = tid
                     break
             if match is None:
-                self.seen[self.next_id] = {"bbox": d.bbox, "first": now, "last": now, "reported": False}
+                self.seen[self.next_id] = {"label": d.label, "bbox": d.bbox, "first": now, "last": now, "reported": False}
+                used.add(self.next_id)
                 self.next_id += 1
                 continue
+            used.add(match)
             rec = self.seen[match]
             rec["bbox"], rec["last"] = d.bbox, now
-            if not rec["reported"] and now - rec["first"] >= self.dwell:
+            dwell = min(self.dwell, 0.12) if classify(d.label) == "weapon" else self.dwell
+            if not rec["reported"] and now - rec["first"] >= dwell:
                 rec["reported"] = True
                 fresh.append(d)
-        for tid in [t for t, r in self.seen.items() if now - r["last"] > self.forget]:
-            del self.seen[tid]
         return fresh
 
 
@@ -121,13 +125,20 @@ class YoloScout:
         from ultralytics import YOLO  # imported lazily so mock mode needs no torch
         self.model = YOLO(model_path)
         self.conf = conf
+        self.weapon_conf = float(os.environ.get("SCOUT_WEAPON_CONF", str(conf)))
+        if not 0 <= self.weapon_conf <= 1:
+            raise ValueError("SCOUT_WEAPON_CONF must be between 0 and 1")
 
     def detect(self, frame: np.ndarray, camera: str) -> list[Detection]:
-        res = self.model.predict(frame, conf=self.conf, verbose=False)[0]
+        res = self.model.predict(frame, conf=min(self.conf, self.weapon_conf), verbose=False)[0]
         out = []
         for b in res.boxes:
+            label = res.names[int(b.cls)]
+            threshold = self.weapon_conf if label in WEAPON_CLASSES else self.conf
+            if float(b.conf) < threshold:
+                continue
             x1, y1, x2, y2 = (int(v) for v in b.xyxy[0].tolist())
-            out.append(Detection(res.names[int(b.cls)], float(b.conf), (x1, y1, x2, y2), camera))
+            out.append(Detection(label, float(b.conf), (x1, y1, x2, y2), camera))
         return out
 
 

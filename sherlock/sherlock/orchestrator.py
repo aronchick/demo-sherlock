@@ -135,7 +135,8 @@ class Sherlock:
                     BUS.emit("system", f"{name}: back online")
                 self.latest_wide[name] = frame
                 self.latest_wide_at[name] = time.time()
-                for det in self.scout.step(frame, name):
+                detections = self.scout.step(frame, name)
+                for det in sorted(detections, key=lambda d: d.threat != "weapon"):
                     self._investigate(det)
             time.sleep(0.03)
 
@@ -215,7 +216,8 @@ class Sherlock:
                         "source_artifact": None, "relationship": "source_frame", "bbox": None}
                     persist()
                 try:
-                    report = self.director.investigate(det)
+                    director = RuleDirector(self.tools) if det.threat == "benign" else self.director
+                    report = director.investigate(det)
                 except Exception as exc:  # noqa: BLE001 - preserve captured evidence on an interrupted investigation
                     report = {"action": "log", "claim": weapon_claim(det.label),
                               "confidence": 0, "error": type(exc).__name__}
@@ -376,11 +378,18 @@ class Sherlock:
         else:
             name = camera or next(iter(self.latest_wide), "")
             img = self.latest_wide.get(name)
+            preview = getattr(self.cameras.get(name), "preview_frame", None)
+            live_preview = self.active is not None and preview is not None
+            if live_preview:
+                try:
+                    img = preview()
+                except CameraError:
+                    live_preview = False
             if img is not None and self.cameras[name].covered:
                 img = (img * 0.15).astype(np.uint8)  # last frame is stale: say so instead of freezing
                 cv2.putText(img, f"{name.upper()}: LENS COVERED", (40, img.shape[0] // 2), cv2.FONT_HERSHEY_SIMPLEX,
                             1.4, (90, 190, 235), 3, cv2.LINE_AA)
-            elif img is not None:
+            elif img is not None and not live_preview:
                 img = self._annotate(name, img)
         if img is None:
             return None

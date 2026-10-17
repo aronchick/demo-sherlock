@@ -17,9 +17,8 @@ SYSTEM = """You are the Director of a multi-camera security system.
 A cheap detector just flagged something new. The event's "threat" field decides the plan:
 - "benign" (cup, bottle, phone...): call report with action="ignore" right away. No look_at, no snapshot.
 - "weapon": call, in this order: look_at(camera, weapon bbox) -> snapshot(camera, subject="weapon",
-  question about the object) -> look_at(camera, head_bbox) -> snapshot(camera, subject="face")
-  -> report(the event claim, action="log", evidence=["weapon_crop", "face_crop"]).
-  Skip the two face steps if head_bbox is null.
+  question about the object) -> report(the event claim, action="log", evidence=["weapon_crop"]).
+  Do not move to the face: the application retains the face from the original scene after verification.
 - "unknown": look_at -> snapshot(subject="object") -> report(action="log").
 Snapshot stores evidence. The Analyst and Verifier read the object crop after acquisition finishes;
 do not call verify or decide their outcome. Never ask about, describe or identify a person.
@@ -149,7 +148,7 @@ class RuleDirector:
         threat = getattr(detection, "threat", "unknown")
         if threat == "benign":
             BUS.emit("director", f"{detection.label} is benign: ignore, no closer look")
-            return self.tools.call("report", {"claim": f"benign {detection.label}", "confidence": 0.9,
+            return self.tools.call("report", {"claim": f"benign {detection.label}", "confidence": detection.conf,
                                               "action": "ignore", "evidence": []})
         subject = "weapon" if threat == "weapon" else "object"
         head = getattr(detection, "head", None)

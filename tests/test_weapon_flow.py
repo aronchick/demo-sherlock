@@ -296,6 +296,28 @@ def test_head_zoom_never_reaches_a_model_whatever_the_subject():
     assert seen == ["analyst"], "aimed back at the weapon, the Analyst gets its crop"
 
 
+def test_face_zoom_left_over_from_the_last_incident_never_reaches_a_model():
+    """Incident 1 ends with the camera on the face. Incident 2 has no head box (the
+    person detector missed): until a successful look_at, nothing may go to a model."""
+    tools = _toolbox()
+    _knife_raised(tools.cameras["hero"].src)
+    tools.begin_incident(_knife_det(), "first")
+    tools.call("look_at", {"camera": "hero", "bbox": list(head_region(PERSON))})
+    assert tools.call("snapshot", {"camera": "hero", "subject": "face"})["analyzed"] is False
+    seen = []
+    tools.analyst = SimpleNamespace(describe=lambda img, q: seen.append("analyst") or {"description": "x"})
+    tools.verifier = SimpleNamespace(check=lambda img, c: seen.append("verifier") or {"supported": True})
+    tools.begin_incident(Detection("knife", 0.9, KNIFE, "hero", threat="weapon"), "second")
+    for args in ({"camera": "hero"}, {"camera": "hero", "subject": "weapon"},
+                 {"camera": "hero", "subject": "object"}):
+        assert "error" in tools.call("snapshot", args), f"leftover face view reached a model via {args}"
+    assert "error" in tools.call("verify", {"claim": "a knife"})
+    assert seen == [] and tools.evidence == {}
+    tools.call("look_at", {"camera": "hero", "bbox": list(KNIFE)})
+    assert "error" not in tools.call("snapshot", {"camera": "hero", "subject": "weapon"})
+    assert seen == ["analyst"]
+
+
 def test_verdict_is_bound_to_claim_and_crop():
     tools = _toolbox()
     _knife_raised(tools.cameras["hero"].src)

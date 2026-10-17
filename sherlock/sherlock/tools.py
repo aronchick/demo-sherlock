@@ -180,15 +180,17 @@ class ToolBox:
         return {"ok": True, **cam.describe()}
 
     def aimed_at_face(self, camera: str) -> bool:
-        """Is this camera's view the person's head? Decided from where the camera was
-        pointed, never from the subject the Director claims, so a mislabelled head
-        zoom still can't reach a model. Unknown aim counts as the head."""
-        head, weapon = self.incident["head"], self.incident["bbox"]
-        if head is None or weapon is None:
-            return False
+        """Could this camera's view be a person's head? Decided from where the camera
+        was pointed, never from the subject the Director claims, so a mislabelled head
+        zoom still can't reach a model. Unknown aim counts as a face whether or not
+        this detection has a head box: the camera may still sit on the last incident's
+        face zoom, so only a successful look_at in this incident clears it."""
         aim = self.aim.get(camera)
         if aim is None:
             return True
+        head, weapon = self.incident["head"], self.incident["bbox"]
+        if head is None or weapon is None:
+            return False
         if _iou(aim, weapon) >= 0.5:
             return False  # the weapon box itself, even when it is held up near the face
         centre = ((aim[0] + aim[2]) / 2, (aim[1] + aim[3]) / 2)

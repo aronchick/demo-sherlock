@@ -145,8 +145,13 @@ mAP50 on the COCO validation images was already 0.45 after 3 epochs. On a CUDA b
 on the held-out test photos, at the 0.35 confidence the runtime Scout uses. Its last line is the number for
 the video: `Scout weapon detection (room test photos, conf 0.35): recall X% -> Y%, precision ...`.
 Choose `--measured` only for real training and evaluation data. After
-`train_scout.py --smoke`, use `eval_scout.py --smoke` instead. The mode is required;
-an invocation without it stops before evaluation. Measured output defaults to
+`train_scout.py --smoke`, use `eval_scout.py --smoke` instead. Smoke training
+defaults to `runs/scout_smoke/weights/best.pt`, preserving the
+normal `runs/scout/weights/best.pt` and its measured evaluation. Pass the smoke
+weights with `--after` when checking that run. An explicit training `--name`
+overrides the default directory.
+Evaluation requires an explicit mode; an invocation without it stops before
+evaluation. Measured output defaults to
 `runs/scout/eval.json`; smoke output goes to `runs/scout/eval_smoke.json` so it
 does not replace measured results. The dashboard excludes smoke reports, and
 the publisher rejects smoke or unlabelled evaluation files before staging.

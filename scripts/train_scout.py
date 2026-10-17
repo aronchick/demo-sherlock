@@ -11,7 +11,8 @@ The base stays YOLOv8n so the runtime Scout keeps its ~10 ms per frame. Then:
     YOLO_MODEL=runs/scout/weights/best.pt python run.py
 
 After --smoke training, evaluate with --smoke instead of --measured. Smoke
-evaluation is a pipeline check and cannot supply measured demo results."""
+weights default to runs/scout_smoke/weights/best.pt, leaving runs/scout intact.
+Smoke evaluation is a pipeline check and cannot supply measured demo results."""
 from __future__ import annotations
 
 import argparse
@@ -63,7 +64,7 @@ def main(argv: list[str] | None = None) -> Path:
     p.add_argument("--model", default="yolov8n.pt", help="base weights (or a .yaml to train from scratch)")
     p.add_argument("--smoke", action="store_true", help="tiny CPU run to check the pipeline end to end")
     p.add_argument("--project", type=Path, default=ROOT / "runs")
-    p.add_argument("--name", default="scout")
+    p.add_argument("--name", help="run directory name: scout, or scout_smoke with --smoke")
     for k, v in PROFILES["cuda"].items():
         p.add_argument(f"--{k}", type=type(v), default=None,
                        help="default per device: " + ", ".join(f"{d} {prof[k]}" for d, prof in PROFILES.items()))
@@ -72,7 +73,8 @@ def main(argv: list[str] | None = None) -> Path:
         raise SystemExit(f"{a.data} not found: run scripts/build_scout_dataset.py build first")
     base = SMOKE if a.smoke else {}
     given = {k: getattr(a, k) for k in PROFILES["cuda"] if getattr(a, k) is not None}
-    return train(a.data, a.model, a.project, a.name, plots=not a.smoke, **{**base, **given})
+    name = a.name if a.name is not None else ("scout_smoke" if a.smoke else "scout")
+    return train(a.data, a.model, a.project, name, plots=not a.smoke, **{**base, **given})
 
 
 if __name__ == "__main__":

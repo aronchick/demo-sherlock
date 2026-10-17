@@ -55,10 +55,10 @@ class IncidentStore:
                     "url": f"/evidence/{report['incident']}/{filename}", "integrity": "verified",
                     **report.get("evidence_provenance", {}).get(name, {"camera": None, "captured_at": None})})
                 record["custody"].append({"stage": "evidence", "t": time.time(),
-                    "detail": f"Saved {name}.jpg locally; SHA-256 {digest}"})
+                    "detail": f"Saved {filename} locally; SHA-256 {digest}"})
             for name in report.get("evidence_unsaved", []):
                 record["custody"].append({"stage": "evidence", "t": time.time(),
-                    "detail": f"{name}.jpg was NOT saved; no stored artifact available"})
+                    "detail": f"{name} was NOT saved; no stored artifact available"})
             record["notification"] = {"simulated": True, "status": "not_sent",
                                       "delivered_at": None, "acknowledged_at": None}
             if report["action"] == "alert" and report.get("verified"):

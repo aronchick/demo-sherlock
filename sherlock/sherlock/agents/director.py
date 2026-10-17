@@ -48,7 +48,12 @@ class Director:
         if thinking is None:
             thinking = _env("DIRECTOR_THINKING", "0") == "1"
         # Nemotron 3.5 Lightning: thinking on by default; off keeps the tool loop fast.
-        self.extra = {"chat_template_kwargs": {"enable_thinking": bool(thinking)}}
+        # vLLM and llama.cpp read the chat-template kwarg. Ollama ignores it and only turns
+        # thinking off for reasoning_effort="none", which vLLM (>= 0.28) also accepts.
+        # Without it, local reasoning ate the whole max_tokens and left no tool call.
+        self.extra: dict = {"chat_template_kwargs": {"enable_thinking": bool(thinking)}}
+        if not thinking:
+            self.extra["reasoning_effort"] = "none"
 
     def investigate(self, detection) -> dict:
         BUS.bump("investigations")

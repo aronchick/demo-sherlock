@@ -7,8 +7,9 @@ Tracks: Multi-Agent (primary), Tool-Calling, Nemotron + vLLM bounties.
 Scout (YOLOv8n detector, every frame, ~10 ms)
   └─ new object? ──► Director (Nemotron 3.5 Lightning 30B-A3B + camera tools)
                         ├─ look_at / move  → PTZ camera (Insta360 Link 2 or software crop)
-                        ├─ snapshot        → Analyst (SmolVLM-500M on the zoomed crop only)
-                        └─ report          → Verifier (same SmolVLM-500M instance: does the crop support the claim?)
+                        ├─ snapshot        → weapon crop (faces filled) + head crop for a human only
+                        └─ report          → 1. Verifier (SmolVLM-500M: does the masked crop show the claim? decides)
+                                             2. Analyst (same SmolVLM-500M instance: describes the crop, advisory)
 ```
 One tiny model gates the expensive ones. The dashboard counts "VLM calls avoided" live.
 
@@ -117,7 +118,7 @@ comparison, complete signatures and syntax-colored JSON. JSON is paginated by
 line; copy and download retain the complete record.
 
 `/phone` presents a full-height simulated responder device. Select a notice,
-page through its scene/object/face/model-input images, choose **Investigate**,
+page through its scene, object and face images, choose **Investigate**,
 then **Notify team** or **Resolve**. These actions are persisted locally as signed
 revisions. No SMS, push notification or team message leaves the application.
 Mock locations map `hero` to Building A / Level 1 / North lobby and `scout1` to
@@ -303,7 +304,10 @@ Brev box, which needs the GPU box to exist.
 - **Prefix-cache A/B in reverse order:** the H100 A/B ran once, off then
   on ([H100 results](#h100-results-17-oct-2026)); no reverse-order run has
   checked it for warmup or load drift.
-- **NeMo Gym ablations:** live results are pending Brev endpoints.
+- **A Gym suite that ranks Directors:** on the H100 both Lightning and
+  Qwen2.5-7B pass all 8 scripted tasks ([Ablation
+  metrics](#ablation-metrics-brev-h100-vllm-0280-17-oct-2026)), so the suite
+  shows what the prompt and thinking change, not which Director is better.
 - **Verifier threshold:** chosen on 90 open COCO objects cut as #62's tight
   model crop, not on room photos. At the demo's -1.0, SmolVLM-500M confirmed
   62/70 real weapons, accepted 0/20 false "a knife" claims on cups and
@@ -589,7 +593,7 @@ stay out of the upload unless `--include-room-photos`, and that needs everyone p
 vLLM is the serving layer for Sherlock's investigation loop. The Director
 chooses camera tools; the Analyst describes and the Verifier checks the
 claim on the masked object crop. Scout gates these calls locally.
-The planned Brev setup runs two vLLM **0.28.0** containers on one H100:
+The Brev setup runs two vLLM **0.28.0** containers on one H100:
 
 | Role | Model | Served name | Port |
 |---|---|---|---:|
@@ -604,9 +608,9 @@ rehearsal spent 2.4 to 5.0 s reasoning on the first turn; with it, 0.35 to
 loading a third model. Separate context, sequence and memory budgets let
 both servers share the GPU. The initial `brev/serve.sh` budgets are 32,768
 tokens / 16 sequences / 0.60 GPU memory for Director and 8,192 / 8 / 0.30
-for VLM. These are starting settings, not measured capacity; the serving
-owner must confirm model revisions, parser, startup flags and available
-memory on the H100. This benchmark does not change `serve.sh`.
+for VLM. These are starting settings, not tuned capacity; with them every
+request in the H100 benchmark below succeeded. This benchmark does not
+change `serve.sh`.
 
 **Measured on the H100 on 17 Oct 2026** (Brev `sherlock-h100`, 1x H100
 PCIe 80GB, vLLM 0.28.0, Configuration A; code at main @09dfd8f plus the
@@ -709,9 +713,8 @@ Lightning includes 270 embedded MTP tensors (1.34B parameters), but the
 uses `AutoWeightsLoader(self, skip_prefixes=["mtp"])`. Those weights are
 skipped when loading the base model; their presence in the checkpoint does
 not enable MTP speculation. The Director therefore loads the 31.58B count,
-not 32.91B. This is configuration and source-code evidence.
-Live container startup and its effective model configuration still need
-verification on the H100.
+not 32.91B. This is configuration and source-code evidence: the H100
+runs did not log the loaded parameter count.
 
 ### Run the benchmark
 
@@ -1024,15 +1027,45 @@ uv run --extra gym python -m gym.run_ablation --all --stub
    QWEN_DIRECTOR_BASE_URL=http://127.0.0.1:8001/v1 uv run --extra gym python -m gym.run_ablation --all
    ```
 
-### Ablation metrics (live runs pending Brev endpoints; local stub validation artifacts in `results/ablation_stub_*.json`)
+### Ablation metrics (Brev H100, vLLM 0.28.0, 17 Oct 2026)
+
+Live runs on Brev `sherlock-h100` (1x H100 PCIe 80GB), each Director
+served by vLLM 0.28.0, 8 tasks per config, in the order above. The tasks
+answer camera tools from a scripted scene, so no VLM is called.
+Evidence: one JSON per config plus `ablation_summary.json` in
+`results/brev_vllm/` (`runtime: brev_vllm`). Time to report is the mean
+per task.
 
 | Ablation Config | Endpoint Env Var | Swapped Component | Director Model | Total Gen Params (card / tensors) | Prompt | Tools | Thinking | Tool-Call Validity | Task Success | Steps to Report | Time to Report (ms) |
 |---|---|---|---|---:|---|---|---|---:|---:|---:|---:|
-| `prompt_v1` | `DIRECTOR_BASE_URL` | System prompt (`v1`) | `Nemotron-3.5-Lightning-30B-A3B-NVFP4` | 30.51B / 32.09B | `system_v1` | `verbose` | `off` | TBD (live run pending) | TBD (live run pending) | TBD (live run pending) | TBD (live run pending) |
-| `terse_tools` | `DIRECTOR_BASE_URL` | Tool schemas (`terse`) | `Nemotron-3.5-Lightning-30B-A3B-NVFP4` | 30.51B / 32.09B | `system_v2` | `terse` | `off` | TBD (live run pending) | TBD (live run pending) | TBD (live run pending) | TBD (live run pending) |
-| `thinking_on` | `DIRECTOR_BASE_URL` | Thinking (`on`) | `Nemotron-3.5-Lightning-30B-A3B-NVFP4` | 30.51B / 32.09B | `system_v2` | `verbose` | `on` | TBD (live run pending) | TBD (live run pending) | TBD (live run pending) | TBD (live run pending) |
-| `nemotron_lightning` | `DIRECTOR_BASE_URL` | Reference (`v2` + `verbose` + `off`) | `Nemotron-3.5-Lightning-30B-A3B-NVFP4` | 30.51B / 32.09B | `system_v2` | `verbose` | `off` | TBD (live run pending) | TBD (live run pending) | TBD (live run pending) | TBD (live run pending) |
-| `qwen_director` | `QWEN_DIRECTOR_BASE_URL` | Model (`Qwen2.5-7B`) | `Qwen2.5-7B-Instruct` | 8.12B / 8.12B | `system_v2` | `verbose` | `off` | TBD (live run pending) | TBD (live run pending) | TBD (live run pending) | TBD (live run pending) |
+| `prompt_v1` | `DIRECTOR_BASE_URL` | System prompt (`v1`) | `Nemotron-3.5-Lightning-30B-A3B-NVFP4` | 30.51B / 32.09B | `system_v1` | `verbose` | `off` | 100% | **0/8** | 4.12 | 1,392 |
+| `terse_tools` | `DIRECTOR_BASE_URL` | Tool schemas (`terse`) | `Nemotron-3.5-Lightning-30B-A3B-NVFP4` | 30.51B / 32.09B | `system_v2` | `terse` | `off` | 100% | 8/8 | 4.62 | 1,483 |
+| `thinking_on` | `DIRECTOR_BASE_URL` | Thinking (`on`) | `Nemotron-3.5-Lightning-30B-A3B-NVFP4` | 30.51B / 32.09B | `system_v2` | `verbose` | `on` | 100% | 8/8 | 4.50 | **3,364** |
+| `nemotron_lightning` | `DIRECTOR_BASE_URL` | Reference (`v2` + `verbose` + `off`) | `Nemotron-3.5-Lightning-30B-A3B-NVFP4` | 30.51B / 32.09B | `system_v2` | `verbose` | `off` | 100% | **8/8** | 4.62 | **1,532** |
+| `qwen_director` | `QWEN_DIRECTOR_BASE_URL` | Model (`Qwen2.5-7B`) | `Qwen2.5-7B-Instruct` | 8.12B / 8.12B | `system_v2` | `verbose` | `off` | 100% | 8/8 | 4.25 | 1,620 |
+
+What it shows:
+
+- **The prompt decides.** The v1 prompt fails all 8 tasks with valid tool
+  calls; v2 (zero-snapshot benign filtering, the two-crop weapon protocol)
+  passes all 8.
+- **Thinking off is the right default.** Thinking on passes the same 8
+  tasks and takes 2.2x as long per task.
+- **The suite does not rank the Directors.** Qwen2.5-7B (7.62B) passes all
+  8 as well. Lightning (3B active) is 5.4% faster per task; Qwen takes
+  fewer steps. A harder suite is needed to separate them.
+- **Terse tool descriptions** cost nothing on this suite.
+
+**Local Ollama run** (M5 Max, Ollama 0.40.5, `results/ablation_summary.json`;
+rehearsal evidence, not vLLM): all four Lightning configs made 100% valid
+tool calls; task success and mean time to report were reference 7/8 at
+2,360 ms, `terse_tools` 7/8 at 2,408 ms, `thinking_on` 8/8 at 7,857 ms and
+`prompt_v1` 0/8 at 7,530 ms. Qwen was not run locally. The dashboard's
+MEASURED card leads its Gym row with the Brev run and shows this one
+beneath it.
+
+`--stub` runs write `results/ablation_stub_*.json`; they exercise the
+harness only and are never results.
 
 ## Demo script (3 min)
 

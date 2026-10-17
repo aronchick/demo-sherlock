@@ -36,6 +36,7 @@ class Stub:
         self.refuse: dict[str, tuple[int, str]] = {}  # request field -> (status, message)
         self.ignore: set[str] = set()                  # request fields accepted but not honoured
         self.status = 200
+        self.logprobs = None  # sent verbatim instead of {"content": tokens} when set
         self.bodies: list[dict] = []
 
 
@@ -66,6 +67,8 @@ def stub():
                 return self.reply(state.status, {"error": {"message": "model not found"}})
             lp = ({"content": state.tokens, "refusal": None}
                   if body.get("logprobs") and "logprobs" not in state.ignore else None)
+            if state.logprobs is not None:
+                lp = state.logprobs
             self.reply(200, {"id": "x", "object": "chat.completion", "created": 0, "model": body["model"],
                              "choices": [{"index": 0, "finish_reason": "stop", "logprobs": lp,
                                           "message": {"role": "assistant", "content": state.content}}]})
@@ -174,6 +177,25 @@ def test_refused_logprobs_are_dropped_once_and_remembered(stub):
 
 def test_nonstandard_logprobs_fall_back_to_the_first_word(stub):
     stub.tokens = [entry(" Yes", None, ((" Yes", None), (" No", None)))]
+    out = verifier(stub).check(IMG, "a knife")
+    assert out["mode"] == "text" and out["supported"] is True
+
+
+@pytest.mark.parametrize(("content", "expected"), [("Yes.", True), ("No.", False)])
+def test_mlx_vlm_placeholder_logprobs_read_the_first_word(stub, content, expected):
+    # mlx-vlm 0.7.8 accepts logprobs without an error, then sends 0.0 for every token and no
+    # alternatives; read as logprobs, 0.0 would look like certainty.
+    stub.content = content
+    stub.tokens = [entry(f" {content[:-1]}", 0.0), entry(".", 0.0)]
+    v = verifier(stub)
+    out = v.check(IMG, "a knife")
+    assert out["mode"] == "text" and out["margin"] is None and out["supported"] is expected
+    assert v.logprobs and stub.bodies[-1]["logprobs"] is True
+
+
+@pytest.mark.parametrize("payload", [[0.0, 0.0], "n/a"])
+def test_logprobs_that_are_not_an_object_fall_back_to_the_first_word(stub, payload):
+    stub.logprobs = payload
     out = verifier(stub).check(IMG, "a knife")
     assert out["mode"] == "text" and out["supported"] is True
 

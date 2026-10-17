@@ -148,8 +148,8 @@ class Verifier:
         BUS.bump("vlm_calls")
         choice = self._ask(img, claim).choices[0]
         raw = (choice.message.content or "").strip()
-        tokens = choice.logprobs.content if self.logprobs and choice.logprobs else None
         try:
+            tokens = choice.logprobs.content if self.logprobs and choice.logprobs else None
             margin = _verdict_margin(tokens) if tokens else None
         except (AttributeError, TypeError, ValueError):  # a server's non-standard logprobs shape
             margin = None

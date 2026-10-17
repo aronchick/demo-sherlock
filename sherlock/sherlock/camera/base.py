@@ -128,7 +128,16 @@ class _FrameSource:
         self.stamp = 0.0  # time.monotonic() when self.frame arrived
         self.lock = threading.Lock()
         self.running = True
-        threading.Thread(target=self._loop, daemon=True).start()
+        self._thread = threading.Thread(target=self._loop, daemon=True)
+        self._thread.start()
+
+    def close(self) -> None:
+        """Stop the reader before the interpreter exits. A daemon thread still
+        inside cap.read() at exit segfaults Python on macOS (the frame copy takes
+        the GIL while CoreMediaIO tears the stream down), so join, then release."""
+        self.running = False
+        self._thread.join(timeout=2)
+        self.cap.release()
 
     def _loop(self) -> None:
         while self.running:
@@ -159,6 +168,9 @@ class SyntheticSource:
     def __init__(self, w: int = 1280, h: int = 720):
         self.w, self.h, self.t0 = w, h, time.time()
 
+    def close(self) -> None:
+        pass
+
     def read(self, newer_than: float = 0.0) -> np.ndarray:  # synthetic frames are always fresh
         t = time.time() - self.t0
         f = np.full((self.h, self.w, 3), 40, np.uint8)
@@ -186,6 +198,9 @@ class FakePTZCamera(Camera):
     def wide_frame(self) -> np.ndarray:
         self._check()
         return self.src.read()
+
+    def close(self) -> None:
+        self.src.close()
 
     def _window(self, w: int, h: int) -> tuple[int, int, int, int]:
         """The part of the wide frame the current pose shows: x0, y0, width, height."""

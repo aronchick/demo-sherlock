@@ -73,11 +73,13 @@ def fetch_annotations(cache: Path) -> list[Path]:
     return out
 
 
-def select_coco(ann: dict, caps: dict[str, int], licenses: frozenset[int] = CC_BY_LICENSES) -> dict:
+def select_coco(ann: dict, caps: dict[str, int], licenses: frozenset[int] = CC_BY_LICENSES,
+                taken: Counter[str] | None = None) -> dict:
     """Pick images for the subset. Returns {image_id: {"image": info, "boxes": [(cls, xyxy)]}}.
 
     Only images under an allowed licence; at most caps[cat] images per target
-    category (an image counts toward every target it contains); crowd boxes skipped."""
+    category (an image counts toward every target it contains); crowd boxes skipped.
+    Pass the same `taken` counter for train2017 and val2017 so caps span both files."""
     cats = {c["id"]: c["name"] for c in ann["categories"]}
     images = {im["id"]: im for im in ann["images"] if im.get("license") in licenses}
     boxes: dict[int, list] = defaultdict(list)
@@ -89,7 +91,7 @@ def select_coco(ann: dict, caps: dict[str, int], licenses: frozenset[int] = CC_B
         boxes[a["image_id"]].append((CLASSES.index(COCO_TO_SCOUT[name]), coco_xyxy(a["bbox"])))
         if name in COCO_TARGETS:
             has[a["image_id"]].add(name)
-    taken: Counter[str] = Counter()
+    taken = Counter() if taken is None else taken
     picked: dict[int, dict] = {}
     # Rarest category first, so bottles (common) can't crowd out scissors (rare).
     for cat in sorted(caps, key=lambda c: sum(c in h for h in has.values())):
@@ -122,10 +124,11 @@ def cmd_coco(a: argparse.Namespace) -> None:
     (out / "labels").mkdir(parents=True, exist_ok=True)
     manifest, jobs = [], []
     lic_names: dict[int, str] = {}
+    taken: Counter[str] = Counter()
     for f in files:
         ann = json.loads(f.read_text())
         lic_names.update({lic["id"]: lic["name"] for lic in ann.get("licenses", [])})
-        for iid, rec in select_coco(ann, caps).items():
+        for iid, rec in select_coco(ann, caps, taken=taken).items():
             im = rec["image"]
             stem = f"coco_{iid:012d}"
             jobs.append((im["coco_url"], out / "images" / f"{stem}.jpg"))

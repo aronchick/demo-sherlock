@@ -53,6 +53,52 @@ python run.py
 ```
 If the endpoint is unreachable mid-pitch, the Director automatically drops to the rule-based fallback (`RuleDirector`).
 
+## Fine-tune the Scout (about 20 minutes on one H100)
+Stock YOLOv8n knows COCO's 80 classes. It has no badge class and it was never shown our room.
+The fine-tune keeps the same 3.2M-parameter nano model (so the Scout stays ~10 ms a frame) and teaches it
+four classes: `person`, `weapon` (knife, scissors, baseball bat), `badge`, `bottle`.
+
+**Open data.** Most of the training set is an open COCO 2017 subset: COCO's own boxes for knife, scissors,
+baseball bat, bottle and person, kept only where the image licence allows CC-BY redistribution
+(Attribution, No known copyright restrictions, US Government Work). That is 1,279 images
+(1,789 weapon, 1,218 bottle and 4,399 person boxes), about 16% of the COCO images with those objects.
+It puts the hackathon's "must use open data" rule inside the model the demo actually runs, with
+per-image licence and source URL in `data/coco_subset/manifest.jsonl`. COCO has no firearms and we don't fake any.
+
+**Before the GPU (laptop, camera attached):**
+```bash
+python scripts/build_scout_dataset.py coco      # open subset: 241 MB annotations + ~200 MB images
+python scripts/capture_props.py --camera hero --prop knife --n 40
+#  repeat for bat, scissors, badge, bottle; then --prop none (empty room, empty hands)
+python scripts/build_scout_dataset.py prelabel  # stock YOLOv8 drafts the boxes
+python scripts/review_labels.py --split test    # fix the held-out photos first: they grade the eval
+python scripts/review_labels.py                 # then the rest (one keypress per good photo)
+python scripts/build_scout_dataset.py build     # -> data/scout/scout.yaml
+```
+Aim for 100-200 prop photos in total. Move the prop, switch hands, change distance and angle while
+`capture_props.py` runs. In-room photos are split by time within each session (first 70% train, last 20%
+test), so near-identical neighbouring frames never land on both sides. `build` refuses to run while
+test photos still carry unreviewed drafts: otherwise the eval would grade stock YOLO against its own guesses.
+
+**On the GPU box** (copy `data/scout/` over):
+```bash
+python scripts/train_scout.py                   # yolov8n, 60 epochs, batch 64, 640 px, cache in RAM
+python scripts/eval_scout.py --after runs/scout/weights/best.pt
+```
+`eval_scout.py` prints precision and recall per class, before (stock YOLOv8n, COCO names mapped) vs after,
+on the held-out test photos, at the 0.35 confidence the runtime Scout uses. Its last line is the number for
+the video: `Scout weapon detection (room test photos, conf 0.35): recall X% -> Y%, precision ...`.
+Copy `best.pt` back and run with it: `YOLO_MODEL=runs/scout/weights/best.pt python run.py`.
+Routing comes from the weapon flow in `agents/scout.py`: `weapon` escalates, `badge` and `bottle` are benign
+(ignored, no VLM call), `person` is context for the face crop.
+
+**Publishing (owner approval first).** `python scripts/publish_scout_hf.py --model-repo ORG/sherlock-scout
+--dataset-repo ORG/sherlock-scout-data` stages both repos with cards under `runs/hf_staging/` and lists the
+files; it uploads nothing without `--publish` (and then only to private repos unless `--public`). The
+dataset card is CC-BY-4.0. The weights card defaults to AGPL-3.0 because they are fine-tuned from
+Ultralytics YOLOv8n (AGPL-3.0); `--model-license` overrides that. In-room photos show real people, so they
+stay out of the upload unless `--include-room-photos`, and that needs everyone pictured to agree.
+
 ## When the OBSBOT arrives
 1. `python scripts/ptz_probe.py` — checks whether the camera answers standard UVC pan/tilt/zoom.
 2. If yes: `CAMERAS=hero:obsbot:0,scout1:fake:1`. Nothing else changes.
@@ -65,6 +111,8 @@ sherlock/agents/     scout.py (YOLO + motion fallback + dedupe/dwell), director.
 sherlock/tools.py    Tool schemas + dispatcher + failure injection
 sherlock/orchestrator.py   Scout → investigate → verify loop, stats
 sherlock/dashboard/  FastAPI SSE + MJPEG + the judge-facing UI
+scripts/             ptz_probe.py, plus the Scout fine-tune kit: capture_props, build_scout_dataset,
+                     review_labels, train_scout, eval_scout, publish_scout_hf (shared: scout_data.py)
 tests/               End-to-end mock run incl. tool failure recovery and covered-lens fallback
 ```
 

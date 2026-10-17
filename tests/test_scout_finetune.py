@@ -58,6 +58,8 @@ def test_select_coco_keeps_open_licences_skips_crowds_and_caps():
     assert sorted(picked) == [1, 4, 6], "knife capped at one image; scissors and bottle kept"
     assert sorted(c for c, _ in picked[1]["boxes"]) == [sd.CLASSES.index("person"), sd.CLASSES.index("weapon")]
     assert [c for c, _ in picked[4]["boxes"]] == [sd.CLASSES.index("weapon")], "chair is not a Scout class"
+    taken = bsd.Counter({"knife": 1})  # a knife image already came from the other annotation file
+    assert 1 not in bsd.select_coco(_ann(), {"knife": 1}, taken=taken), "caps span train2017 and val2017"
 
 
 # --- splits and metrics ---------------------------------------------------------------

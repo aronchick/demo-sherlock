@@ -354,8 +354,22 @@ Configuration B swaps the Director and shared VLM via `.env` (see the commented-
 ```bash
 just up                                    # needs uv and just; ultralytics (the `yolo` extra) is optional for this mode
 open http://127.0.0.1:8000
-just down                                  # stops what `just up` started
+just down-local                            # stop only the local demo
 ```
+
+For the Brev camera demo, `just down` stops the local presenter and requests
+a stop of `sherlock-h100`, then checks that Brev reports it stopped. Storage charges
+may remain. Use `just down-local` for a quick presenter restart while keeping
+the GPU running and billable.
+
+The current Scaleway H100 rejected `brev stop` in the hardware check on
+2026-10-17. For this instance, `just down` fails with a billing warning;
+it cannot stop GPU charges and never deletes the machine automatically.
+
+After a full shutdown, run `just brev-up`, then `just brev-connect` in one
+terminal and `just brev-live` in another. Cached model files are retained,
+but booting the GPU and loading the models can take several minutes; cold
+restart time has not been measured. `just up` remains the synthetic demo.
 `just up` runs `run.py --mock --synthetic` in the background on `DASHBOARD_PORT` (default 8000) with
 `CAMERAS=hero:fake:synthetic,scout1:fake:synthetic` (set either in your shell to change it), and keeps its
 PID and log in the gitignored `.runtime/`. The first run builds the environment from `pyproject.toml` and `uv.lock`.

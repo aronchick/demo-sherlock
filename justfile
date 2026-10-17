@@ -49,11 +49,15 @@ up:
         sleep 0.5
     done
     echo "Sherlock did not answer on port {{ port }} within 120 s; stopping it" >&2
-    "{{ just_executable() }}" --justfile "{{ justfile() }}" down
+    "{{ just_executable() }}" --justfile "{{ justfile() }}" down-local
     exit 1
 
-# Stop the demo that `just up` started
-down:
+# Stop the presenter and its Brev GPU (use down-local for a quick UI restart)
+down: down-local
+    uv run --no-project scripts/brev_machine.py down
+
+# Stop only the local presenter; Brev continues billing
+down-local:
     #!/usr/bin/env bash
     set -euo pipefail
     pidfile={{ runtime }}/sherlock.pid

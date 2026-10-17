@@ -248,6 +248,23 @@ def test_scout_all_fallback_and_supported_locations(tmp_path):
     assert numbers.read_numbers(tmp_path)["scout"]["source"] == "room"
 
 
+def test_current_scout_producer_format_without_provenance_marker():
+    data = scout()
+    data.pop("evidence_kind")
+    data.update(conf=0.35, iou=0.5)
+    assert numbers.scout_result(data)["before_recall"] == 0.5
+    for key, value in (
+        ("stub", True),
+        ("execution_mode", "local_stub"),
+        ("evidence_kind", "stub"),
+    ):
+        assert numbers.scout_result({**data, key: value}) is None
+    for key in ("images", "conf", "iou"):
+        incomplete = dict(data)
+        incomplete.pop(key)
+        assert numbers.scout_result(incomplete) is None
+
+
 def test_malformed_and_oversized_files_do_not_break_dashboard(tmp_path, monkeypatch):
     path = write(tmp_path, "results/vllm_bench_bad.json", {})
     for raw in (

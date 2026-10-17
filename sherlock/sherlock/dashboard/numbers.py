@@ -144,14 +144,30 @@ def ablation_result(data):
 
 
 def scout_result(data):
-    if data.get("evidence_kind") != "model_evaluation" or not no_stub(data):
+    # eval_scout.py has no stub execution path and its original report has no
+    # provenance field. Recognize that complete producer format while allowing
+    # an explicit model_evaluation marker; never accept a conflicting stub flag.
+    images = mapping(data.get("images"))
+    image_counts = [count(value) for value in images.values()]
+    legacy_report = (
+        "evidence_kind" not in data
+        and "execution_mode" not in data
+        and number(data.get("conf"), maximum=1) is not None
+        and number(data.get("iou"), minimum=0.01, maximum=1) is not None
+        and bool(image_counts)
+        and None not in image_counts
+        and sum(image_counts) > 0
+    )
+    if (
+        data.get("evidence_kind") != "model_evaluation" and not legacy_report
+    ) or not no_stub(data):
         return None
     if data.get("split") not in {"test", "val"}:
         return None
     before, after = mapping(data.get("before")), mapping(data.get("after"))
     if (
-        not before.get("model")
-        or not after.get("model")
+        not text(before.get("model"))
+        or not text(after.get("model"))
         or not no_stub(before)
         or not no_stub(after)
     ):

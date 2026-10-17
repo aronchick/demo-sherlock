@@ -401,7 +401,13 @@ Tuning (env, defaults in `sherlock/sherlock/camera/insta360.py`):
 | `INSTA360_HOME_AFTER_S` | `6` | Return to the wide home pose after this many idle seconds (`0` = never) |
 | `INSTA360_PAN_SIGN` / `INSTA360_TILT_SIGN` / `INSTA360_UNITS_PER_DEG` | `1` / `1` / `3600` | Direction and units of the raw UVC values (arc-seconds per spec) |
 
-The OBSBOT adapter (`hero:obsbot:<n>`) is kept as an alternate backend.
+**OBSBOT Tiny 2 / Tiny 2 Lite / Tiny SE (draft, not yet run on a real camera).** The same control path with OBSBOT's USB ids (vendor `3564`; Tiny 2 `fef8`, Tiny 2 Lite `fef9`; the Tiny SE's id is unpublished, so pass the one the probe prints as `OBSBOT_PID`). It switches AI tracking off when it connects, since tracking would undo every `look_at`. Every `INSTA360_*` knob above exists as `OBSBOT_*`, defaulting to the Tiny 2 spec sheet (72.9° FOV; the Tiny SE is 71°). Close OBSBOT Center while Sherlock runs, since it can switch tracking back on, and pick the real camera by its full name, not `OBSBOT Virtual Camera`:
+```bash
+uv run scripts/obsbot_probe.py            # ids, ranges, AI mode, camera names
+uv run scripts/obsbot_probe.py --wiggle   # sign check and move timing
+CAMERAS="hero:obsbot:name:OBSBOT Tiny 2,scout1:fake:name:MacBook Pro Camera"
+```
+If its PTZ does not answer, crop in software on the same stream: `hero:fake:name:OBSBOT Tiny 2`.
 
 ## Fine-tune the Scout (about 20 minutes on this Mac)
 Stock YOLOv8n knows COCO's 80 classes. It has no badge class and it was never shown our room.
@@ -828,7 +834,7 @@ invalid tool calls and counter resets. No Brev endpoint is needed.
 ## Layout
 The `sherlock/...` entries below live in the package directory, `sherlock/sherlock/`.
 ```
-sherlock/camera/     Camera interface, FakePTZ (crop/zoom), Insta360Camera (Link 2 gimbal), ObsbotCamera (UVC), SyntheticSource
+sherlock/camera/     Camera interface, FakePTZ (crop/zoom), Insta360Camera (Link 2 gimbal), ObsbotCamera (Tiny family, draft), SyntheticSource
 sherlock/agents/     scout.py (YOLO + motion fallback + dedupe/dwell), director.py (tool loop + RuleDirector), vision.py (Analyst, Verifier, mocks)
 sherlock/tools.py    Tool schemas + dispatcher + failure injection
 sherlock/orchestrator.py   Scout → investigate → verify loop, per-incident evidence, stats

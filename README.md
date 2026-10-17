@@ -52,9 +52,11 @@ access. Unset or blank `DASHBOARD_HOST` values keep the loopback default.
 
 Rule-based director, mock VLMs, a scripted room on a 26 s loop: someone holds up a cup (ignored, 0 VLM calls),
 then someone holds up a knife (look_at → snapshot → look_at head → face snapshot → verify → alert with both crops).
-Press **Break the next tool call**, **Corrupt next tool args** or **Cover hero lens** on the dashboard to see recovery.
+Press **Break the next tool call** or **Cover hero lens** on the dashboard to see recovery; corrupted tool arguments have
+no button, so send `curl -X POST 127.0.0.1:8000/demo/corrupt/1`.
 Evidence lands in `snapshots/<incident>/` (`EVIDENCE_DIR` overrides). The face crop is stored for a human only:
-no model ever sees it, and nothing identifies or describes the person.
+no model ever sees it, and nothing identifies or describes the person. It is kept only when the Verifier confirms the
+weapon claim; a rejected or unverified claim discards it before anything is saved.
 
 **Data flow view (the default page).** `http://localhost:8000/` shows each investigation as it moves: the camera feeds
 into the Scout, only a ticket and then a crop cross to the models, and the decision lands in Ignored, Logged
@@ -188,8 +190,11 @@ The planned Brev setup runs two vLLM **0.28.0** containers on one H100:
 | Director | Nemotron 3.5 Lightning 30B, NVFP4 repository | `director` | 8001 |
 | Analyst + Verifier | `HuggingFaceTB/SmolVLM-500M-Instruct`, 0.51B, shared | `vlm` | 8002 |
 
-The Director uses automatic tool selection and disables thinking in the
-request's chat-template kwargs. Analyst and Verifier share one VLM to avoid
+The Director uses automatic tool selection and turns thinking off in every
+request: `chat_template_kwargs.enable_thinking: false` for vLLM, plus
+`reasoning_effort: "none"`, which Ollama needs (without it, a local
+rehearsal spent 2.4 to 5.0 s reasoning on the first turn; with it, 0.35 to
+0.40 s). Analyst and Verifier share one VLM to avoid
 loading a third model. Separate context, sequence and memory budgets let
 both servers share the GPU. The initial `brev/serve.sh` budgets are 32,768
 tokens / 16 sequences / 0.60 GPU memory for Director and 8,192 / 8 / 0.30
@@ -535,7 +540,7 @@ Sherlock includes a native [NeMo Gym](https://github.com/NVIDIA-NeMo/Gym) (`nemo
 
 1. **System prompt (`prompt_v1` vs `nemotron_lightning`)**: `gym/prompts/system_v1.yaml` vs `gym/prompts/system_v2.yaml` (adds zero-snapshot benign filtering and the two-crop weapon + head/face protocol).
 2. **Tool descriptions (`terse_tools` vs `nemotron_lightning`)**: `terse` (3-word tool strings, stripped parameter hints) vs `verbose` (`sherlock.tools.TOOL_SCHEMAS`).
-3. **Reasoning mode (`thinking_on` vs `nemotron_lightning`)**: `enable_thinking: true` vs `enable_thinking: false` on `nvidia/NVIDIA-Nemotron-3.5-Lightning-30B-A3B-NVFP4`.
+3. **Reasoning mode (`thinking_on` vs `nemotron_lightning`)**: `enable_thinking: true` vs `enable_thinking: false` on `nvidia/NVIDIA-Nemotron-3.5-Lightning-30B-A3B-NVFP4` (the thinking-off configs also send `reasoning_effort: none`, so they stay off on servers that ignore the chat-template switch).
 4. **Director model (`qwen_director` vs `nemotron_lightning`)**: `Qwen/Qwen2.5-7B-Instruct` (7.62B) vs `nvidia/NVIDIA-Nemotron-3.5-Lightning-30B-A3B-NVFP4` (30B total / 3B active).
 
 Every configuration pairs the Director with `HuggingFaceTB/SmolVLM-500M-Instruct` (0.51B) for the Analyst/Verifier VLM. By model card that is 30.51B for the Nemotron 3.5 Lightning configs and 8.12B for Qwen 2.5 7B (`7,615,616,512` + `507,482,304`). By checkpoint tensor count the Lightning configs are 32.09B (see [Parameter budget and speculation](#parameter-budget-and-speculation)). All are under the 33B limit; the ablation runner's budget check uses the model-card figures.
@@ -640,8 +645,9 @@ bat escalate; everything else YOLO names is benign.
    describes it, the camera zooms on the head for a face crop that no model
    ever sees, the Verifier confirms the weapon itself on the weapon crop, and
    the dashboard shows the alert with both crops. Point at latency per stage.
-3. **Recovery.** Press **Break the next tool call** or **Corrupt next tool
-   args**: the Director gets an error, recovers, still reports.
+3. **Recovery.** Press **Break the next tool call** (or corrupt the next
+   tool's arguments with `curl -X POST 127.0.0.1:8000/demo/corrupt/1`):
+   the Director gets an error, recovers, still reports.
 4. **Fallback.** Cover the hero lens: the investigation finishes on scout1.
 5. **Close** on the ratio: frames handled by a 10 ms model vs. VLM calls made.
 
@@ -663,7 +669,7 @@ Sherlock incorporates both existing open datasets and openly published synthetic
 ## Known limitations & next steps
 
 ### Known limitations
-- **Human-in-the-loop review required for security alerts**: Small vision-language models (`SmolVLM-Instruct` 2.25B and `SmolVLM-500M-Instruct` 0.51B) are decision-support tools, not autonomous safety-critical detectors. In our 50-crop COCO bake-off, the yes/no `Verifier.check` at its default threshold confirms 27/30 real weapon crops on 500M and 29/30 on 2.2B, and accepts 1/20 and 0/20 false `"kitchen knife"` claims on cups and bottles. Borderline crops near the log-odds threshold can still flip across JPEG re-encodes, so every `alert` attaches both the weapon crop and an unanalyzed human-only face crop for operator verification.
+- **Human-in-the-loop review required for security alerts**: Small vision-language models such as the shipped `SmolVLM-500M-Instruct` (0.51B) are decision-support tools, not autonomous safety-critical detectors. In our 50-crop COCO bake-off, the yes/no `Verifier.check` at its default threshold confirms 27/30 real weapon crops on the 500M and accepts 1/20 false `"kitchen knife"` claims on cups and bottles (for comparison, the over-budget 2.25B `SmolVLM-Instruct`: 29/30 and 0/20). Borderline crops near the log-odds threshold can still flip across JPEG re-encodes, so every `alert` attaches both the weapon crop and an unanalyzed human-only face crop for operator verification.
 - **Parameter-count accounting across model card vs. checkpoint tensors**: The default configuration, `NVIDIA-Nemotron-3.5-Lightning` (30B) + the shared `HuggingFaceTB/SmolVLM-500M-Instruct` (`0.51B`), totals **30.51B by model card and 32.09B by base checkpoint tensors** (raw BF16 safetensors headers excluding never-loaded `mtp.*` weights: `31.58B + 0.51B`), under 33B on both counts. The previous `SmolVLM-Instruct` (2.25B) default totals 32.25B by model card but `31.58B + 2.25B = 33.82B` by tensors, over the cap; the 500M costs single-crop Verifier recall (27/30 real weapon crops confirmed vs. 29/30 at the default Verifier threshold).
 - **Platform-specific USB gimbal control**: Direct UVC pan/tilt/zoom control for the Insta360 Link 2 (`2e1a:4c01`, `2e1a:4c02`, `2e1a:4c04`) relies on macOS IOKit via `link-ctl`. On Linux, the stock `uvcvideo` kernel driver rejects UVC pan/tilt `SET_CUR` transfers without detaching the video stream, so Linux hosts automatically fall back to the secondary camera or software crop (`FakePTZ`).
 - **Local dashboard network scope**: The FastAPI dashboard serves live MJPEG streams and saved evidence crops without authentication and therefore binds to `127.0.0.1` by default (`DASHBOARD_HOST=127.0.0.1`).

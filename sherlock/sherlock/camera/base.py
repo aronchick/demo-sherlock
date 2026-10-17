@@ -81,7 +81,12 @@ def list_video_devices() -> list[tuple[int, str]]:
         return [(i, c.get("_name", "?")) for i, c in enumerate(cams)]
     if sys.platform.startswith("linux"):
         nums = sorted(int(d.name[5:]) for d in V4L2_SYSFS.glob("video*") if d.name[5:].isdigit())
-        return [(n, (V4L2_SYSFS / f"video{n}" / "name").read_text().strip()) for n in nums]
+        # A UVC camera registers a capture node plus a metadata node with the same
+        # name; sysfs `index` is 0 only on the first (capture) node of each device.
+        def capture(n: int) -> bool:
+            idx = V4L2_SYSFS / f"video{n}" / "index"
+            return not idx.exists() or idx.read_text().strip() == "0"
+        return [(n, (V4L2_SYSFS / f"video{n}" / "name").read_text().strip()) for n in nums if capture(n)]
     raise CameraError(f"name-based camera selection is not supported on {sys.platform}")
 
 

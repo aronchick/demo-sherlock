@@ -438,6 +438,21 @@ def test_linux_keeps_real_video_numbers_across_gaps(monkeypatch, tmp_path):
     assert base.resolve_source("name:integrated", devices) == "5"
 
 
+def test_linux_skips_uvc_metadata_nodes_that_repeat_the_name(monkeypatch, tmp_path):
+    from sherlock.camera import base
+
+    for n, name, index in ((2, "Insta360 Link 2", 0), (3, "Insta360 Link 2", 1),
+                           (6, "Integrated Camera", 0), (7, "Integrated Camera", 1)):
+        (tmp_path / f"video{n}").mkdir()
+        (tmp_path / f"video{n}" / "name").write_text(name + "\n")
+        (tmp_path / f"video{n}" / "index").write_text(f"{index}\n")
+    monkeypatch.setattr(base.sys, "platform", "linux")
+    monkeypatch.setattr(base, "V4L2_SYSFS", tmp_path)
+    devices = base.list_video_devices()
+    assert devices == [(2, "Insta360 Link 2"), (6, "Integrated Camera")]
+    assert base.resolve_source("name:Insta360 Link 2", devices) == "2"  # not "several cameras"
+
+
 def test_cameras_env_accepts_name_sources(monkeypatch):
     monkeypatch.setenv("CAMERAS", "hero:insta360:name:Insta360 Link 2,scout1:fake:name:MacBook Pro Camera")
     assert [(c.name, c.backend, c.source) for c in Config().cameras] == [

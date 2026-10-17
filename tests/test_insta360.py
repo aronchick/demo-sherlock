@@ -491,3 +491,28 @@ def test_probe_passes_when_ptz_ranges_answer(monkeypatch):
 
     monkeypatch.setattr(probe.ins, "MacUSBTransport", Answers)
     assert probe.macos_usb_direct() is not None
+
+
+@pytest.mark.parametrize("set_ok", [True, False])
+def test_v4l2_open_proves_pantilt_set_works(monkeypatch, set_ok):
+    from sherlock.camera import insta360
+
+    listing = ("pan_absolute 0x009a0908 (int) : min=-522000 max=522000 step=3600 default=0 value=7200\n"
+               "tilt_absolute 0x009a0909 (int) : min=-324000 max=108000 step=3600 default=0 value=-3600\n")
+    ran: list[tuple] = []
+
+    def run(cmd, **kw):
+        ran.append(tuple(cmd[3:]))
+        if cmd[3] == "--set-ctrl" and not set_ok:  # Link 2 on stock uvcvideo
+            raise insta360.subprocess.CalledProcessError(255, cmd, stderr="Invalid argument")
+        return types.SimpleNamespace(stdout=listing if cmd[3] == "--list-ctrls" else "")
+
+    monkeypatch.setattr(insta360.shutil, "which", lambda _: "/usr/bin/v4l2-ctl")
+    monkeypatch.setattr(insta360.subprocess, "run", run)
+    tr = insta360.V4L2Transport("/dev/video2")
+    if set_ok:
+        tr.open()
+    else:
+        with pytest.raises(TransportError, match="rejects setting"):
+            tr.open()
+    assert ran[1] == ("--set-ctrl", "pan_absolute=7200,tilt_absolute=-3600")  # no motion

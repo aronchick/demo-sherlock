@@ -5,7 +5,13 @@ Control paths, in the order they are tried:
    module (`link_usb_macos`). No Link Controller app, no sudo, no signing.
    link-ctl opens the original Link (PID 0x4c01) by default, so the Link 2 PID
    is passed explicitly.
-2. Linux: v4l2-ctl pan_absolute / tilt_absolute / zoom_absolute.
+2. Linux: v4l2-ctl pan_absolute / tilt_absolute / zoom_absolute, for UVC PTZ
+   cameras whose driver accepts the SET. The Link 2 on the stock uvcvideo
+   driver does not: GET works, SET fails, and link-ctl's only alternative is a
+   libusb CT SET after detaching uvcvideo, which drops /dev/video* and hangs the
+   camera when repeated (link-ctl docs/LINK2_LINUX.md). open() checks the SET
+   up front, so the Link 2 on Linux comes up offline and the Director falls
+   back instead of failing on every look_at. macOS is the supported path.
 The Link Controller WebSocket API is deliberately not used: its confirmed
 message set has zoom, re-centre and joystick *velocity*, but no absolute
 pan/tilt, so it cannot aim at a bbox.
@@ -291,6 +297,15 @@ class V4L2Transport(PTZTransport):
         self.ctrls = parse_v4l2_ctrls(self._run("--list-ctrls"))
         if "pan_absolute" not in self.ctrls:
             raise TransportError(f"{self.device} has no pan_absolute control")
+        # Write back the current pose: no motion, but proves SET works. Listing
+        # and reading the controls succeed even where SET is rejected.
+        pan = self.ctrls["pan_absolute"].get("value", 0)
+        tilt = self.ctrls.get("tilt_absolute", {}).get("value", 0)
+        try:
+            self.set_pantilt(pan, tilt)
+        except TransportError as e:
+            raise TransportError(f"{self.device} lists pan/tilt but rejects setting them (the"
+                                 " Link 2 on the stock Linux driver does; use macOS)") from e
 
     def ranges(self) -> PTZRanges | None:
         try:

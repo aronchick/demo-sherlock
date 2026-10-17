@@ -106,15 +106,15 @@ DIRECTOR_BASE_URL=https://<brev-host>/v1 uv run python -m gym.run_ablation --con
 uv run python -m gym.run_ablation --all
 ```
 
-### Ablation metrics (local stub validation; replace with live Brev vLLM numbers once `DIRECTOR_BASE_URL` is up)
+### Ablation metrics (live runs pending Brev `DIRECTOR_BASE_URL` endpoint; local stub validation artifacts in `results/ablation_stub_*.json`)
 
 | Ablation Config | Swapped Component | Director Model | Total Gen Params | Prompt | Tools | Thinking | Tool-Call Validity | Task Success | Steps to Report | Time to Report (ms) |
 |---|---|---|---:|---|---|---|---:|---:|---:|---:|
-| `prompt_v1` | System prompt (`v1`) | `Nemotron-3.5-Lightning-30B-A3B-NVFP4` | 32.25B | `system_v1` | `verbose` | `off` | 100.0% | 50.0% | 4.50 | 65.9 *(stub)* |
-| `terse_tools` | Tool schemas (`terse`) | `Nemotron-3.5-Lightning-30B-A3B-NVFP4` | 32.25B | `system_v2` | `terse` | `off` | 90.5% | 100.0% | 4.88 | 71.8 *(stub)* |
-| `thinking_on` | Thinking (`on`) | `Nemotron-3.5-Lightning-30B-A3B-NVFP4` | 32.25B | `system_v2` | `verbose` | `on` | 100.0% | 87.5% | 4.62 | 198.3 *(stub)* |
-| `qwen_director` | Model (`Qwen2.5-7B`) | `Qwen2.5-7B-Instruct` | 9.85B | `system_v2` | `verbose` | `off` | 100.0% | 87.5% | 4.12 | 86.2 *(stub)* |
-| `nemotron_lightning` | Reference (`v2` + `verbose` + `off`) | `Nemotron-3.5-Lightning-30B-A3B-NVFP4` | 32.25B | `system_v2` | `verbose` | `off` | 100.0% | 100.0% | 4.25 | 65.9 *(stub)* |
+| `prompt_v1` | System prompt (`v1`) | `Nemotron-3.5-Lightning-30B-A3B-NVFP4` | 32.25B | `system_v1` | `verbose` | `off` | TBD (live run pending) | TBD (live run pending) | TBD (live run pending) | TBD (live run pending) |
+| `terse_tools` | Tool schemas (`terse`) | `Nemotron-3.5-Lightning-30B-A3B-NVFP4` | 32.25B | `system_v2` | `terse` | `off` | TBD (live run pending) | TBD (live run pending) | TBD (live run pending) | TBD (live run pending) |
+| `thinking_on` | Thinking (`on`) | `Nemotron-3.5-Lightning-30B-A3B-NVFP4` | 32.25B | `system_v2` | `verbose` | `on` | TBD (live run pending) | TBD (live run pending) | TBD (live run pending) | TBD (live run pending) |
+| `qwen_director` | Model (`Qwen2.5-7B`) | `Qwen2.5-7B-Instruct` | 9.85B | `system_v2` | `verbose` | `off` | TBD (live run pending) | TBD (live run pending) | TBD (live run pending) | TBD (live run pending) |
+| `nemotron_lightning` | Reference (`v2` + `verbose` + `off`) | `Nemotron-3.5-Lightning-30B-A3B-NVFP4` | 32.25B | `system_v2` | `verbose` | `off` | TBD (live run pending) | TBD (live run pending) | TBD (live run pending) | TBD (live run pending) |
 
 ## Demo script (3 min)
 

@@ -84,10 +84,10 @@ def test_end_to_end_ablation_pipeline_with_local_stub(tmp_path: Path) -> None:
             output_dir=tmp_path,
         )
 
-        # Verify output files written
-        assert (tmp_path / "ablation_prompt_v1.json").is_file()
-        assert (tmp_path / "ablation_terse_tools.json").is_file()
-        assert (tmp_path / "ablation_nemotron_lightning.json").is_file()
+        # Verify stub output files written with *_stub_*.json naming
+        assert (tmp_path / "ablation_stub_prompt_v1.json").is_file()
+        assert (tmp_path / "ablation_stub_terse_tools.json").is_file()
+        assert (tmp_path / "ablation_stub_nemotron_lightning.json").is_file()
 
         # Prompt v2 improves task_success over prompt v1 (benign zero-snapshot + 2-crop weapon protocol)
         assert r_ref["summary_metrics"]["task_success"] > r_v1["summary_metrics"]["task_success"]

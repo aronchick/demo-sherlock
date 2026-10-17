@@ -297,7 +297,8 @@ async def run_single_ablation(
 
     out_dir = REPO_ROOT / output_dir
     out_dir.mkdir(parents=True, exist_ok=True)
-    out_path = out_dir / f"ablation_{agent_config.ablation_id}.json"
+    file_prefix = "ablation_stub" if effective_use_stub else "ablation"
+    out_path = out_dir / f"{file_prefix}_{agent_config.ablation_id}.json"
     out_path.write_text(json.dumps(artifact, indent=2) + "\n")
     return artifact
 
@@ -335,7 +336,9 @@ async def _async_main(args: argparse.Namespace) -> None:
 
     if args.all or len(results) > 1:
         out_dir = REPO_ROOT / args.output_dir
-        summary_path = out_dir / "ablation_summary.json"
+        is_stub = results[0]["execution_mode"] == "local_stub"
+        summary_name = "ablation_stub_summary.json" if is_stub else "ablation_summary.json"
+        summary_path = out_dir / summary_name
         summary_path.write_text(
             json.dumps(
                 {

@@ -71,8 +71,6 @@ sherlock/orchestrator.py   Scout → investigate → verify loop, per-incident e
 sherlock/scene.py    Scripted synthetic room (cup, then knife) for --synthetic
 sherlock/dashboard/  FastAPI SSE + MJPEG + the judge-facing UI
 tests/               End-to-end mock run: alert chain, ignore path (zero VLM calls), evidence, recovery
-gym/                 Native NeMo Gym resources server, verifier, agent, and YAML ablation configs
-results/             Per-ablation JSON artifacts (results/ablation_*.json)
 ```
 
 ## Development

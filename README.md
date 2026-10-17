@@ -148,6 +148,9 @@ With `--metrics`, optional `/metrics` snapshots record KV cache usage and
 prefix-cache counter deltas, excluding warmup. Missing metrics stay
 unavailable. KV snapshots are not peak memory usage. A reverse proxy can
 override the scrape path with `DIRECTOR_METRICS_URL` / `ANALYST_METRICS_URL`.
+If metrics use the repository ID instead of the requested served alias,
+the benchmark matches a single labelled model and records that choice in
+`matched_model_name` / `model_match`. It leaves ambiguous models unmatched.
 Avoid unrelated endpoint traffic during measurement because counters are
 server-wide.
 
@@ -162,9 +165,17 @@ documents `--enable-prefix-caching`, `--no-enable-prefix-caching`, and
 explains that reuse reduces prefill work, not decoding work. The expected
 signal is lower TTFT; the size of any benefit remains unmeasured.
 
-1. The serving owner starts Director with `--no-enable-prefix-caching`.
-   Keep the model revision, parser, context, sequence/memory budgets, VLM
-   settings and hardware fixed. Wait for model readiness.
+1. On the Brev host, the serving owner starts the baseline with:
+
+   ```bash
+   PREFIX_CACHING=0 bash brev/serve.sh
+   ```
+
+   `PREFIX_CACHING=0` selects `--no-enable-prefix-caching` for Director.
+   The script creates both containers; the serving owner must stop/remove
+   previous experiment containers before each launch. Keep the model
+   revision, parser, context, sequence/memory budgets, VLM settings and
+   hardware fixed. Wait for both models to be ready.
 2. Record the baseline. Use a nonsecret environment label identifying the
    GPU and exact model/config revisions; reuse it for the candidate:
 
@@ -173,9 +184,16 @@ signal is lower TTFT; the size of any benefit remains unmeasured.
      --prefix-caching off --environment h100-config-1
    ```
 
-3. The serving owner restarts Director with `--enable-prefix-caching` and
-   `--prefix-caching-hash-algo sha256`, preserving the other settings. These
-   are server flags; the benchmark's `--prefix-caching` only labels a run.
+3. On the Brev host, the serving owner recreates the containers with:
+
+   ```bash
+   PREFIX_CACHING=1 bash brev/serve.sh
+   ```
+
+   This selects `--enable-prefix-caching --prefix-caching-hash-algo sha256`
+   for Director and preserves the VLM settings. Wait for readiness again.
+   The benchmark's `--prefix-caching` only labels a run; set it to `off`
+   for `PREFIX_CACHING=0` and `on` for `PREFIX_CACHING=1`.
 4. Run the candidate against the printed baseline JSON path:
 
    ```bash

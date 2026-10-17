@@ -157,7 +157,7 @@
   <header class="bar">
     <div class="head">
       <div class="eyebrow">Sherlock / data flow</div>
-      <h1>One 10 ms detector watches every frame. A model only ever gets a crop.</h1>
+      <h1>Scout watches every frame. Two parallel checks inspect each incident.</h1>
     </div>
     <div class="ratio"><b id="avoided">0</b><span>VLM calls avoided</span></div>
   </header>
@@ -199,7 +199,7 @@
       </article>
       <div></div>
       <article class="stage" id="st-bucket" style="--c: var(--benign)">
-        <div class="kind">Evidence</div>
+        <div class="kind">Local evidence</div>
         <div class="sub">snapshots/ on this disk</div>
         <div class="slots evidence-links" id="evidence-links" aria-label="Saved evidence"><span>No saved evidence yet</span></div>
         <a href="/custody" target="sherlock-evidence" class="custody-link">Browse chain of custody</a>
@@ -225,9 +225,9 @@
         <div class="model-heading"><img class="model-logo" id="analystLogo" alt="" hidden><div class="model-name" id="analystModel"></div></div>
         <div class="model-runtime" id="analystRuntime"></div>
         <div class="model-body">
-          <div class="model-copy"><div class="kind">Read</div><div class="name">Analyst</div><div class="sub" id="analystSub">parallel object description</div></div>
+          <div class="model-copy"><div class="kind">Read</div><div class="name">Analyst</div><div class="sub" id="analystSub">scene + object + person</div></div>
           <figure class="model-preview">
-            <div class="model-preview-image"><span class="empty" id="analystEmpty">No crop yet</span><img id="analystPreview" alt="Object crop sent to the Analyst" hidden></div>
+            <div class="model-preview-image"><span class="empty" id="analystEmpty">No crop yet</span><img id="analystPreview" alt="Scene, object and face context sent to the Analyst" hidden></div>
             <figcaption id="analystPreviewState"></figcaption>
           </figure>
         </div>
@@ -237,9 +237,9 @@
         <div class="model-heading"><img class="model-logo" id="verifierLogo" alt="" hidden><div class="model-name" id="verifierModel"></div></div>
         <div class="model-runtime" id="verifierRuntime"></div>
         <div class="model-body">
-          <div class="model-copy"><div class="kind">Check</div><div class="name">Verifier</div><div class="sub" id="verifierSub">parallel claim check</div></div>
+          <div class="model-copy"><div class="kind">Check</div><div class="name">Verifier</div><div class="sub" id="verifierSub">parallel context check</div></div>
           <figure class="model-preview">
-            <div class="model-preview-image"><span class="empty" id="verifierEmpty">No crop yet</span><img id="verifierPreview" alt="Object crop sent to the Verifier" hidden></div>
+            <div class="model-preview-image"><span class="empty" id="verifierEmpty">No crop yet</span><img id="verifierPreview" alt="Scene, object and face context sent to the Verifier" hidden></div>
             <figcaption id="verifierPreviewState"></figcaption>
           </figure>
         </div>
@@ -268,6 +268,11 @@
         <span id="phone-error" class="phone-error" role="status"></span>
       </article>
 
+      <article class="dest cloud-evidence" id="st-cloud" style="--c: var(--scout)">
+        <div class="kind">Cloud evidence</div>
+        <div class="cloud-thumbnails" id="cloud-evidence-links"></div>
+        <div class="sub" id="cloud-evidence-status">Delivery unconfirmed</div>
+      </article>
     </div>
   </section>
 
@@ -364,7 +369,7 @@ pollExpanso();
 
 // ---- stages (DOM) -------------------------------------------------------------------
 const ST = { camera: $('wideFrame'), scout: $('st-scout'), director: $('st-director'), analyst: $('st-analyst'),
-  verifier: $('st-verifier'), comparison: $('st-comparison'), bucket: $('st-bucket'), ignored: $('d-ignored'), logged: $('d-logged'), alert: $('d-alert') };
+  verifier: $('st-verifier'), comparison: $('st-comparison'), cloud: $('st-cloud'), bucket: $('st-bucket'), ignored: $('d-ignored'), logged: $('d-logged'), alert: $('d-alert') };
 const badgeEl = id => id === 'camera' ? $('b-camera') : ST[id].querySelector('.badge');
 const timers = new WeakMap();
 function later(el, key, fn, ms) {
@@ -443,6 +448,7 @@ function layout() {
   E.assessA = mk([P(an.r, an.cy), P(g5 - 7, an.cy), P(g5 - 7, R.comparison.cy - 8), P(R.comparison.l, R.comparison.cy - 8)], {color: C.analyst});
   E.assessV = mk([P(v.r, v.cy), P(g5 + 7, v.cy), P(g5 + 7, R.comparison.cy + 8), P(R.comparison.l, R.comparison.cy + 8)], {color: C.verifier});
   E.store = mk([P(c.r, c.cy + 7), P(g1 + 6, c.cy + 7), P(g1 + 6, bk.cy), P(bk.l, bk.cy)], { label: 'evidence', color: C.benign, lseg: 1 });
+  E.replica = mk([P(bk.cx, bk.b), P(bk.cx, R.board.b + 5), P(g5, R.board.b + 5), P(g5, R.cloud.cy), P(R.cloud.l, R.cloud.cy)], { color: C.scout, dash: true });
   E.toIgnore = mk([P(d.r, d.cy), P(g5, d.cy), P(g5, R.ignored.cy), P(R.ignored.l, R.ignored.cy)], { color: C.benign });
   E.toLog = mk([P(R.comparison.cx - 20, R.comparison.b), P(R.comparison.cx - 20, R.logged.t)], { color: C.analyst });
   E.toAlert = mk([P(R.comparison.r, R.comparison.cy), P(R.out.r + 9, R.comparison.cy), P(R.out.r + 9, R.alert.cy), P(R.alert.r, R.alert.cy)], { color: C.weapon });
@@ -688,7 +694,7 @@ function onTool(ev) {
       if (bb) S.zoom = { from: S.zoom ? S.zoom.to : [0, 0, mm.nw, mm.nh], to: zoomWindow(bb, mm.nw, mm.nh), t0: now(), ms: 700, color: isHead ? C.director : cur.color };
       $('cropTag').textContent = isHead ? 'zoom: face' : 'zoom';
       cropImg.style.visibility = 'visible';
-      $('cropFrame').classList.toggle('sealed', !!isHead);
+      $('cropFrame').classList.remove('sealed');
       const cf = $('cropFrame'); cf.classList.add('iris'); void cf.offsetWidth; cf.classList.remove('iris');
       await wait(600);
     });
@@ -699,10 +705,10 @@ function onTool(ev) {
     const eid = d.result && d.result.evidence_id;
     if (eid === 'face_crop' || /subject=.?face/.test(m)) {              // evidence only: sealed, never analyzed
       beat(async () => {
-        chainAdd('face, sealed');
+        chainAdd('face evidence');
         cur.face = grab(cropImg, null, 200);
         flash($('cropFrame'));
-        caption('face crop · stored as evidence · not analyzed');
+        caption('face crop · linked to original scene');
         const slot = shelfSlot(Math.min(S.shelf.length, 7));
         flow('seal', 1100, C.benign);
         await ride('seal', 1150, { bmp: cur.face, w: 44, blur: true, color: C.benign }, { x: slot.x, y: slot.y });
@@ -733,7 +739,7 @@ function onModelInput(ev) {
     flow('crop', 700, C.analyst);
     flow('judge', 700, C.verifier);
     $('comparison-status').textContent = 'Checking in parallel';
-    $('comparison-reason').textContent = 'Same crop, different prompts';
+    $('comparison-reason').textContent = 'Same scene + crops, different prompts';
     await wait(700);
   });
 }
@@ -757,7 +763,7 @@ function onVerifier(ev) {
 }
 function onComparison(ev) {
   beat(async () => {
-    const result = ev.data || {};
+    const result = ev.data?.comparison || ev.data || {};
     modelCards.complete('analyst');
     modelCards.complete('verifier');
     $('comparison-status').textContent = result.status === 'agreed' ? 'Both support the claim' : 'Review needed';
@@ -791,6 +797,7 @@ function onReport(ev) {
     const bmp = cur.crop || cur.card;
     const color = action === 'alert' ? C.weapon : C.analyst;
     flow('store', 700, C.benign);
+    if (CFG.mock) flow('replica', 900, C.scout);
     const slot = shelfSlot(Math.min(S.shelf.length, 7));
     await ride('store', 800, { bmp, w: 44, stamp: cur.verdict, color: C.benign }, { x: slot.x, y: slot.y });
     const item = { bmp, kind: action, color, ok: cur.verdict };
@@ -904,7 +911,7 @@ function drawLabel(e, hot) {
   let i = e.lseg;
   if (i === undefined) { i = 0; for (let k = 1; k < e.lens.length; k++) if (e.lens[k] > e.lens[i]) i = k; }
   const a = e.pts[i], b = e.pts[i + 1], x = (a.x + b.x) / 2, y = (a.y + b.y) / 2;
-  ctx.font = `500 9.5px ${FONT.mono}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.font = `500 11px ${FONT.mono}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
   const tw = ctx.measureText(e.label).width + 10;
   ctx.fillStyle = C.paper; ctx.fillRect(x - tw / 2, y - 7, tw, 14);
   ctx.fillStyle = hot ? (e.tint || e.color) : '#8d8777'; ctx.fillText(e.label, x, y + 0.5);
@@ -941,8 +948,8 @@ function drawBoundary() {
   ctx.save(); ctx.setLineDash([3, 6]); ctx.strokeStyle = 'rgba(27,30,34,.3)'; ctx.lineWidth = 1;
   ctx.beginPath(); ctx.moveTo(x, y0); ctx.lineTo(x, y1); ctx.stroke(); ctx.setLineDash([]);
   ctx.save(); ctx.translate(x, (y0 + y1) / 2); ctx.rotate(-Math.PI / 2);
-  ctx.font = `500 9.5px ${FONT.mono}`; ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
-  const t = 'crops only · never the frame', tw = ctx.measureText(t).width + 12;
+  ctx.font = `500 11px ${FONT.mono}`; ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
+  const t = 'selected incidents · scene + object + face', tw = ctx.measureText(t).width + 12;
   ctx.fillStyle = C.paper; ctx.fillRect(-tw / 2, -12, tw, 13);
   ctx.fillStyle = '#6f695d'; ctx.fillText(t, 0, -2); ctx.restore(); ctx.restore();
 }

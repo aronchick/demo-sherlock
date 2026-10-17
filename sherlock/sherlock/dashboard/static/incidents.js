@@ -9,6 +9,8 @@
   const phone = document.getElementById('phone-content');
   const phoneError = document.getElementById('phone-error');
   const shelf = document.getElementById('evidence-links');
+  const cloudShelf = document.getElementById('cloud-evidence-links');
+  const cloudStatus = document.getElementById('cloud-evidence-status');
   const custody = document.getElementById('custody-content');
   const custodyError = document.getElementById('custody-error');
   const selected = new URLSearchParams(location.search).get('incident');
@@ -151,11 +153,13 @@
   /** @param {Incident[]} records */
   function renderShelf(records) {
     if (!shelf) return;
-    const entries = records.flatMap(record => record.artifacts.map(artifact => ({ record, artifact }))).slice(0, 8);
+    const entries = records.flatMap(record => record.artifacts.filter(artifact => artifact.name !== 'model_context').map(artifact => ({ record, artifact }))).slice(0, 8);
     const revision = entries.map(({ record, artifact }) => `${record.incident}:${artifact.name}`).join(',');
 
     if (revision === shelfRevision) return;
     shelfRevision = revision;
+
+    if (cloudShelf) cloudShelf.replaceChildren(...entries.slice(0, 3).map(({record, artifact}) => pictureLink(record, artifact)));
     shelf.replaceChildren(...entries.map(({ record, artifact }) => pictureLink(record, artifact)));
 
     if (!entries.length) shelf.append(element('span', 'No saved evidence yet'));
@@ -210,6 +214,8 @@
         association.append(source);
         figure.append(association);
       }
+
+      if (artifact.relationship === 'composite') figure.append(element('p', 'Model context assembled from this incident’s scene and crops. Both checks receive this context.'));
 
       if (artifact.bbox) figure.append(element('p', `Target box in source coordinates: ${artifact.bbox.join(', ')}`));
       const good = artifact.integrity === 'verified';
@@ -313,8 +319,15 @@
       if (phoneError) phoneError.textContent = '';
 
       if (shelf) renderShelf(await read('/incidents?limit=8&evidence_only=true'));
+
+      if (cloudStatus) {
+        const [mode, transport] = await Promise.all([read('/mode'), read('/expanso')]);
+        cloudStatus.textContent = mode.mock ? 'Simulated destination · no upload' : transport.edge ? 'Edge accepted · cloud unconfirmed' : 'Not connected · source previews';
+      }
     } catch {
       if (phoneError) phoneError.textContent = 'Connection unavailable. Displayed incident may be out of date.';
+
+      if (cloudStatus) cloudStatus.textContent = 'Connection unavailable · cloud unconfirmed';
     }
   }
 

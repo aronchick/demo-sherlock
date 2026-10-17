@@ -150,3 +150,18 @@ a:focus-visible, button:focus-visible, summary:focus-visible { outline: 2px soli
   #phone-view .phone-full .phone-gallery .phone-crop img { height: 52px; }
   #phone-view .phone-full .phone-id { font-size: 11px; }
 }
+
+.cloud-thumbnails { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 5px; margin-block: 6px; }
+.cloud-thumbnails a { background: var(--card); border: 1px solid var(--line); min-width: 0; }
+.cloud-thumbnails img { display: block; width: 100%; height: 34px; object-fit: contain; }
+.cloud-thumbnails .face-preview { filter: blur(3px); }
+.cloud-evidence .sub { font-size: 11px; line-height: 1.3; }
+@media (min-width: 1100px) and (min-height: 650px) {
+  .out { grid-template-rows: .8fr .9fr .8fr 1fr 1.1fr; gap: 8px; }
+  .out > .dest { min-height: 0; padding-block: 8px; }
+  .out .num { font-size: clamp(24px, 2.6vw, 38px); }
+  .out .sub { font-size: 11px; line-height: 1.3; }
+  #d-alert { min-height: 84px; }
+  .cloud-thumbnails img { height: 28px; }
+  .comparison strong { font-size: 13px; margin-block: 3px; }
+}

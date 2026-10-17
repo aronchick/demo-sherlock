@@ -140,8 +140,9 @@ test (`PREFIX_CACHING=1` or `0`). No speculative-decoding draft model is
 loaded, which is what keeps Configuration A under the 33B cap. The laptop
 reaches both through `DIRECTOR_BASE_URL` and `ANALYST_BASE_URL`, directly or
 over an SSH tunnel. Model calls are plain OpenAI-compatible HTTP, so a local
-Ollama or mlx-vlm server is a one-line swap for rehearsal (not bounty
-evidence: the bounty requires vLLM).
+Ollama or mlx-vlm server is a one-line swap for rehearsal (`just local-up`,
+[Every model on this Mac](#every-model-on-this-mac-plan-b-apple-silicon); not
+bounty evidence: the bounty requires vLLM).
 
 **Fine-tuning** touches only the Scout. Nemotron and SmolVLM run stock
 weights. The Scout kit builds an open COCO 2017 CC-BY subset plus prop
@@ -338,6 +339,38 @@ just live                         # real cameras and models per .env; installs t
 Open <http://127.0.0.1:8000> on the Mac; the dashboard stays local while model calls
 use the Brev endpoints or SSH tunnels.
 If the endpoint is unreachable mid-pitch, the Director automatically drops to the rule-based fallback (`RuleDirector`).
+
+## Every model on this Mac (Plan B, Apple silicon)
+When the Brev box or the venue network is out, run all three models on the laptop instead:
+```bash
+ollama pull nemotron-3.5-lightning:30b-mlx   # once, on a good network (19 GB); Ollama 0.40 or newer
+just local-up       # Director and VLM on 127.0.0.1; returns once both answer (about a minute)
+just local-live     # Sherlock against them; `just local-live --synthetic` rehearses with no camera
+just local-down     # stops exactly what local-up started; fails unless both ports are free
+```
+`just local-status` shows what `local-up` started and whether each server answers.
+
+| Role | Model | Server |
+|---|---|---|
+| Director | `nemotron-3.5-lightning:30b-mlx` | a dedicated `ollama serve` on `127.0.0.1:11436`, 8,192-token context |
+| Analyst + Verifier | `HuggingFaceTB/SmolVLM-500M-Instruct` | mlx-vlm 0.7.8 on `127.0.0.1:8002`, `--top-logprobs-k 10` |
+
+The Director gets its own Ollama so any Ollama already on 11434 is never touched; with the default context, the 30B
+load hit Ollama's 5-minute limit under memory pressure. `--top-logprobs-k 10` gives the Verifier real logprobs, so
+the board shows a margin as on Brev; without it mlx-vlm returns placeholders and the Verifier reads the first word.
+
+mlx-vlm runs only on Apple silicon, so it is not a project dependency: `scripts/local.sh` runs it through
+`uvx --python 3.12 --from mlx-vlm==0.7.8`, and `uv sync` on Linux or Brev is unchanged. The first `local-up`
+downloads it and the 500M weights (about 1 GB). On any other machine `local-up` stops with a pointer to Brev.
+
+`local-live` exports `DIRECTOR_BASE_URL`, `ANALYST_BASE_URL`, `VERIFIER_BASE_URL`, the three `*_MODEL` names and
+`VERIFIER_MARGIN=-1.0`, which win over a `.env` that points at Brev; `eval "$(scripts/local.sh env)"` prints the same
+exports for running `run.py` yourself. -1.0 is the 500M's measured operating point on tight crops: 62 of 70 weapons
+confirmed against 57 at the code default of 0.0, and still 0 of 20 knife claims accepted on cups and bottles. Set
+`VERIFIER_MARGIN` in the shell to override it. If a port is taken (an SSH tunnel to Brev on 8002, say), `local-up`
+refuses; close the tunnel or set `LOCAL_DIRECTOR_PORT` / `LOCAL_VLM_PORT`. PIDs and logs are in `.runtime/local/`.
+Measured on an M5 Max with 64 GB and both models cached: `local-up` in 66 s, then a synthetic knife alert verified
+in 4.2 s (Verifier 233 ms, margin +8.00 against -1.00). Rehearsal only: bounty evidence comes from vLLM on Brev.
 
 ## Hardware: Insta360 Link 2 hero camera
 The hero is an **Insta360 Link 2, the gimbal model** (USB `2e1a:4c04`), not the gimbal-less Link 2C. The scout is the Mac's built-in webcam on the software-crop backend.

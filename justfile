@@ -92,6 +92,22 @@ down:
 live:
     uv run --extra yolo python run.py
 
+# Plan B on Apple silicon: Director on a dedicated Ollama, VLM on mlx-vlm, both on loopback
+local-up:
+    scripts/local.sh up
+
+# Sherlock in the foreground against the local models; --synthetic rehearses with no camera
+local-live *args:
+    scripts/local.sh live {{args}}
+
+# The local model servers started here, and whether they answer
+local-status:
+    scripts/local.sh status
+
+# Stop exactly what `just local-up` started; fails unless both model ports are free
+local-down:
+    scripts/local.sh down
+
 # Run the test suite (includes the gym optional extra on Python >= 3.13.14)
 test:
     uv run --extra gym pytest

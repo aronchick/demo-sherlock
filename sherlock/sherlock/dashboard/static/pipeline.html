@@ -727,15 +727,18 @@ function onTool(ev) {
 
 function onModelInput(ev) {
   const {role, image} = ev.data || {};
+
   if (role !== 'analyst' || !image?.startsWith('data:image/png;base64,')) return;
   const input = new Image();
   input.src = image;
   beat(async () => {
     cur.crop = input;
+
     for (const check of ['analyst', 'verifier']) {
       modelCards.show(check, image);
       glow(check, 1);
     }
+
     flow('crop', 700, C.analyst);
     flow('judge', 700, C.verifier);
     $('comparison-status').textContent = 'Checking in parallel';
@@ -761,6 +764,7 @@ function onVerifier(ev) {
     flow('assessV', 600, C.verifier);
   });
 }
+
 function onComparison(ev) {
   beat(async () => {
     const result = ev.data?.comparison || ev.data || {};
@@ -797,6 +801,7 @@ function onReport(ev) {
     const bmp = cur.crop || cur.card;
     const color = action === 'alert' ? C.weapon : C.analyst;
     flow('store', 700, C.benign);
+
     if (CFG.mock) flow('replica', 900, C.scout);
     const slot = shelfSlot(Math.min(S.shelf.length, 7));
     await ride('store', 800, { bmp, w: 44, stamp: cur.verdict, color: C.benign }, { x: slot.x, y: slot.y });

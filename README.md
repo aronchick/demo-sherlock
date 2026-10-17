@@ -63,9 +63,9 @@ monitors those pipelines
 3. **Duplicates and overlaps are dropped.** The same label seen on another
    camera moments ago counts as a duplicate. A detection that arrives while
    an investigation is running is counted as `dropped_busy`, not "avoided".
-4. **Benign objects stop here.** The Director calls `report(ignore)` with no
-   `look_at` and no `snapshot`, so **no VLM call is made**. This is the
-   "VLM calls avoided" number.
+4. **Benign objects stop here.** The original scene is saved, and the Director
+   calls `report(ignore)` with no `look_at` or extra `snapshot`, so **no VLM
+   call is made**. This is the "VLM calls avoided" number.
 5. **The Director acquires evidence.** It uses `look_at`, `move` and
    `snapshot` to obtain object and face detail. The orchestrator saves the
    original scene before acquisition and persists each available image and

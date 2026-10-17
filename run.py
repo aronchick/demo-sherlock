@@ -15,12 +15,14 @@ def main():
     if a.mock:
         os.environ["SHERLOCK_MOCK"] = "1"
     from sherlock.config import Config
+    from sherlock.dashboard.pipeline import mount_pipeline
     from sherlock.dashboard.server import make_app
     from sherlock.orchestrator import Sherlock
 
     s = Sherlock(Config(), synthetic=a.synthetic)
     s.start()
-    uvicorn.run(make_app(s), host="0.0.0.0", port=a.port, log_level="warning")
+    app = mount_pipeline(make_app(s))  # /pipeline: edge-to-cloud view
+    uvicorn.run(app, host="0.0.0.0", port=a.port, log_level="warning")
 
 
 if __name__ == "__main__":

@@ -239,6 +239,11 @@ def test_results_say_where_they_were_measured():
     assert numbers.ablation_result(summary)["measured_on"] == "local · Ollama"  # inherited by the row
     vllm = {"name": "vLLM", "version": "0.28.0", "host": "brev-l40s", "label": "vLLM"}
     assert numbers.director_result({**benchmark(), "model_server": vllm})["measured_on"] == "brev-l40s · vLLM"
+    h100 = {"name": "vLLM", "version": "0.28.0", "host": "sherlock-h100", "hardware": "Brev, 1x H100 PCIe 80GB",
+            "label": "Brev · vLLM", "source": "declared"}  # the producer's own label wins
+    assert numbers.director_result({**benchmark(), "model_server": h100})["measured_on"] == "Brev · vLLM"
+    unknown = {"name": None, "host": "sherlock-h100", "label": "sherlock-h100", "reachable": True}
+    assert numbers.director_result({**benchmark(), "model_server": unknown})["measured_on"] == "sherlock-h100"
     assert numbers.director_result({**benchmark(), "environment": "brev-l40s"})["measured_on"] == "brev-l40s"
     assert numbers.director_result({**benchmark(), "environment": "unspecified"})["measured_on"] is None
     assert numbers.director_result(benchmark())["measured_on"] is None

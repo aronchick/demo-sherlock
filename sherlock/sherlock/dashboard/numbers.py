@@ -45,9 +45,15 @@ def mapping(value):
 def measured_on(data):
     """Where the evidence was measured, as its producer recorded it: "local · Ollama"
     from a model_server entry, else the runtime or environment and device it named
-    ("local · MPS"). None when it recorded nothing."""
+    ("local · MPS"). None when it recorded nothing.
+
+    model_servers.server() labels an entry with its program or, failing that, its
+    host; a label that is neither was written by the producer ("Brev · vLLM" on the
+    H100 evidence) and is shown as it stands."""
     server = mapping(data.get("model_server"))
-    host, name = text(server.get("host")), text(server.get("name") or server.get("label"))
+    host, name, label = (text(server.get(key)) for key in ("host", "name", "label"))
+    if label not in {"", name, host}:
+        return label
     if host or name:
         parts = ["local" if host == "laptop" else host, name]
     else:

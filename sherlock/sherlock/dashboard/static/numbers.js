@@ -64,6 +64,20 @@ function renderMeasurements(data) {
     ? ablation.config.slice(0, 32) : NOT_MEASURED);
   measurementText('number-success', measuredNumber(measuredPercent(ablation?.task_success), '%'));
   measurementText('number-validity', measuredNumber(measuredPercent(ablation?.tool_call_validity), '%'));
+
+  /* The same reference config measured elsewhere (the local run under the Brev one),
+     on one line that is the first to go when the card is short of room. */
+  const secondary = data.ablation_secondary;
+  const also = document.getElementById('number-ablation-secondary');
+
+  if (also) {
+    also.hidden = !secondary;
+    also.title = secondary?.file || '';
+  }
+
+  measurementText('number-ablation-secondary-where', secondary ? secondary.measured_on || 'runtime not recorded' : '');
+  measurementText('number-ablation-secondary-success', secondary
+    ? measuredNumber(measuredPercent(secondary.task_success), '% task success') : NOT_MEASURED);
   resultHeading('number-scout', 'Scout', scout
     ? `weapon · ${scout.source} ${scout.split} n=${scout.boxes}` : 'weapon', scout);
   measurementText('number-precision', measuredPair(
@@ -82,7 +96,7 @@ async function refreshMeasurements() {
 
     renderMeasurements(await response.json());
   } catch {
-    renderMeasurements({director: null, ablation: null, scout: null});
+    renderMeasurements({director: null, ablation: null, ablation_secondary: null, scout: null});
     measurementText('numbers-status', 'Measurements unavailable');
   }
 }

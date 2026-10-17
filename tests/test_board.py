@@ -90,27 +90,27 @@ def empty_results(tmp_path, monkeypatch) -> tuple[str, dict]:
 
 def test_board_mounts_every_measured_result_as_not_measured(tmp_path, monkeypatch):
     page, data = empty_results(tmp_path, monkeypatch)
-    assert data == {"director": None, "ablation": None, "scout": None}
+    assert data == {"director": None, "ablation": None, "ablation_secondary": None, "scout": None}
     assert '<script src="numbers.js"' in page
     ids = measured_ids()
-    assert len(ids) == 12 and all(f'id="{i}"' in page for i in ids), "numbers.js writes to an element the board lacks"
+    assert len(ids) == 15 and all(f'id="{i}"' in page for i in ids), "numbers.js writes to an element the board lacks"
     outputs = re.findall(r'<output id="(number-[a-z-]+)">([^<]*)</output>', page)
-    assert len(outputs) == 8 and {text for _, text in outputs} == {"not measured"}
+    assert len(outputs) == 9 and {text for _, text in outputs} == {"not measured"}
     assert "TBD" not in page
 
 
 # numbers.js against a stand-in DOM holding the board's ids, fed a /numbers body.
-# A heading prints as its parts: [name, detail, runtime].
+# A heading prints as its parts: [name, detail, runtime]; a hidden element as "hidden".
 RUN_NUMBERS_JS = """
 const {script, data, ids} = JSON.parse(process.argv[1]);
 const shown = {};
-const node = () => ({textContent: '', replaceChildren(...kids) { this.parts = kids.map(k => k.textContent); }});
+const node = () => ({textContent: '', hidden: false, replaceChildren(...kids) { this.parts = kids.map(k => k.textContent); }});
 globalThis.document = {getElementById: id => ids.includes(id) ? (shown[id] ??= node()) : null, createElement: node};
 globalThis.fetch = async () => ({ok: true, json: async () => data});
 globalThis.setInterval = () => 0;
 require(script);
 setTimeout(() => console.log(JSON.stringify(Object.fromEntries(
-  Object.entries(shown).map(([id, el]) => [id, el.parts || el.textContent])))), 0);
+  Object.entries(shown).map(([id, el]) => [id, el.hidden ? 'hidden' : el.parts || el.textContent])))), 0);
 """
 
 
@@ -133,7 +133,9 @@ def test_numbers_js_renders_not_measured_from_an_empty_results_dir(tmp_path, mon
     headings = {i: shown.pop(i) for i in ("number-director", "number-ablation", "number-scout")}
     assert headings == {"number-director": ["Director", "", ""], "number-ablation": ["NeMo Gym", "", ""],
                         "number-scout": ["Scout", " · weapon", ""]}
-    assert set(shown.values()) == {"not measured"} and len(shown) == 8
+    secondary = [shown.pop(i) for i in ("number-ablation-secondary", "number-ablation-secondary-where")]
+    assert secondary == ["hidden", ""], "no second Gym run, no line for it"
+    assert set(shown.values()) == {"not measured"} and len(shown) == 9
 
 
 @needs_node
@@ -153,9 +155,18 @@ def test_every_measured_group_names_its_runtime(tmp_path, monkeypatch):
     assert shown["number-ablation"] == ["NeMo Gym", " · 8 tasks", "local · Ollama"]
     assert shown["number-scout"] == ["Scout", " · weapon · coco val n=104", "local · MPS"]
     assert shown["number-precision"] == "90.5% → not measured"
+    assert shown["number-ablation-secondary"] == "hidden"
     assert "vLLM" not in json.dumps(shown)
     brev = run_numbers_js(page, {"director": {**director, "measured_on": "brev-l40s · vLLM"}, "ablation": None, "scout": None})
     assert brev["number-director"][2] == "brev-l40s · vLLM"
+    # Both Gym runs: Brev leads the group, the local run gets the one secondary line.
+    both = run_numbers_js(page, {**local, "ablation": {**local["ablation"], "task_success": 1.0, "measured_on": "Brev · vLLM"},
+                                 "ablation_secondary": local["ablation"]})
+    assert both["number-ablation"] == ["NeMo Gym", " · 8 tasks", "Brev · vLLM"]
+    assert both["number-success"] == "100%"
+    assert both["number-ablation-secondary-where"] == "local · Ollama"
+    assert both["number-ablation-secondary-success"] == "87.5% task success"
+    assert both["number-ablation-secondary"] != "hidden"
 
 
 def scout_backend(tmp_path, *, mock: bool, synthetic: bool, backend: str = "yolo") -> str:

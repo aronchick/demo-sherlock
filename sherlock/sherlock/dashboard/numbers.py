@@ -4,7 +4,8 @@ Read the newest eligible artifact by modification time (filename breaks ties).
 The Director headline uses the highest measured concurrency, never the fastest
 row. A/B deltas must match that same model/concurrency and have no failed calls.
 Every result carries measured_on, the runtime its producer recorded, so local
-numbers never read as vLLM ones.
+numbers never read as vLLM ones. The Gym reference run on Brev (results/brev_vllm/)
+is the ablation result; the local one in results/ follows as ablation_secondary.
 """
 
 from __future__ import annotations
@@ -54,6 +55,11 @@ def measured_on(data):
     host, name, label = (text(server.get(key)) for key in ("host", "name", "label"))
     if label not in {"", name, host}:
         return label
+    # gym/run_ablation.py names its runtime "<place>_<program>", place "brev" for any
+    # host but the laptop: "brev_vllm" on sherlock-h100 is "Brev · vLLM".
+    place, _, program = text(data.get("runtime")).partition("_")
+    if place == "brev" and name and program == name.lower():
+        host = "Brev"
     if host or name:
         parts = ["local" if host == "laptop" else host, name]
     else:
@@ -234,19 +240,26 @@ def latest(root, paths, parse):
     return None
 
 
+def reference_ablation(root, results, directory):
+    """The nemotron_lightning reference row of one Gym run directory, in fixed source
+    priority: checkout mtimes and other configurations cannot replace it. Keeps
+    latest()'s bounded, confined reads; file is relative to results/."""
+    for name in ("ablation_summary.json", "ablation_nemotron_lightning.json"):
+        path = results / directory / name
+        found = latest(root, [path], ablation_result)
+        if found is not None:
+            return {**found, "file": path.relative_to(results).as_posix()}
+    return None
+
+
 def read_numbers(root=None):
     root = ROOT if root is None else Path(root)
     results = root / "results"
-    # Fixed source priority: checkout mtimes and other configurations cannot
-    # replace the reference result. Keep latest()'s bounded, confined reads.
-    ablation = None
-    for name in ("ablation_summary.json", "ablation_nemotron_lightning.json"):
-        ablation = latest(root, [results / name], ablation_result)
-        if ablation is not None:
-            break
+    brev, local = reference_ablation(root, results, "brev_vllm"), reference_ablation(root, results, "")
     return {
         "director": latest(root, results.rglob("vllm_bench_*.json"), director_result),
-        "ablation": ablation,
+        "ablation": brev or local,
+        "ablation_secondary": local if brev else None,
         "scout": latest(
             root,
         [root / "runs/scout/eval.json", root / "runs/scout/eval_baseline.json", *results.glob("scout_eval*.json")],

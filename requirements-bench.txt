@@ -9,4 +9,4 @@ prometheus-client>=0.21,<1
 fastapi
 uvicorn
 pytest
-ruff
+ruff==0.17.1

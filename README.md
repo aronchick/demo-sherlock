@@ -122,6 +122,8 @@ Markdown table, and prints the table. JSON `schema_version: 1` contains:
 - `runs[]`, keyed by `workload`, `model`, `concurrency`, with `summary`,
   excluded `warmup` failure counts, optional `metrics`, and per-request
   `samples`. A dashboard can read these files without scraping Markdown.
+  Filter to `evidence_kind: endpoint` before displaying model performance;
+  the checked-in `stub` example is only a protocol smoke test.
 - `summary.ttft_ms` and `e2e_ms` with `p50`, `p95`, `p99`,
   `output_tokens_per_s`, `requests_per_s`, and `tool_call_validity_rate`.
 

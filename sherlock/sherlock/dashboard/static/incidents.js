@@ -1,7 +1,7 @@
 // @ts-check
 'use strict';
 
-/** @typedef {{name:string, sha256:string, url:string, integrity:string, camera?:string}} Artifact */
+/** @typedef {{name:string, sha256:string, url:string, integrity:string, camera?:string,captured_at?:number|null}} Artifact */
 /** @typedef {{stage:string, t:number, detail:string}} CustodyEvent */
 /** @typedef {{incident:string, action:string, claim:string, t:number, verified?:boolean, evidence_camera?:string, trigger?:{camera:string}, artifacts:Artifact[], custody:CustodyEvent[], models?:{mock?:boolean,scout?:string,director?:string,analyst?:string,verifier?:string}, notification:{simulated:boolean,status:string,delivered_at?:number,acknowledged_at?:number}}} Incident */
 
@@ -29,9 +29,9 @@
     return node;
   }
 
-  /** @param {number|undefined} value */
+  /** @param {number|undefined|null} value */
   function timestamp(value) {
-    return value === undefined ? 'Not recorded' : new Date(value * 1000).toLocaleString();
+    return value == null ? 'Not recorded' : new Date(value * 1000).toLocaleString();
   }
 
   /** @param {string} url @param {RequestInit} [options] @returns {Promise<any>} */
@@ -53,6 +53,13 @@
     const link = document.createElement('a');
     link.href = custodyUrl(record.incident);
     link.title = `Chain of custody: ${artifact.name}, ${record.incident}`;
+
+    if (artifact.integrity === 'missing') {
+      link.textContent = 'Image unavailable · view record';
+
+      return link;
+    }
+
     const img = document.createElement('img');
     img.src = artifact.url;
     img.alt = `${artifact.name.replaceAll('_', ' ')} from ${record.incident}. View chain of custody`;
@@ -161,12 +168,15 @@
       img.src = artifact.url;
       img.alt = artifact.name.replaceAll('_', ' ');
 
-      if (artifact.name === 'face_crop') {
+      if (artifact.integrity === 'missing') {
+        figure.append(element('p', 'Image unavailable. The recorded hash is retained below.'));
+      } else if (artifact.name === 'face_crop') {
         const disclosure = document.createElement('details');
         disclosure.append(element('summary', 'Face evidence · reveal for human review'), img);
         figure.append(disclosure);
       } else figure.append(img);
       figure.append(element('figcaption', `${artifact.name.replaceAll('_', ' ')} · ${artifact.camera || record.evidence_camera || 'camera not recorded'}`));
+      figure.append(element('p', `Captured ${timestamp(artifact.captured_at)}`));
       const good = artifact.integrity === 'verified';
       figure.append(element('p', good ? 'SHA-256 matches saved record' : `Integrity check: ${artifact.integrity}`, good ? 'integrity-ok' : 'integrity-error'));
       figure.append(element('code', `SHA-256 ${artifact.sha256}`));
@@ -221,7 +231,7 @@
           link.href = custodyUrl(record.incident);
           const artifact = record.artifacts.find(item => item.name !== 'face_crop');
 
-          if (artifact) {
+          if (artifact && artifact.integrity !== 'missing') {
             const img = document.createElement('img');
             img.src = artifact.url;
             img.alt = artifact.name.replaceAll('_', ' ');

@@ -6,3 +6,6 @@ snapshots/
 .venv/
 data/
 runs/
+.runtime/
+*.egg-info/
+build/

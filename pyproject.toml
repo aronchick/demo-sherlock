@@ -1,0 +1,47 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "sherlock"
+version = "0.1.0"
+description = "A camera that investigates: Scout, Director and Verifier small models with PTZ camera tools."
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "opencv-python",
+    "numpy",
+    "openai>=1.40",
+    "fastapi",
+    "uvicorn",
+    "pydantic",
+    "python-dotenv",
+    # Insta360 Link 2 USB-direct PTZ
+    "link-ctl>=2.2.1 ; sys_platform == 'darwin'",
+]
+
+[project.optional-dependencies]
+# Scout backend "yolo" (SCOUT_BACKEND=yolo, the default outside mock mode). Pulls in torch,
+# so mock mode and the tests leave it out.
+yolo = ["ultralytics"]
+
+[dependency-groups]
+# Test and lint tooling; `uv sync` and `uv run` include it by default.
+dev = [
+    "pytest",
+    "ruff==0.17.1",  # must match required-version in ruff.toml
+    # benchmark tests (tests/test_bench_vllm.py), same set as requirements-bench.txt
+    "httpx>=0.27,<1",
+    "jsonschema>=4.23,<5",
+    "prometheus-client>=0.21,<1",
+]
+
+# The package lives at sherlock/sherlock, so the repo-level `sherlock/` is the source root.
+[tool.setuptools]
+package-dir = { "" = "sherlock" }
+
+[tool.setuptools.packages.find]
+where = ["sherlock"]
+
+[tool.setuptools.package-data]
+"sherlock.dashboard" = ["static/*"]

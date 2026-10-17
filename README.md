@@ -37,10 +37,14 @@ Configuration B swaps the Director and shared VLM via `.env` (see the commented-
 
 ## Run with nothing (sandbox, airplane, dead wifi)
 ```bash
-pip install -r requirements.txt            # ultralytics optional for this mode
-CAMERAS=hero:fake:synthetic,scout1:fake:synthetic python run.py --mock --synthetic
+just up                                    # needs uv and just; ultralytics (the `yolo` extra) is optional for this mode
 open http://localhost:8000
+just down                                  # stops what `just up` started
 ```
+`just up` runs `run.py --mock --synthetic` in the background on `DASHBOARD_PORT` (default 8000) with
+`CAMERAS=hero:fake:synthetic,scout1:fake:synthetic` (set either in your shell to change it), and keeps its
+PID and log in the gitignored `.runtime/`. The first run builds the environment from `pyproject.toml` and `uv.lock`.
+
 Rule-based director, mock VLMs, a scripted room on a 26 s loop: someone holds up a cup (ignored, 0 VLM calls),
 then someone holds up a knife (look_at → snapshot → look_at head → face snapshot → verify → alert with both crops).
 Press **Break the next tool call**, **Corrupt next tool args** or **Cover hero lens** on the dashboard to see recovery.
@@ -55,7 +59,7 @@ no model ever sees it, and nothing identifies or describes the person.
 2. On the Mac, copy `.env.example` to `.env` and point at the Brev host (or local SSH tunnel on `:8001` and `:8002`):
 ```bash
 cp .env.example .env              # CAMERAS=hero:fake:0 uses the laptop webcam with software PTZ
-python run.py
+just live                         # real cameras and models per .env; installs the `yolo` extra (ultralytics)
 ```
 If the endpoint is unreachable mid-pitch, the Director automatically drops to the rule-based fallback (`RuleDirector`).
 
@@ -115,7 +119,7 @@ python scripts/build_scout_dataset.py build
 # train (cuda > mps > cpu, auto) and score before vs after
 python scripts/train_scout.py
 python scripts/eval_scout.py --after runs/scout/weights/best.pt
-YOLO_MODEL=runs/scout/weights/best.pt python run.py
+YOLO_MODEL=runs/scout/weights/best.pt just live
 ```
 Aim for 100-200 prop photos in total. Move the prop, switch hands, change distance and angle while
 `capture_props.py` runs. In-room photos are split by time within each session (first 70% train, last 20%
@@ -369,13 +373,13 @@ the Red Hat vLLM bounty explanation.
 ### Local validation
 
 ```bash
-uvx ruff@0.17.1 check .
-uv run --with-requirements requirements-bench.txt pytest -q
+just lint     # uv run ruff check .  (ruff 0.17.1, pinned)
+just test     # uv run pytest
 ```
 
-With `requirements-dev.txt` installed (see Development), bare
-`uv run pytest` also works: the root `pytest.ini` supplies the nested
-package path and test directory.
+No extra flags are needed (see Development): `pyproject.toml` installs the
+nested `sherlock/sherlock` package and the `dev` dependency group, and the
+root `pytest.ini` supplies the test directory.
 
 The tests start a tiny loopback OpenAI-compatible SSE server, run the
 benchmark CLI through both A/B legs and all concurrency levels, verify JSON
@@ -400,16 +404,17 @@ tests/               End-to-end mock run: alert chain, ignore path (zero VLM cal
 ## Development
 The lint gate is one command, and it must report zero findings:
 ```bash
-uvx ruff@0.17.1 check .
+just lint        # uv run ruff check .
+just check       # lint, then the test suite
 ```
 `ruff.toml` pins this exact version (`required-version`; other versions refuse to run) and spells out its rule set, so every machine gets the same answer.
 
-The test gate runs from a clean environment. `requirements-dev.txt` pulls in the app, benchmark and test-only dependencies:
+The test gate runs from a clean environment. `uv sync` builds it from `pyproject.toml` and `uv.lock`: the app, benchmark and test-only dependencies (the `dev` group mirrors `requirements-dev.txt`, which stays for plain `pip` installs, except that ultralytics is the optional `yolo` extra):
 ```bash
-uv venv
-uv pip install -r requirements-dev.txt
-uv run pytest -q
+uv sync
+just test        # uv run pytest
 ```
+Two scout fine-tune tests need ultralytics and skip without it; `uv run --extra yolo pytest` runs them.
 
 ## NeMo Gym ablation
 

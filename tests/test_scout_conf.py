@@ -12,6 +12,7 @@ from sherlock.orchestrator import Sherlock
 
 @pytest.mark.parametrize("value,expected", [(None, 0.35), ("0.10", 0.10), ("0", 0.0), ("1", 1.0)])
 def test_scout_conf_reaches_predict(tmp_path, monkeypatch, value, expected):
+    monkeypatch.delenv("SCOUT_WEAPON_CONF", raising=False)
     if value is None:
         monkeypatch.delenv("SCOUT_CONF", raising=False)
     else:

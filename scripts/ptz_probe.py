@@ -90,6 +90,7 @@ def macos_usb_direct() -> ins.MacUSBTransport | None:
         print(f"  NO: {e}")
         return None
     print(f"  opened {ins.INSTA360_VID:04x}:{tr.pid:04x} video-control interface")
+    missing: list[str] = []  # an open interface proves nothing until PTZ answers
     for label, sel, n in (("pan/tilt", ins.CT_PANTILT_ABSOLUTE, 8), ("zoom", ins.CT_ZOOM_ABSOLUTE, 2)):
         for req_name, req in (("MIN", ins.GET_MIN), ("MAX", ins.GET_MAX), ("RES", ins.GET_RES),
                               ("DEF", ins.GET_DEF), ("CUR", ins.GET_CUR)):
@@ -97,6 +98,8 @@ def macos_usb_direct() -> ins.MacUSBTransport | None:
                 raw = tr.request(req, sel, n)
             except ins.TransportError as e:
                 print(f"  {label:8} {req_name}: unreadable ({e})")
+                if req in (ins.GET_MIN, ins.GET_MAX):
+                    missing.append(f"{label} {req_name}")
                 continue
             if n == 8:
                 pan, tilt = struct.unpack("<ii", raw)
@@ -112,6 +115,10 @@ def macos_usb_direct() -> ins.MacUSBTransport | None:
                                       " look_at" if mode == 0x01 else ""))
     except ins.TransportError as e:
         print(f"  AI mode: unreadable ({e})")
+    if missing:
+        print(f"  NO: the camera opened but did not answer {', '.join(missing)}")
+        tr.close()
+        return None
     return tr
 
 
@@ -135,6 +142,9 @@ def linux_v4l2(device: str) -> ins.V4L2Transport | None:
         return None
     for name in ("pan_absolute", "tilt_absolute", "zoom_absolute"):
         print(f"  {name}: {tr.ctrls.get(name, 'missing')}")
+    if tr.ranges() is None:
+        print("  NO: pan, tilt and zoom absolute controls are not all present")
+        return None
     return tr
 
 

@@ -425,3 +425,69 @@ def test_cameras_env_accepts_name_sources(monkeypatch):
     assert [(c.name, c.backend, c.source) for c in Config().cameras] == [
         ("hero", "insta360", "name:Insta360 Link 2"),
         ("scout1", "fake", "name:MacBook Pro Camera")]
+
+
+# --- hardware probe -----------------------------------------------------------------
+
+def _load_probe():
+    import importlib.util
+    from pathlib import Path
+
+    path = Path(__file__).resolve().parent.parent / "scripts" / "ptz_probe.py"
+    spec = importlib.util.spec_from_file_location("ptz_probe", path)
+    assert spec and spec.loader
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
+
+
+@pytest.mark.parametrize("answers", [set(), {(GET_MIN, CT_PANTILT_ABSOLUTE)}])
+def test_probe_fails_when_the_interface_opens_but_ptz_does_not_answer(monkeypatch, answers):
+    probe = _load_probe()
+    closed: list[bool] = []
+
+    class Silent:
+        pid = 0x4C04
+        name = "usb-iokit"
+
+        def open(self):
+            pass
+
+        def request(self, req, sel, length, unit=None):
+            if (req, sel) in answers:
+                return bytes(length)
+            raise TransportError("simulated: STALL")
+
+        def close(self):
+            closed.append(True)
+
+    monkeypatch.setattr(probe.ins, "MacUSBTransport", Silent)
+    assert probe.macos_usb_direct() is None
+    assert closed == [True]
+    for name in ("usb_presence", "link_controller_app"):
+        monkeypatch.setattr(probe, name, lambda: None)
+    monkeypatch.setattr(probe, "video_indexes", lambda: None)
+    monkeypatch.setattr(probe.sys, "platform", "darwin")
+    monkeypatch.setattr(probe.sys, "argv", ["ptz_probe.py"])
+    assert probe.main() == 1  # no "PTZ control works" verdict
+
+
+def test_probe_passes_when_ptz_ranges_answer(monkeypatch):
+    probe = _load_probe()
+
+    class Answers:
+        pid = 0x4C04
+
+        def open(self):
+            pass
+
+        def request(self, req, sel, length, unit=None):
+            if unit == 9:
+                raise TransportError("no AI mode")
+            return bytes(length)
+
+        def close(self):
+            pass
+
+    monkeypatch.setattr(probe.ins, "MacUSBTransport", Answers)
+    assert probe.macos_usb_direct() is not None

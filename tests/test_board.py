@@ -74,11 +74,12 @@ def test_review_crop_is_the_head_not_the_knife():
     face = tools.evidence["face_crop"]
     assert face.shape[0] < 720 and face.shape[1] < 640, "a head crop, not the whole zoomed view"
     assert _mock_classify(face) is None, "no blade in the review crop"
-    # The weapon crop the models see is unchanged: still the zoomed view with the blade.
+    # The weapon crop the models see is the knife box plus a margin, not the zoomed view.
     tools.call("look_at", {"camera": "hero", "bbox": list(det.bbox)})
     tools.call("snapshot", {"camera": "hero", "subject": "weapon"})
-    assert tools.evidence["weapon_crop"].shape[:2] == (720, 1280)
-    assert _mock_classify(tools.evidence["weapon_crop"]) == "knife"
+    weapon = tools.evidence["weapon_crop"]
+    assert weapon.shape[1] < 640, "the box plus a margin, not the whole zoomed view"
+    assert _mock_classify(weapon) == "knife"
 
 
 def test_tool_events_carry_the_chain_and_a_plain_director_line():

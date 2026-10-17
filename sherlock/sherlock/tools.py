@@ -97,10 +97,22 @@ def _box(v) -> tuple | None:
     return None
 
 
-def _crop(img: np.ndarray, box: tuple, margin: float = 0.3) -> np.ndarray:
-    """The box plus `margin` of its size on every side, clamped to the image."""
+# What a model sees of a weapon or object: the aimed box plus 20% of its own width and height
+# per side, never the whole zoomed view. 20% is about twice a detector's typical edge error, so
+# a box that clips the blade still yields the whole object, and it absorbs the hardware aim error
+# view_box leaves to the caller. It stops short of neighbours: on 2026-10-17 the full view around
+# an 86 px cup held a real knife's handle 23 px away, and the Verifier confirmed "a knife".
+# Each side gets at least 10% of the longer side, so an upright knife is not cut to a sliver.
+MODEL_CROP_MARGIN, MODEL_CROP_FLOOR = 0.2, 0.1
+
+
+def _crop(img: np.ndarray, box: tuple, margin: float = 0.3, floor: float = 0.0) -> np.ndarray:
+    """The box plus `margin` of its size on every side (at least `floor` of its longer side),
+    clamped to the image."""
     h, w = img.shape[:2]
-    mx, my = (box[2] - box[0]) * margin, (box[3] - box[1]) * margin
+    bw, bh = box[2] - box[0], box[3] - box[1]
+    least = max(bw, bh) * floor
+    mx, my = max(bw * margin, least), max(bh * margin, least)
     x1, y1 = max(int(box[0] - mx), 0), max(int(box[1] - my), 0)
     x2, y2 = min(int(box[2] + mx), w), min(int(box[3] + my), h)
     if x2 - x1 < 8 or y2 - y1 < 8:
@@ -295,10 +307,16 @@ class ToolBox:
                              "a model. look_at the weapon bbox first, or use subject='face' for evidence")
         img = cam.snapshot()
         aim = self.aim.get(camera)
-        if subject == "face" and aim is not None:
-            # A head crop, not the chest-up view the zoom leaves, so the review crop
-            # holds the person's head and nothing the weapon chain needed.
-            img = _crop(img, cam.view_box(aim, (img.shape[1], img.shape[0])))
+        if aim is not None:
+            box = cam.view_box(aim, (img.shape[1], img.shape[0]))
+            if subject == "face":
+                # A head crop, not the chest-up view the zoom leaves, so the review crop
+                # holds the person's head and nothing the weapon chain needed.
+                img = _crop(img, box)
+            else:
+                # The zoom keeps the frame's aspect ratio, so its view runs well past a narrow
+                # box: neighbouring objects, or the face above a raised knife.
+                img = _crop(img, box, MODEL_CROP_MARGIN, MODEL_CROP_FLOOR)
         self.last_crop = img
         eid = f"{subject}_crop"
         self.evidence[eid] = img

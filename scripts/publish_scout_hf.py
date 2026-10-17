@@ -1,9 +1,11 @@
 """Stage the fine-tuned Scout and its open dataset for Hugging Face. Uploads ONLY
 with --publish, which needs the owner's go-ahead and HF_TOKEN in the environment.
 
-    python scripts/publish_scout_hf.py --model-repo ORG/sherlock-scout \\
+    uv run --with huggingface-hub scripts/publish_scout_hf.py \\
+        --model-repo ORG/sherlock-scout \\
         --dataset-repo ORG/sherlock-scout-data           # dry run: stage + list
-    python scripts/publish_scout_hf.py ... --publish      # upload (private repos)
+    uv run --with huggingface-hub scripts/publish_scout_hf.py \\
+        ... --publish                                    # upload (private repos)
 
 Stages runs/hf_staging/{model,dataset} with cards, then lists every file.
 Repos are created private unless --public.
@@ -80,7 +82,7 @@ models when something worth a closer look appears.
 from ultralytics import YOLO
 YOLO("best.pt").predict("frame.jpg", conf=0.35)
 ```
-In Sherlock: `YOLO_MODEL=best.pt python run.py`.
+In Sherlock: `YOLO_MODEL=best.pt just live`.
 
 ## Training data
 An open COCO 2017 subset (knife, scissors, baseball bat -> `weapon`; bottle; person) limited

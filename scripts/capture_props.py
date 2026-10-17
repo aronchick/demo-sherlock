@@ -1,6 +1,6 @@
 """Shoot in-room training photos of one prop from a named camera.
 
-    python scripts/capture_props.py --camera hero --prop knife --n 40 --interval 0.7
+    uv run scripts/capture_props.py --camera hero --prop knife --n 40 --interval 0.7
 
 Grabs the camera's wide view (what the Scout sees at runtime) every --interval
 seconds into data/props/<prop>/<session>/NNNN.jpg. One session per prop per pass;
@@ -70,7 +70,7 @@ def main(argv: list[str] | None = None) -> list[Path]:
     session = f"{a.camera}-{time.strftime('%Y%m%d-%H%M%S')}"
     saved = capture(open_camera(a.camera, a.source), a.out / a.prop / session, a.n, a.interval, a.countdown)
     print(f"{len(saved)} frames of {a.prop!r} in {a.out / a.prop / session}")
-    print("next: python scripts/build_scout_dataset.py prelabel")
+    print("next: uv run --extra yolo scripts/build_scout_dataset.py prelabel")
     return saved
 
 

@@ -23,6 +23,7 @@
   let loaded = false;
   let message = '';
   let revision = '';
+  let responseRevision = 0;
   const pageSize = 4;
 
   /** @param {string} tag @param {string} [text] @param {string} [className] */
@@ -79,6 +80,7 @@
   async function respond(action) {
     if (!selected || pending || !connected) return;
     pending = true;
+    responseRevision++;
     message = 'Saving response…';
     render();
 
@@ -176,17 +178,19 @@
 
   async function poll() {
     try {
+      const requestedSelection = selected?.incident;
+      const requestedResponse = responseRevision;
       const next = await read('/incidents?limit=100&action=alert');
 
       if (pending) return;
-      const current = selected ? await read(`/incidents/${encodeURIComponent(selected.incident)}`) : null;
+      const current = requestedSelection ? await read(`/incidents/${encodeURIComponent(requestedSelection)}`) : null;
 
-      if (pending) return;
+      if (pending || requestedResponse !== responseRevision) return;
       records = next;
       loaded = true;
       connected = true;
 
-      if (current) selected = current;
+      if (current && selected?.incident === requestedSelection) selected = current;
       page = Math.min(page, Math.max(0, Math.ceil(records.length / pageSize) - 1));
       const nextRevision = JSON.stringify([records, selected]);
 

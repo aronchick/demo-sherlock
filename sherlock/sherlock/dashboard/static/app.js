@@ -107,7 +107,11 @@ const covered = { hero: false, scout1: false };
 // Cameras that did not open at startup (name -> reason), from /cameras.
 const unavailable = {};
 
-const live = c => !covered[c] && !(c in unavailable);
+// The cameras this run opened, from /cameras: a tile for a camera the run never
+// configured is not watching anything. The board's own tiles until /cameras answers.
+let opened = [...CAMS];
+
+const live = c => opened.includes(c) && !covered[c] && !(c in unavailable);
 
 const feedBuffer = [];
 
@@ -183,7 +187,7 @@ feed.addEventListener("mouseleave", () => {
 
 /* --------------------------------------------------------------- status */
 function watching() {
-  const n = CAMS.filter(live).length;
+  const n = opened.filter(c => !covered[c]).length;
 
   return `${n} CAMERA${n === 1 ? "" : "S"}`;
 }
@@ -419,12 +423,20 @@ function markUnavailable(cam, why) {
   if (cam === "hero") $("btn-cover").disabled = true;
 }
 
+// A tile for a camera this run does not configure: no stream, no particles, not counted.
+function markUnconfigured(cam) {
+  $("cam-" + cam).dataset.unconfigured = true;
+  $(cam + "-empty").textContent = "NOT IN THIS RUN";
+
+  if (cam === "hero") $("btn-cover").disabled = true;
+}
+
 // Called on every (re)connect: an MJPEG stream does not reopen by itself after a restart.
 function showStreams() {
   const fresh = `?t=${Date.now()}`;
 
   for (const c of CAMS) {
-    if (c in unavailable) continue;  // its stream would 404; the tile keeps saying why
+    if (!opened.includes(c) || c in unavailable) continue;  // its stream would 404; the tile keeps saying why
 
     $("img-" + c).src = `/stream/wide/${c}${fresh}`;
     $("img-" + c).hidden = false;
@@ -924,10 +936,15 @@ async function boot() {
 
   try {
     const cams = await getJson("/cameras");
+    const failed = (cams.unavailable || []).map(c => c.name);
+
+    opened = (cams.cameras || []).map(c => c.name);
 
     for (const c of cams.cameras || []) if (c.name in covered) setCovered(c.name, !!c.covered);
 
     for (const c of cams.unavailable || []) if (CAMS.includes(c.name)) markUnavailable(c.name, c.error);
+
+    for (const c of CAMS) if (!opened.includes(c) && !failed.includes(c)) markUnconfigured(c);
   } catch {
     // No runtime yet: nothing is covered.
   }

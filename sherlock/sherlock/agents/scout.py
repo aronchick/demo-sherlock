@@ -157,7 +157,8 @@ class SceneScout:
 
 class Scout:
     def __init__(self, backend: str, model_path: str, dwell: float,
-                 truth: Callable[[str], list[tuple[str, BBox]]] | None = None):
+                 truth: Callable[[str], list[tuple[str, BBox]]] | None = None,
+                 measure: bool = False, handled_via: Callable[[Detection], str | None] | None = None):
         if backend == "scene" and truth is not None:
             self.impl: YoloScout | MotionScout | SceneScout = SceneScout(truth)
         else:
@@ -165,10 +166,16 @@ class Scout:
         self.trackers: dict[str, _Tracker] = {}
         self.dwell = dwell
         self.last_dets: dict[str, list[Detection]] = {}  # every box this frame, for the dashboard overlay
+        self.measure = measure  # record per-frame detector time (live detectors only)
+        # Which camera already handled this object, if any: the event says so, so a
+        # viewer does not mistake the second camera's sighting for a new incident.
+        self.handled_via = handled_via
 
     def step(self, frame: np.ndarray, camera: str) -> list[Detection]:
         t0 = time.perf_counter()
         dets = self.impl.detect(frame, camera)
+        if self.measure:
+            BUS.time_scout((time.perf_counter() - t0) * 1000)
         self.last_dets[camera] = dets
         people = [d for d in dets if d.label in CONTEXT_CLASSES]
         tracker = self.trackers.setdefault(camera, _Tracker(dwell=self.dwell))
@@ -181,7 +188,9 @@ class Scout:
                 d.head = head_region(d.person) if d.person else None
             BUS.bump("scout_hits")
             near = " (person nearby)" if d.person else ""
+            via = self.handled_via(d) if self.handled_via else None
             BUS.emit("scout", f"new {d.label} on {camera} at {d.bbox}: {d.threat}{near}",
                      (time.perf_counter() - t0) * 1000, bbox=d.bbox, label=d.label, camera=camera,
-                     threat=d.threat, person=d.person, head=d.head)
+                     threat=d.threat, person=d.person, head=d.head,
+                     **({"handled_via": via} if via else {}))
         return fresh

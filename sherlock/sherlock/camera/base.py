@@ -52,6 +52,14 @@ class Camera(ABC):
         pose = FakePTZCamera.bbox_to_pose(bbox, (w, h))
         return self.move(pose.pan, pose.tilt, pose.zoom)
 
+    def view_box(self, bbox: tuple[int, int, int, int], view_wh: tuple[int, int]) -> tuple[int, int, int, int]:
+        """Where a wide-frame box sits in snapshot() after look_at(bbox). Real optics
+        centre the box and magnify it by the zoom; the caller's margin absorbs the
+        aiming error."""
+        w, h = view_wh
+        bw, bh = (bbox[2] - bbox[0]) * self.pose.zoom, (bbox[3] - bbox[1]) * self.pose.zoom
+        return (int(w / 2 - bw / 2), int(h / 2 - bh / 2), int(w / 2 + bw / 2), int(h / 2 + bh / 2))
+
     def _check(self) -> None:
         if self.covered:
             raise CameraError(f"{self.name}: no usable image (lens covered or stream dead)")
@@ -179,17 +187,28 @@ class FakePTZCamera(Camera):
         self._check()
         return self.src.read()
 
-    def snapshot(self) -> np.ndarray:
-        f = self.wide_frame()
-        h, w = f.shape[:2]
+    def _window(self, w: int, h: int) -> tuple[int, int, int, int]:
+        """The part of the wide frame the current pose shows: x0, y0, width, height."""
         z = self.pose.zoom
         cw, ch = int(w / z), int(h / z)
         cx = int(w / 2 + (self.pose.pan / self.PAN_RANGE) * (w / 2))
         cy = int(h / 2 - (self.pose.tilt / self.TILT_RANGE) * (h / 2))
-        x0 = min(max(cx - cw // 2, 0), w - cw)
-        y0 = min(max(cy - ch // 2, 0), h - ch)
+        return min(max(cx - cw // 2, 0), w - cw), min(max(cy - ch // 2, 0), h - ch), cw, ch
+
+    def snapshot(self) -> np.ndarray:
+        f = self.wide_frame()
+        h, w = f.shape[:2]
+        x0, y0, cw, ch = self._window(w, h)
         crop = f[y0:y0 + ch, x0:x0 + cw]
         return cv2.resize(crop, (w, h), interpolation=cv2.INTER_LINEAR)
+
+    def view_box(self, bbox: tuple[int, int, int, int], view_wh: tuple[int, int]) -> tuple[int, int, int, int]:
+        """Exact for the software crop, including the clamp at the frame edges."""
+        w, h = view_wh
+        x0, y0, cw, ch = self._window(w, h)
+        sx, sy = w / cw, h / ch
+        return (int((bbox[0] - x0) * sx), int((bbox[1] - y0) * sy),
+                int((bbox[2] - x0) * sx), int((bbox[3] - y0) * sy))
 
     def move(self, pan=None, tilt=None, zoom=None) -> Pose:
         self._check()

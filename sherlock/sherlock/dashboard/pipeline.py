@@ -78,6 +78,15 @@ def pipeline_font(name: str) -> FileResponse:
     return FileResponse(FONTS / name, media_type="font/woff2", headers={"Cache-Control": "public, max-age=86400"})
 
 
+@router.get("/pipeline/assets/{name}")
+def pipeline_asset(name: str) -> FileResponse:
+    allowed = {"pipeline-models.js", "pipeline-models.css", "brand-nvidia.svg",
+               "brand-huggingface.svg", "brand-ultralytics.svg"}
+    if name not in allowed:
+        raise HTTPException(status_code=404)
+    return FileResponse(STATIC / name, headers={"Cache-Control": "no-cache"})
+
+
 def mount_pipeline(app: FastAPI) -> FastAPI:
     """Attach the flow and topology pages to an app built by make_app()."""
     app.include_router(router)

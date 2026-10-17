@@ -149,6 +149,7 @@
   #fx { position: fixed; inset: 0; pointer-events: none; }
   @media (prefers-reduced-motion: reduce) { .frame.alert, #d-alert.ping, .cell.on, .frame .fh i { animation: none; } }
 </style>
+<link rel="stylesheet" href="/pipeline/assets/pipeline-models.css">
 </head>
 <body>
 <div class="app">
@@ -184,6 +185,8 @@
     <div class="col zone laptop" id="zLaptop">
       <div class="zhead">The laptop<small id="laptopTag"></small></div>
       <article class="stage" id="st-scout" style="--c: var(--scout)">
+        <div class="model-heading"><img class="model-logo" id="scoutLogo" alt="" hidden><div class="model-name" id="scoutModel"></div></div>
+        <div class="model-runtime" id="scoutRuntime"></div>
         <div class="txt">
           <div class="kind">Detect</div>
           <div class="name">Scout</div>
@@ -205,15 +208,39 @@
     <div class="col zone models" id="zModels">
       <div class="zhead" id="modelsHead">Models<small id="modeTag"></small></div>
       <article class="stage" id="st-director" style="--c: var(--director)">
-        <div class="kind">Decide</div><div class="name">Director</div><div class="sub" id="directorSub">picks the next tool</div>
+        <div class="model-heading"><img class="model-logo" id="directorLogo" alt="" hidden><div class="model-name" id="directorModel"></div></div>
+        <div class="model-runtime" id="directorRuntime"></div>
+        <div class="model-body">
+          <div class="model-copy"><div class="kind">Decide</div><div class="name">Director</div><div class="sub" id="directorSub">picks the next tool</div></div>
+          <figure class="model-preview">
+            <div class="model-preview-image"><span class="empty" id="directorEmpty">No detection yet</span><img id="directorPreview" alt="Detection context; the Director receives a text ticket" hidden></div>
+            <figcaption id="directorPreviewState"></figcaption>
+          </figure>
+        </div>
         <span class="ms"></span><span class="badge"></span>
       </article>
       <article class="stage" id="st-analyst" style="--c: var(--analyst)">
-        <div class="kind">Read</div><div class="name">Analyst</div><div class="sub" id="analystSub">describes the crop</div>
+        <div class="model-heading"><img class="model-logo" id="analystLogo" alt="" hidden><div class="model-name" id="analystModel"></div></div>
+        <div class="model-runtime" id="analystRuntime"></div>
+        <div class="model-body">
+          <div class="model-copy"><div class="kind">Read</div><div class="name">Analyst</div><div class="sub" id="analystSub">describes the crop</div></div>
+          <figure class="model-preview">
+            <div class="model-preview-image"><span class="empty" id="analystEmpty">No crop yet</span><img id="analystPreview" alt="Object crop sent to the Analyst" hidden></div>
+            <figcaption id="analystPreviewState"></figcaption>
+          </figure>
+        </div>
         <span class="ms"></span><span class="badge"></span>
       </article>
       <article class="stage" id="st-verifier" style="--c: var(--verifier)">
-        <div class="kind">Check</div><div class="name">Verifier</div><div class="sub" id="verifierSub">second look at the same crop</div>
+        <div class="model-heading"><img class="model-logo" id="verifierLogo" alt="" hidden><div class="model-name" id="verifierModel"></div></div>
+        <div class="model-runtime" id="verifierRuntime"></div>
+        <div class="model-body">
+          <div class="model-copy"><div class="kind">Check</div><div class="name">Verifier</div><div class="sub" id="verifierSub">second look at the same crop</div></div>
+          <figure class="model-preview">
+            <div class="model-preview-image"><span class="empty" id="verifierEmpty">No crop yet</span><img id="verifierPreview" alt="Object crop sent to the Verifier" hidden></div>
+            <figcaption id="verifierPreviewState"></figcaption>
+          </figure>
+        </div>
         <span class="ms"></span><span class="badge"></span>
       </article>
     </div>
@@ -255,6 +282,7 @@
 </div>
 <canvas id="fx"></canvas>
 
+<script src="/pipeline/assets/pipeline-models.js"></script>
 <script>
 'use strict';
 // ---------------------------------------------------------------------------
@@ -269,6 +297,8 @@
 // the real crop. The face crop is stored evidence: never analyzed, never labelled.
 // ---------------------------------------------------------------------------
 const CFG = __CFG_JSON__;
+
+const modelCards = new ModelCards(CFG);
 const $ = id => document.getElementById(id);
 const fx = $('fx'), ctx = fx.getContext('2d');
 const wideImg = $('wide'), cropImg = $('crop');
@@ -290,7 +320,7 @@ $('modeTag').textContent = CFG.mock ? 'mock, in-process on this laptop' : runs +
 $('laptopTag').textContent = 'scout ' + short((M.scout || {}).model);
 for (const r of ['director', 'analyst', 'verifier']) {
   const el = $(r + 'Sub'), base = el.textContent;
-  el.textContent = CFG.mock ? 'mock · ' + base : short((M[r] || {}).model) + ' · ' + base;
+  el.textContent = base;
   el.title = CFG.mock ? 'mock, no model server' : `${(M[r] || {}).model} at ${(M[r] || {}).url}`;
 }
 $('expanso').classList.toggle('live', CFG.expanso);
@@ -438,6 +468,29 @@ const S = {
   boxes: [],        // [{ bb, color, alpha, dash, label }] on the wide feed
   zoom: null, docked: null, archived: null, frames: 0, ambient: 0.6,
 };
+let previousScroll = scrollY;
+
+addEventListener('scroll', () => {
+  const delta = scrollY - previousScroll;
+
+  previousScroll = scrollY;
+
+  // Keep in-flight pixels attached to document content while the fixed canvas moves.
+  for (const edge of new Set([...Object.values(E), ...S.particles.map(p => p.e)])) {
+    for (const point of edge.pts) point.y -= delta;
+  }
+
+  for (const card of S.cards) {
+    for (const point of card.pts) point.y -= delta;
+  }
+
+  for (const item of [...S.bursts, S.docked, S.archived]) {
+    if (item) item.y -= delta;
+  }
+
+  layout();
+}, {passive: true});
+
 const now = () => performance.now();
 const ease = t => t < .5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
 const easeOut = t => 1 - Math.pow(1 - t, 3);
@@ -533,6 +586,7 @@ function playScout(ev) {
     if (d.head) S.boxes.push({ bb: d.head, color: C.director, alpha: 1, dash: true, weight: 1 });
     S.zoom = null; S.docked = null;
     cellsReset();
+    modelCards.reset();
     cellSet('scout', `${d.label || 'object'} · ${threat}${d.person ? ' · person nearby' : ''}`, ev.latency_ms ? fmtMs(ev.latency_ms) : '');
     flash($('wideFrame')); $('wideFrame').classList.remove('alert');
     setStamp($('stamp'), '', ''); setStamp($('wideStamp'), '', ''); caption('');
@@ -541,14 +595,16 @@ function playScout(ev) {
     const p = bboxToPage(wideImg, bb);
     const dock = { x: R.spec.cx, y: R.spec.cy };
     await sendCard(cur.card, [{ x: p.x + p.w / 2, y: p.y + p.h / 2 }, dock], 650, { w: 56, color });
-    S.docked = { bmp: cur.card, ...dock, alpha: 1, color };            // the pixels stay on the laptop
-    burst(dock.x, dock.y, color, 12);
+    S.docked = { bmp: cur.card, x: R.spec.cx, y: R.spec.cy, alpha: 1, color }; // the pixels stay on the laptop
+    burst(R.spec.cx, R.spec.cy, color, 12);
   });
   beat(async () => {                                                    // only a ticket crosses the line
     flow('uplink', 850, color);
     glow('director', 0.6);
     await ride('uplink', 900, { text: `${cur.label || 'object'} · ${threat}`, color });
     glow('director', 1);
+
+    if (cur.card) modelCards.show('director', cur.card.toDataURL());
   });
 }
 function onDirector(ev) {
@@ -622,15 +678,29 @@ function onTool(ev) {
   }
   if (name === 'verify') { latency('verifier', ev.latency_ms); beat(async () => { chainAdd('verify'); }); }
 }
+
+function onModelInput(ev) {
+  const {role, image} = ev.data || {};
+
+  if (!['analyst', 'verifier'].includes(role) || !image?.startsWith('data:image/png;base64,')) return;
+  const input = new Image();
+  input.src = image;
+  beat(async () => {
+    cur.crop = input;
+    modelCards.show(role, image);
+    glow(role, 1);
+  });
+}
 function onAnalyst(ev) {
   beat(async () => {                                                    // the zoomed crop is what leaves the laptop
-    cur.crop = grab(cropImg, null, 200) || cur.card;
+    // model_input captured the actual crop before inference, unaffected by later head zooms.
     flash($('cropFrame'));
     flow('crop', 900, cur.color);
     glow('analyst', 0.6);
     await ride('crop', 950, { bmp: cur.crop, w: 50, color: cur.color }, null);
     glow('analyst', 1); latency('analyst', ev.latency_ms);
     cellSet('analyst', ev.msg, ev.latency_ms ? fmtMs(ev.latency_ms) : '');
+    modelCards.complete('analyst');
     caption(ev.msg);
     await wait(650);
   });
@@ -641,6 +711,7 @@ function onVerifier(ev) {
     flow('judge', 700, C.verifier);
     await ride('judge', 700, { bmp: cur.crop || cur.card, w: 40, color: cur.color });
     cur.verdict = ok;
+    modelCards.complete('verifier');
     glow('verifier', 1, ok ? C.ok : C.bad); latency('verifier', ev.latency_ms);
     burst(R.verifier.cx, R.verifier.cy, ok ? C.ok : C.bad, ok ? 18 : 34);
     setStamp($('stamp'), ok ? 'confirmed' : 'rejected', ok ? 'ok' : 'bad');
@@ -651,13 +722,14 @@ function onVerifier(ev) {
 function onReport(ev) {
   const d = ev.data || {}, action = d.action || 'log';
   beat(async () => {
+    modelCards.complete('director');
     const calls = d.vlm_calls !== undefined ? `${d.vlm_calls} VLM call${d.vlm_calls === 1 ? '' : 's'}` : '';
     const secs = ev.latency_ms ? ` · ${(ev.latency_ms / 1000).toFixed(1)} s` : '';
     if (action === 'ignore') {                                          // nothing stored, nothing analyzed
       flow('toIgnore', 700, C.benign); glow('scout', .8, C.benign);
       const keep = R.keep;
       await ride('toIgnore', 800, { bmp: cur.card, w: 44, color: C.benign }, { x: keep.cx, y: keep.cy });
-      S.archived = { bmp: cur.card, x: keep.cx, y: keep.cy, color: C.benign };   // the picture lands in Archived
+      S.archived = { bmp: cur.card, x: R.keep.cx, y: R.keep.cy, color: C.benign }; // the picture lands in Archived
       ping('ignored', C.benign);
       setStamp($('wideStamp'), 'archived', 'quiet');
       caption(`${d.label || cur.label || 'object'} · benign · archived${calls ? ' · ' + calls : ''}`);
@@ -716,6 +788,7 @@ es.onmessage = e => {
     case 'scout': return onScout(ev);
     case 'director': return afterScout(() => onDirector(ev));
     case 'tool': return afterScout(() => onTool(ev));
+    case 'model_input': return afterScout(() => onModelInput(ev));
     case 'analyst': analystEv = ev; return afterScout(() => onAnalyst(ev));
     case 'verifier': return afterScout(() => onVerifier(ev));
     case 'system':

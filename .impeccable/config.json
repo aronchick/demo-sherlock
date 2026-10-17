@@ -11,6 +11,15 @@
         ],
         "createdAt": "2026-10-17T16:38:59.173Z",
         "reason": "Code inspection: pre-existing hidden weapon and face img elements get evidence URLs on incident events; no visible broken placeholders."
+      },
+      {
+        "rule": "cramped-padding",
+        "value": "*",
+        "files": [
+          "sherlock/sherlock/dashboard/static/index.html"
+        ],
+        "createdAt": "2026-10-17T17:03:19.053Z",
+        "reason": "Code inspection and mock-run screenshot: existing cam and frame containers hold edge-to-edge images; camera labels are inset 10px/8px and empty crop text is grid-centered. Adding container padding would alter the intended image framing."
       }
     ]
   }

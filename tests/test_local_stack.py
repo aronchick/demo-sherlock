@@ -6,6 +6,8 @@ import pathlib
 import shutil
 import socket
 import subprocess
+import threading
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 import pytest
 
@@ -21,9 +23,9 @@ def _free_port():
 
 @pytest.fixture
 def env(tmp_path):
-    e = {k: v for k, v in os.environ.items() if k != "VERIFIER_MARGIN"}
+    e = {k: v for k, v in os.environ.items() if k not in ("VERIFIER_MARGIN", "CAMERAS", "DASHBOARD_PORT")}
     e.update(LOCAL_RUNTIME=str(tmp_path / "runtime"), LOCAL_DIRECTOR_PORT=str(_free_port()),
-             LOCAL_VLM_PORT=str(_free_port()))
+             LOCAL_VLM_PORT=str(_free_port()), DASHBOARD_PORT=str(_free_port()))
     return e
 
 
@@ -67,6 +69,59 @@ def test_live_refuses_when_the_models_are_not_answering(env):
     r = _run(env, "live", "--synthetic")
     assert r.returncode == 1
     assert "just local-up" in r.stderr
+
+
+@pytest.fixture
+def answering(env, tmp_path):
+    """Stand-ins that answer the two readiness URLs, and a `uv` that prints what it was asked
+    to run, so `live` gets as far as launching Sherlock without starting anything."""
+    class Ok(BaseHTTPRequestHandler):
+        def do_GET(self):
+            self.send_response(200)
+            self.end_headers()
+
+        def log_message(self, *a):
+            pass
+
+    servers = [ThreadingHTTPServer(("127.0.0.1", int(env[k])), Ok) for k in ("LOCAL_DIRECTOR_PORT", "LOCAL_VLM_PORT")]
+    for server in servers:
+        threading.Thread(target=server.serve_forever, daemon=True).start()
+    shim = tmp_path / "bin"
+    shim.mkdir()
+    (shim / "uv").write_text('#!/bin/sh\necho "CAMERAS=${CAMERAS-unset}"\necho "ARGS=$*"\n')
+    (shim / "uv").chmod(0o755)
+    yield {**env, "PATH": f"{shim}:{env['PATH']}"}
+    for server in servers:
+        server.shutdown()
+        server.server_close()
+
+
+def test_live_synthetic_runs_both_synthetic_cameras(answering):
+    r = _run(answering, "live", "--synthetic")
+    assert r.returncode == 0, r.stderr
+    assert "CAMERAS=hero:fake:synthetic,scout1:fake:synthetic" in r.stdout
+    assert "ARGS=run --extra yolo python run.py --synthetic" in r.stdout
+    # A CAMERAS already in the shell wins, and live cameras are left to .env.
+    assert "CAMERAS=hero:fake:synthetic" in _run({**answering, "CAMERAS": "hero:fake:synthetic"},
+                                                  "live", "--synthetic").stdout.splitlines()
+    assert "CAMERAS=unset" in _run(answering, "live").stdout
+
+
+@pytest.mark.parametrize("how", ["env", "--port", "--port="])
+def test_live_refuses_a_busy_dashboard_port(answering, how):
+    with socket.socket() as s:
+        s.bind(("127.0.0.1", 0))
+        s.listen()
+        held = str(s.getsockname()[1])
+        if how == "env":
+            r = _run({**answering, "DASHBOARD_PORT": held}, "live", "--synthetic")
+        elif how == "--port":
+            r = _run(answering, "live", "--synthetic", "--port", held)
+        else:
+            r = _run(answering, "live", "--synthetic", f"--port={held}")
+    assert r.returncode == 1
+    assert f"dashboard port {held} is in use" in r.stderr
+    assert "ARGS=" not in r.stdout, "refused before starting Sherlock"
 
 
 def test_down_with_nothing_started_is_a_clean_no_op(env):

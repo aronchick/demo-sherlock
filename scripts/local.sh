@@ -5,7 +5,8 @@
 #
 #   scripts/local.sh up            start both model servers; return once each has answered
 #   scripts/local.sh live [args]   Sherlock in the foreground against them (run.py args pass
-#                                  through: --synthetic rehearses with no camera)
+#                                  through: --synthetic rehearses on two synthetic cameras,
+#                                  hero and scout1); fails if the dashboard port is in use
 #   scripts/local.sh env           the exports `live` uses, for: eval "$(scripts/local.sh env)"
 #   scripts/local.sh status        what `up` started here, and whether it answers
 #   scripts/local.sh down          stop exactly what `up` started; fail unless both ports are free
@@ -147,13 +148,36 @@ cmd_env() {
   say "export VERIFIER_MARGIN=${VERIFIER_MARGIN:--1.0}"
 }
 
+# The port run.py binds: --port N or --port=N, else DASHBOARD_PORT, else 8000.
+dashboard_port() {
+  local port="${DASHBOARD_PORT:-8000}"
+  while (($#)); do
+    case "$1" in
+      --port) port="${2:-}"; shift ;;
+      --port=*) port="${1#--port=}" ;;
+    esac
+    shift
+  done
+  printf '%s\n' "$port"
+}
+
 cmd_live() {
+  local port arg
+  port="$(dashboard_port "$@")"
+  port_busy "$port" && die "dashboard port $port is in use (set DASHBOARD_PORT or pass --port)"
   if ! curl -fsS -o /dev/null "http://127.0.0.1:$DIRECTOR_PORT/api/version" 2>/dev/null ||
     ! curl -fsS -o /dev/null "http://127.0.0.1:$VLM_PORT/v1/models" 2>/dev/null; then
     die "the local models are not answering; run: just local-up"
   fi
   # Exported, so they win over a .env that points at Brev (python-dotenv never overrides).
   eval "$(cmd_env)"
+  for arg in "$@"; do
+    # Both synthetic cameras, as `just up` runs them: the board shows two, and a covered or
+    # failed hero hands the investigation to scout1. A CAMERAS already in the shell wins.
+    if [[ $arg == --synthetic ]]; then
+      export CAMERAS="${CAMERAS:-hero:fake:synthetic,scout1:fake:synthetic}"
+    fi
+  done
   exec uv run --extra yolo python run.py "$@"
 }
 

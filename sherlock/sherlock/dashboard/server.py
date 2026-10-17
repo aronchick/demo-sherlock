@@ -7,8 +7,9 @@ import pathlib
 import queue
 import re
 import time
+from typing import Literal
 
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.responses import (
     FileResponse,
     HTMLResponse,
@@ -106,7 +107,10 @@ def make_app(sherlock: Sherlock) -> FastAPI:
     def evidence(incident: str, name: str):
         if not _INCIDENT_ID.match(incident) or name not in _EVIDENCE_NAMES:
             raise HTTPException(404)
-        path = sherlock.evidence_path(incident, name)
+        try:
+            path = sherlock.evidence_path(incident, name)
+        except ValueError:
+            raise HTTPException(404) from None
         if not path.is_file():
             raise HTTPException(404)
         return FileResponse(path, media_type="image/jpeg")
@@ -157,6 +161,33 @@ def make_app(sherlock: Sherlock) -> FastAPI:
             raise HTTPException(400)
         serving[rec["server"]] = {**{k: rec[k] for k in _SERVING_FIELDS if k in rec}, "received": time.time()}
         return {"ok": True}
+
+    @app.get("/incidents")
+    def incidents(limit: int = Query(default=20, ge=1, le=100),
+                  offset: int = Query(default=0, ge=0, le=100000),
+                  action: Literal["alert", "log", "ignore"] | None = None,
+                  evidence_only: bool = False):
+        return JSONResponse(sherlock.incidents.list(limit, offset, action, evidence_only),
+                            headers={"Cache-Control": "no-store"})
+
+    @app.get("/incidents/{incident}")
+    def incident_record(incident: str):
+        try:
+            record = sherlock.incidents.read(incident)
+        except (OSError, ValueError, KeyError, TypeError):
+            raise HTTPException(404, "Incident record unavailable") from None
+        return JSONResponse(record, headers={"Cache-Control": "no-store"})
+
+    @app.post("/incidents/{incident}/acknowledge")
+    def acknowledge(incident: str):
+        try:
+            return sherlock.incidents.acknowledge(incident)
+        except FileNotFoundError:
+            raise HTTPException(404) from None
+        except ValueError:
+            raise HTTPException(409, "No simulated notification to acknowledge") from None
+        except OSError:
+            raise HTTPException(503, "Acknowledgment could not be saved") from None
 
     @app.get("/reports")
     def reports():

@@ -71,7 +71,8 @@ def test_ignore_path_makes_zero_vlm_calls(tmp_path):
     assert r["vlm_calls"] == 0
     assert r["evidence"] == [] and "verified" not in r
     assert chain(drain(q), r["incident"]) == ["report"], "benign path must not look, snapshot or verify"
-    assert not (tmp_path / r["incident"]).exists()
+    assert not list((tmp_path / r["incident"]).glob("*.jpg")), "benign incidents retain metadata only"
+    assert s.incidents.read(r["incident"])["notification"]["status"] == "not_sent"
 
 
 def test_alert_path_runs_full_chain_and_saves_evidence(tmp_path):
@@ -498,6 +499,7 @@ def test_evidence_write_failures_keep_the_report_and_the_loop(tmp_path, monkeypa
     s._investigate(_knife_det())
     r = s.log[-1]
     assert r["action"] == "alert" and r["evidence"] == []
+    assert r["custody_saved"] is False and r["notification"]["status"] == "failed"
     assert r["evidence_unsaved"] == ["weapon_crop", "face_crop"] and "evidence_camera" not in r
     monkeypatch.setattr("sherlock.orchestrator.cv2.imwrite", lambda *a, **k: False)
     s.evidence_dir = tmp_path / "ok"

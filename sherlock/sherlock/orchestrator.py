@@ -17,6 +17,7 @@ from .camera import Camera, CameraError, build_camera
 from .config import CONFIG, Config
 from .edge import EdgeSink
 from .events import BUS
+from .incidents import IncidentStore
 from .scene import ScriptedScene
 from .tools import ToolBox
 
@@ -61,6 +62,7 @@ class Sherlock:
         self.scout = Scout(backend, cfg.yolo_model, cfg.dwell_seconds, truth=self._scene_truth,
                            measure=not cfg.mock and backend != "scene", handled_via=self._handled_via)
         self.evidence_dir = pathlib.Path(evidence_dir or os.environ.get("EVIDENCE_DIR", "snapshots"))
+        self.incidents = IncidentStore(self.evidence_dir)
         self.edge = EdgeSink.from_env(self.evidence_dir)  # None unless SHERLOCK_EDGE=1
         self.latest_wide: dict[str, np.ndarray] = {}
         self.log: list[dict] = []
@@ -159,47 +161,66 @@ class Sherlock:
             self._recent[det.label] = (det.camera, time.monotonic())
             self._incidents += 1
             iid = f"{time.strftime('%Y%m%d-%H%M%S')}-{self._incidents:03d}"
+            while (self.evidence_dir / iid).exists():
+                self._incidents += 1
+                iid = f"{time.strftime('%Y%m%d-%H%M%S')}-{self._incidents:03d}"
             self.tools.begin_incident(det, iid)
             self.active = det
             vlm_before = BUS.stats["vlm_calls"]
             t0 = time.perf_counter()
-            report = self.director.investigate(det)
-            claim = report.get("claim", "")
-            eid, _ = self.tools.model_crop()
-            verdict = self.tools.verdict_for(claim)
-            if verdict is None and eid is not None and report.get("action") != "ignore":
-                # The final claim against the current weapon crop (never the face). A verdict on
-                # another claim, or on a crop since replaced, says nothing about this report.
-                verdict = self.tools.check_claim(claim)
-            if verdict is not None:
-                report["verified"] = bool(verdict["supported"])
-                report["verifier_reason"] = verdict["reason"]
-            if report.get("action") == "alert" and not report.get("verified"):
-                report["action"] = "log"
-                report["downgraded"] = "alert without a verified weapon claim"
-            if eid is not None:
-                said = self.tools.descriptions.get(eid, "")
-                if report.get("verified") and said and not names_claim(said, claim):
-                    # A confirmed knife described as 'Cake.' reads as a broken system. The
-                    # claim stands on the Verifier's own yes; the Analyst's words stay on file.
-                    report["description"], report["analyst_mismatch"] = "", said
-                else:
-                    report["description"] = said
-            if not report.get("verified"):
-                self._drop_face_crop(report)
-            report["incident"] = iid
-            report["t"] = time.time()
-            report["evidence"], unsaved = self._save_evidence(iid, self.tools.evidence)
-            if unsaved:
-                report["evidence_unsaved"] = unsaved
-            if report["evidence"]:
-                report["evidence_camera"] = self.tools.evidence_camera[report["evidence"][0]]
-            report["vlm_calls"] = BUS.stats["vlm_calls"] - vlm_before
-            report["total_ms"] = (time.perf_counter() - t0) * 1000
-            report["trigger"] = {"camera": det.camera, "label": det.label, "bbox": det.bbox,
-                                 "threat": det.threat, "person": det.person, "head": det.head}
+            with BUS.capture() as custody:
+                custody.append({"stage": "scout", "t": time.time(),
+                                "detail": f"Investigation opened: {det.label} on {det.camera}"})
+                report = self.director.investigate(det)
+                claim = report.get("claim", "")
+                eid, _ = self.tools.model_crop()
+                verdict = self.tools.verdict_for(claim)
+                if verdict is None and eid is not None and report.get("action") != "ignore":
+                    # The final claim against the current weapon crop (never the face). A verdict on
+                    # another claim, or on a crop since replaced, says nothing about this report.
+                    verdict = self.tools.check_claim(claim)
+                if verdict is not None:
+                    report["verified"] = bool(verdict["supported"])
+                    report["verifier_reason"] = verdict["reason"]
+                if report.get("action") == "alert" and not report.get("verified"):
+                    report["action"] = "log"
+                    report["downgraded"] = "alert without a verified weapon claim"
+                if eid is not None:
+                    said = self.tools.descriptions.get(eid, "")
+                    if report.get("verified") and said and not names_claim(said, claim):
+                        # A confirmed knife described as 'Cake.' reads as a broken system. The
+                        # claim stands on the Verifier's own yes; the Analyst's words stay on file.
+                        report["description"], report["analyst_mismatch"] = "", said
+                    else:
+                        report["description"] = said
+                if not report.get("verified"):
+                    self._drop_face_crop(report)
+                report["incident"] = iid
+                report["t"] = time.time()
+                report["evidence"], unsaved = self._save_evidence(iid, self.tools.evidence)
+                if unsaved:
+                    report["evidence_unsaved"] = unsaved
+                if report["evidence"]:
+                    report["evidence_camera"] = self.tools.evidence_camera[report["evidence"][0]]
+                report["vlm_calls"] = BUS.stats["vlm_calls"] - vlm_before
+                report["total_ms"] = (time.perf_counter() - t0) * 1000
+                report["trigger"] = {"camera": det.camera, "label": det.label, "bbox": det.bbox,
+                                     "threat": det.threat, "person": det.person, "head": det.head}
             action = report.get("action")
             BUS.bump({"alert": "alerts", "ignore": "ignored"}.get(action, "logged"))
+            try:
+                record = self.incidents.save(report, custody, {
+                    "mock": self.cfg.mock, "scout": self.cfg.yolo_model,
+                    "director": self.cfg.director.model, "analyst": self.cfg.analyst.model,
+                    "verifier": self.cfg.verifier.model,
+                })
+                report["notification"] = record["notification"]
+                report["custody_saved"] = True
+            except (OSError, ValueError) as exc:
+                report["custody_saved"] = False
+                report["notification"] = {"simulated": True, "status": "failed",
+                                          "delivered_at": None, "acknowledged_at": None}
+                BUS.emit("system", f"Incident manifest NOT saved for {iid}: {exc}")
             self.log.append(report)
             verdict = "" if "verified" not in report else (", verified" if report["verified"] else ", NOT verified")
             BUS.emit("system", f"REPORT: {report.get('claim')} ({action}{verdict}, "
@@ -249,7 +270,7 @@ class Sherlock:
         return saved, unsaved
 
     def evidence_path(self, iid: str, name: str) -> pathlib.Path:
-        return self.evidence_dir / iid / f"{name}.jpg"
+        return self.incidents.path(iid, f"{name}.jpg")
 
     # --- dashboard frames -------------------------------------------------------
     def _annotate(self, camera: str, frame: np.ndarray) -> np.ndarray:

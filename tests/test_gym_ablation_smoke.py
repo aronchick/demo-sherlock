@@ -298,3 +298,39 @@ def test_ablation_artifacts_record_ollama_runtime_and_feed_numbers() -> None:
     assert nums["ablation"]["model_server_label"] == "Ollama"
 
 
+def test_brev_vllm_ablation_artifacts_record_vllm_runtime() -> None:
+    """Verify measured Brev H100 vLLM ablation files record vLLM 0.28.0 on sherlock-h100."""
+    from sherlock.dashboard.numbers import ablation_result
+
+    repo_root = Path(__file__).resolve().parents[1]
+    brev_dir = repo_root / "results" / "brev_vllm"
+    expected_files = [
+        "ablation_prompt_v1.json",
+        "ablation_terse_tools.json",
+        "ablation_thinking_on.json",
+        "ablation_nemotron_lightning.json",
+        "ablation_summary.json",
+    ]
+    for fname in expected_files:
+        fpath = brev_dir / fname
+        assert fpath.is_file(), f"Missing measured Brev vLLM ablation result: {fpath}"
+        payload = json.loads(fpath.read_text())
+        assert payload["execution_mode"] == "live_endpoint"
+        assert payload["runtime"] == "brev_vllm"
+        assert payload["model_server"]["name"] == "vLLM"
+        assert payload["model_server"]["version"] == "0.28.0"
+        assert payload["model_server"]["host"] == "sherlock-h100"
+        assert payload["model_server"]["label"] == "vLLM"
+
+    summary = json.loads((brev_dir / "ablation_summary.json").read_text())
+    parsed = ablation_result(summary)
+    assert parsed is not None
+    assert parsed["config"] == "nemotron_lightning"
+    assert parsed["runtime"] == "brev_vllm"
+    assert parsed["model_server_label"] == "vLLM"
+    assert parsed["tasks"] == 8
+    assert parsed["task_success"] == 1.0
+    assert parsed["tool_call_validity"] == 1.0
+
+
+

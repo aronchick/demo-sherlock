@@ -438,18 +438,20 @@ function layout() {
   const g1 = (R.cam.r + R.zl.l) / 2, g3 = (R.zl.r + R.zm.l) / 2, g5 = (R.zm.r + R.out.l) / 2;
   L.g3 = g3;
   const w = R.wide, c = R.crop, s = R.scout, bk = R.bucket, d = R.director, an = R.analyst, v = R.verifier;
-  const lane = (s.b + bk.t) / 2, railY = R.board.t + 9;
+  const lane = (s.b + bk.t) / 2;
+  const controlY = Math.max(s.b + 25, d.b + 12);
   const wy = w.t + (w.b - w.t) * 0.4;
-  E.frames = mk([P(w.r, wy), P(g1, wy), P(g1, s.cy), P(s.l, s.cy)], { label: 'frame', shape: 'frame', color: C.rail, lseg: 1 });
-  E.uplink = mk([P(s.r, s.cy), P(g3, s.cy), P(g3, d.cy), P(d.l, d.cy)], { label: 'ticket', color: C.scout });
-  E.lookat = mk([P(d.cx, d.t), P(d.cx, railY), P(w.cx, railY), P(w.cx, w.t)], { label: 'look_at: pan, tilt, zoom', dash: true, color: C.director });
+  E.frames = mk([P(w.r, wy), P(g1, wy), P(g1, s.cy), P(s.l, s.cy)], { shape: 'frame', color: C.rail, lseg: 1 });
+  E.uplink = mk([P(s.r, s.cy), P(g3, s.cy), P(g3, d.cy), P(d.l, d.cy)], { color: C.scout });
+  E.lookat = mk([P(d.l, d.b - 16), P(g3 - 12, d.b - 16), P(g3 - 12, controlY), P(w.r, controlY)],
+    { label: 'Camera control · pan / tilt / zoom', color: C.director, lseg: 2, labelOffset: -14, prominent: true });
   E.crop = mk([P(c.r, c.cy - 7), P(g1 - 6, c.cy - 7), P(g1 - 6, lane), P(g3 - 7, lane), P(g3 - 7, an.cy), P(an.l, an.cy)],
-    { label: 'scene + detail', color: C.analyst, lseg: 2 });
-  E.seal = mk([P(c.r, c.cy + 7), P(g1 + 6, c.cy + 7), P(g1 + 6, bk.cy), P(bk.l, bk.cy)], { label: 'sealed', color: C.benign, lseg: 1 });
-  E.judge = mk([P(c.r, c.cy), P(g1, c.cy), P(g1, lane + 14), P(g3, lane + 14), P(g3, v.cy), P(v.l, v.cy)], { label: 'same context', color: C.verifier, lseg: 2 });
+    { label: 'Scene + object + person', color: C.analyst, lseg: 2, labelOffset: 12 });
+  E.seal = mk([P(c.r, c.cy + 7), P(g1 + 6, c.cy + 7), P(g1 + 6, bk.cy), P(bk.l, bk.cy)], { color: C.benign, lseg: 1 });
+  E.judge = mk([P(c.r, c.cy), P(g1, c.cy), P(g1, lane + 24), P(g3, lane + 24), P(g3, v.cy), P(v.l, v.cy)], { color: C.verifier });
   E.assessA = mk([P(an.r, an.cy), P(g5 - 7, an.cy), P(g5 - 7, R.comparison.cy - 8), P(R.comparison.l, R.comparison.cy - 8)], {color: C.analyst});
   E.assessV = mk([P(v.r, v.cy), P(g5 + 7, v.cy), P(g5 + 7, R.comparison.cy + 8), P(R.comparison.l, R.comparison.cy + 8)], {color: C.verifier});
-  E.store = mk([P(c.r, c.cy + 7), P(g1 + 6, c.cy + 7), P(g1 + 6, bk.cy), P(bk.l, bk.cy)], { label: 'evidence', color: C.benign, lseg: 1 });
+  E.store = mk([P(c.r, c.cy + 7), P(g1 + 6, c.cy + 7), P(g1 + 6, bk.cy), P(bk.l, bk.cy)], { color: C.benign, lseg: 1 });
   E.replica = mk([P(bk.cx, bk.b), P(bk.cx, R.board.b + 5), P(g5, R.board.b + 5), P(g5, R.cloud.cy), P(R.cloud.l, R.cloud.cy)], { color: C.scout, dash: true });
   E.toIgnore = mk([P(d.r, d.cy), P(g5, d.cy), P(g5, R.ignored.cy), P(R.ignored.l, R.ignored.cy)], { color: C.benign });
   E.toLog = mk([P(R.comparison.cx - 20, R.comparison.b), P(R.comparison.cx - 20, R.logged.t)], { color: C.analyst });
@@ -508,6 +510,7 @@ function grab(img, bb, size = 160) {
 
 // ---- animated state ----------------------------------------------------------------------------
 const S = {
+  /** @type {Array<{e: ReturnType<typeof mk>, t: number, v: number, j: number, size: number}>} */
   particles: [], cards: [], bursts: [], shelf: [],
   boxes: [],        // [{ bb, color, alpha, dash, label }] on the wide feed
   zoom: null, docked: null, archived: null, frames: 0, ambient: 0.6,
@@ -544,10 +547,11 @@ function flow(edge, ms, color) {
   const e = E[edge];
   e.hot = Math.max(e.hot, now() + ms);
   e.tint = color || null;
-  if (!REDUCED) for (let i = 0; i < 6; i++) spawnParticle(e, Math.random() * 0.15);
+  if (!REDUCED) spawnParticle(e);
 }
 function spawnParticle(e, t0 = 0) {
-  S.particles.push({ e, t: t0, v: 0.004 + Math.random() * 0.004, j: (Math.random() - .5) * 4, size: 1.3 + Math.random() * 1.5 });
+  if (S.particles.some(p => p.e === e)) return;
+  S.particles.push({ e, t: t0, v: 0.006, j: 0, size: 2 });
 }
 function burst(x, y, color, n = 26) {
   if (REDUCED) n = Math.min(n, 6);
@@ -917,11 +921,11 @@ function drawLabel(e, hot) {
   if (!e.label) return;
   let i = e.lseg;
   if (i === undefined) { i = 0; for (let k = 1; k < e.lens.length; k++) if (e.lens[k] > e.lens[i]) i = k; }
-  const a = e.pts[i], b = e.pts[i + 1], x = (a.x + b.x) / 2, y = (a.y + b.y) / 2;
+  const a = e.pts[i], b = e.pts[i + 1], x = (a.x + b.x) / 2, y = (a.y + b.y) / 2 + (e.labelOffset || 0);
   ctx.font = `500 11px ${FONT.mono}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
   const tw = ctx.measureText(e.label).width + 10;
   ctx.fillStyle = C.paper; ctx.fillRect(x - tw / 2, y - 7, tw, 14);
-  ctx.fillStyle = hot ? (e.tint || e.color) : '#8d8777'; ctx.fillText(e.label, x, y + 0.5);
+  ctx.fillStyle = hot ? (e.tint || e.color) : C.director; ctx.fillText(e.label, x, y + 0.5);
 }
 function drawCard(c, cx, cy, w, alpha = 1) {
   if (c.text) {                                                          // a ticket: words, not pixels
@@ -950,23 +954,14 @@ function drawCard(c, cx, cy, w, alpha = 1) {
   ctx.restore();
   return h;
 }
-function drawBoundary() {
-  const x = L.g3, y0 = R.board.t + 24, y1 = R.board.b;
-  ctx.save(); ctx.setLineDash([3, 6]); ctx.strokeStyle = 'rgba(27,30,34,.3)'; ctx.lineWidth = 1;
-  ctx.beginPath(); ctx.moveTo(x, y0); ctx.lineTo(x, y1); ctx.stroke(); ctx.setLineDash([]);
-  ctx.save(); ctx.translate(x, (y0 + y1) / 2); ctx.rotate(-Math.PI / 2);
-  ctx.font = `500 11px ${FONT.mono}`; ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
-  const t = 'selected incidents · scene + object + face', tw = ctx.measureText(t).width + 12;
-  ctx.fillStyle = C.paper; ctx.fillRect(-tw / 2, -12, tw, 13);
-  ctx.fillStyle = '#6f695d'; ctx.fillText(t, 0, -2); ctx.restore(); ctx.restore();
-}
+function drawBoundary() { /* Column headings identify the execution locations. */ }
 function drawRails(t) {
   for (const e of Object.values(E)) {
     const hot = e.hot > t;
     ctx.save();
-    ctx.strokeStyle = hot ? e.tint || e.color : C.rail; ctx.lineWidth = hot ? 1.7 : 1;
+    ctx.strokeStyle = hot || e.prominent ? e.tint || e.color : C.rail; ctx.lineWidth = e.prominent ? 2.5 : (hot ? 1.5 : 1);
     ctx.setLineDash(e.dash ? [5, 4] : []); tracePath(e); ctx.stroke();
-    drawArrow(e, hot ? e.tint || e.color : C.rail);
+    drawArrow(e, hot || e.prominent ? e.tint || e.color : C.rail);
     ctx.restore();
     drawLabel(e, hot);
   }
@@ -1038,7 +1033,7 @@ function drawFeed(t) {
 function step(t) {
   ctx.clearRect(0, 0, innerWidth, innerHeight);
   if (E.frames && !REDUCED && Math.random() < S.ambient * 0.05) spawnParticle(E.frames);
-  for (const e of Object.values(E)) if (e.hot > t && !REDUCED && Math.random() < 0.6) spawnParticle(e);
+  for (const e of Object.values(E)) if (e.hot > t && !REDUCED && Math.random() < 0.015) spawnParticle(e);
   for (const p of S.particles) p.t += p.v;
   S.particles = S.particles.filter(p => p.t < 1);
   if (S.particles.length > 400) S.particles.splice(0, S.particles.length - 400);

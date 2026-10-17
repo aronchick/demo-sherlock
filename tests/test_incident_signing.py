@@ -150,3 +150,68 @@ def test_private_key_symlink_is_refused(tmp_path):
     (root / ".signing-key").symlink_to(outside)
     with pytest.raises(OSError):
         save(IncidentStore(root))
+
+
+@pytest.mark.parametrize("initial", [True, False])
+@pytest.mark.parametrize("failure", ["write", "replace"])
+def test_failed_manifest_publication_recovers_after_restart(tmp_path, monkeypatch, initial, failure):
+    from pathlib import Path
+
+    store = IncidentStore(tmp_path)
+    if not initial:
+        save(store)
+    original_open = Path.open
+    original_replace = Path.replace
+
+    def fail_open(path, *args, **kwargs):
+        if failure == "write" and path.name == "manifest.tmp":
+            raise OSError("injected manifest write failure")
+        return original_open(path, *args, **kwargs)
+
+    def fail_replace(path, *args, **kwargs):
+        if failure == "replace" and path.name == "manifest.tmp":
+            raise OSError("injected manifest replace failure")
+        return original_replace(path, *args, **kwargs)
+
+    with monkeypatch.context() as patch:
+        patch.setattr(Path, "open", fail_open)
+        patch.setattr(Path, "replace", fail_replace)
+        with pytest.raises(OSError, match="injected"):
+            save(store) if initial else store.respond(IID, "investigate")
+    restarted = IncidentStore(tmp_path)
+    result = save(restarted) if initial else restarted.respond(IID, "investigate")
+    assert result["verification"] == {"signature": "verified", "history": "verified", "artifacts": "verified"}
+    assert len(restarted.signed_history(IID)) == 2
+    if not initial:
+        assert len(result["response"]["events"]) == 1
+
+
+def test_recovery_refuses_tampered_orphan(tmp_path, monkeypatch):
+    store = IncidentStore(tmp_path)
+    with monkeypatch.context() as patch:
+        def fail(_record):
+            raise OSError("injected")
+        patch.setattr(store, "_replace_manifest", fail)
+        with pytest.raises(OSError, match="injected"):
+            save(store)
+    orphan = store._history_path(IID, 1)
+    orphan.write_text(orphan.read_text().replace('"knife"', '"cup"'))
+    with pytest.raises(ValueError, match="invalid unpublished"):
+        save(IncidentStore(tmp_path))
+    assert not store.path(IID).exists()
+
+
+def test_provenance_cannot_override_authoritative_artifact_fields(tmp_path):
+    store = IncidentStore(tmp_path)
+    record = save(store)
+    report = payload(record)
+    report["evidence_provenance"]["face_crop"].update({
+        "name": "forged", "sha256": "0" * 64, "filename": "manifest.json",
+        "url": "https://example.invalid", "integrity": "verified", "relationship": "subsequent_capture"})
+    updated = store.save(report, [], {"mock": True})
+    artifact = updated["artifacts"][0]
+    assert artifact["name"] == "face_crop"
+    assert artifact["sha256"] == hashlib.sha256(b"first image").hexdigest()
+    assert artifact["filename"] == record["artifacts"][0]["filename"]
+    assert artifact["url"] == record["artifacts"][0]["url"]
+    assert artifact["relationship"] == "subsequent_capture"

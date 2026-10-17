@@ -68,6 +68,44 @@ class IncidentStore:
         except (OSError, ValueError, KeyError, TypeError):
             return "invalid"
 
+    def _replace_manifest(self, record: dict) -> None:
+        path = self.path(record["incident"])
+        path.parent.mkdir(parents=True, exist_ok=True)
+        temporary = self.path(record["incident"], "manifest.tmp")
+        with temporary.open("w") as stream:
+            json.dump(record, stream, indent=2)
+            stream.flush()
+            os.fsync(stream.fileno())
+        temporary.replace(path)
+
+    def _recover_revision(self, iid: str) -> None:
+        """Publish a completely written, valid revision after interrupted publication."""
+        path = self.path(iid)
+        prior = json.loads(path.read_text()) if path.exists() else None
+        if prior and (signing.verify(prior) != "verified" or self._history_valid(prior) != "verified"):
+            raise ValueError("cannot update unsigned or damaged evidence")
+        revision = prior["signature"]["revision"] + 1 if prior else 1
+        orphan = self._history_path(iid, revision)
+        if not orphan.exists():
+            return
+        candidate = json.loads(orphan.read_text())
+        metadata = candidate.get("signature", {})
+        previous = signing.digest(prior) if prior else None
+        # Validate against the persisted signer as well as the public signature.
+        expected = signing.sign(candidate, self.root, revision, previous, 0)["signature"]["key_fingerprint"]
+        if (signing.verify(candidate) != "verified" or candidate.get("incident") != iid
+                or metadata.get("revision") != revision or metadata.get("previous_sha256") != previous
+                or metadata.get("key_fingerprint") != expected
+                or (prior and metadata.get("key_fingerprint") != prior["signature"]["key_fingerprint"])):
+            raise ValueError("invalid unpublished signed revision")
+        envelopes = [candidate, *self.signed_history(iid)] if prior else [candidate]
+        for envelope in envelopes:
+            for artifact in envelope.get("artifacts", []):
+                data = self.path(iid, artifact["filename"]).read_bytes()
+                if hashlib.sha256(data).hexdigest() != artifact["sha256"]:
+                    raise ValueError("damaged unpublished evidence")
+        self._replace_manifest(candidate)
+
     def _write(self, record: dict) -> None:
         path = self.path(record["incident"])
         prior = None
@@ -88,17 +126,11 @@ class IncidentStore:
             os.fsync(stream.fileno())
         record.clear()
         record.update(signed)
-        path = self.path(record["incident"])
-        path.parent.mkdir(parents=True, exist_ok=True)
-        temporary = self.path(record["incident"], "manifest.tmp")
-        with temporary.open("w") as stream:
-            json.dump(record, stream, indent=2)
-            stream.flush()
-            os.fsync(stream.fileno())
-        temporary.replace(path)
+        self._replace_manifest(record)
 
     def save(self, report: dict, custody: list[dict], models: dict) -> dict:
         with self.lock:
+            self._recover_revision(report["incident"])
             report = signing.payload(report)
             record = {**report, "custody": list(custody), "models": models, "artifacts": [],
                       "custody_scope": "Local application history; not independently attested or immutable"}
@@ -120,9 +152,13 @@ class IncidentStore:
                         stream.write(data)
                         stream.flush()
                         os.fsync(stream.fileno())
-                record["artifacts"].append({"name": name, "sha256": digest,
-                    "url": f"/evidence/{report['incident']}/{stored_name}", "filename": stored_name, "integrity": "verified",
-                    **report.get("evidence_provenance", {}).get(name, {"camera": None, "captured_at": None})})
+                provenance = report.get("evidence_provenance", {}).get(name, {})
+                record["artifacts"].append({
+                    **{key: provenance[key] for key in ("camera", "captured_at", "source_artifact",
+                       "relationship", "bbox", "sources", "missing_sources") if key in provenance},
+                    "name": name, "sha256": digest,
+                    "url": f"/evidence/{report['incident']}/{stored_name}",
+                    "filename": stored_name, "integrity": "verified"})
                 record["custody"].append({"stage": "evidence", "t": time.time(),
                     "detail": f"Saved {filename} locally; SHA-256 {digest}"})
             for name in report.get("evidence_unsaved", []):
@@ -200,6 +236,7 @@ class IncidentStore:
 
     def respond(self, iid: str, action: str) -> dict:
         with self.lock:
+            self._recover_revision(iid)
             record = self.read(iid)
             if record["verification"] != {"signature": "verified", "artifacts": "verified", "history": "verified"}:
                 raise ValueError("cannot respond to unsigned or damaged evidence")

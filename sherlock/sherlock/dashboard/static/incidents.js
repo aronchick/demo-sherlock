@@ -1,9 +1,9 @@
 // @ts-check
 'use strict';
 
-/** @typedef {{name:string, sha256:string, url:string, integrity:string}} Artifact */
+/** @typedef {{name:string, sha256:string, url:string, integrity:string, camera?:string}} Artifact */
 /** @typedef {{stage:string, t:number, detail:string}} CustodyEvent */
-/** @typedef {{incident:string, action:string, claim:string, t:number, verified?:boolean, trigger?:{camera:string}, artifacts:Artifact[], custody:CustodyEvent[], models?:unknown, mode?:unknown, notification:{simulated:boolean,status:string,delivered_at?:number,acknowledged_at?:number}}} Incident */
+/** @typedef {{incident:string, action:string, claim:string, t:number, verified?:boolean, evidence_camera?:string, trigger?:{camera:string}, artifacts:Artifact[], custody:CustodyEvent[], models?:{mock?:boolean,scout?:string,director?:string,analyst?:string,verifier?:string}, notification:{simulated:boolean,status:string,delivered_at?:number,acknowledged_at?:number}}} Incident */
 
 (() => {
   const phone = document.getElementById('phone-content');
@@ -99,7 +99,7 @@
     const acknowledged = record.notification.status === 'acknowledged';
     phone.append(element('p', acknowledged ? 'ACKNOWLEDGED · SIMULATED' : 'DELIVERED · SIMULATED', `phone-status${acknowledged ? ' acknowledged' : ''}`));
     phone.append(element('h2', record.claim || 'Verified incident'));
-    phone.append(element('p', `${record.trigger?.camera || 'Camera not recorded'} · ${timestamp(record.t)}`));
+    phone.append(element('p', `Detected on ${record.trigger?.camera || 'unrecorded camera'} · ${timestamp(record.t)}`));
     const artifact = record.artifacts.find(item => item.name !== 'face_crop');
 
     if (artifact) {
@@ -108,6 +108,8 @@
       phone.append(link);
     }
 
+    phone.append(element('p', `Evidence camera: ${record.evidence_camera || 'not recorded'}`));
+    phone.append(element('p', record.models?.mock ? 'Mock analysis' : 'Live analysis'));
     phone.append(element('p', `Incident ${record.incident}`));
     const link = document.createElement('a');
     link.href = custodyUrl(record.incident);
@@ -149,7 +151,7 @@
     if (!custody) return;
     custody.replaceChildren();
     const summary = element('div', '', 'incident-summary');
-    summary.append(fact('Incident', record.incident), fact('Camera', record.trigger?.camera || 'Not recorded'), fact('Decision', record.action), fact('Recorded', timestamp(record.t)));
+    summary.append(fact('Incident', record.incident), fact('Trigger camera', record.trigger?.camera || 'Not recorded'), fact('Evidence camera', record.evidence_camera || 'Not recorded'), fact('Analysis', record.models?.mock ? 'Mock run' : 'Live run'), fact('Decision', record.action), fact('Recorded', timestamp(record.t)));
     custody.append(summary, element('h2', record.claim || 'Incident evidence'));
     const grid = element('div', '', 'artifact-grid');
 
@@ -164,7 +166,7 @@
         disclosure.append(element('summary', 'Face evidence · reveal for human review'), img);
         figure.append(disclosure);
       } else figure.append(img);
-      figure.append(element('figcaption', artifact.name.replaceAll('_', ' ')));
+      figure.append(element('figcaption', `${artifact.name.replaceAll('_', ' ')} · ${artifact.camera || record.evidence_camera || 'camera not recorded'}`));
       const good = artifact.integrity === 'verified';
       figure.append(element('p', good ? 'SHA-256 matches saved record' : `Integrity check: ${artifact.integrity}`, good ? 'integrity-ok' : 'integrity-error'));
       figure.append(element('code', `SHA-256 ${artifact.sha256}`));
@@ -192,7 +194,7 @@
 
     custody.append(timeline);
     const metadata = document.createElement('details');
-    metadata.append(element('summary', 'Configured models and run mode'), element('p', JSON.stringify({ models: record.models, mode: record.mode }, null, 2), 'model-record'));
+    metadata.append(element('summary', 'Configured models and run mode'), element('p', JSON.stringify(record.models, null, 2), 'model-record'));
     custody.append(metadata);
     const download = document.createElement('a');
     download.href = `/incidents/${encodeURIComponent(record.incident)}`;

@@ -186,6 +186,14 @@ def test_mac_usb_reopens_after_a_close_that_raises(monkeypatch):
     assert len(opened) == 2 and tr._h is opened[1]
 
 
+def test_default_pids_are_gimbal_models_only():
+    from sherlock.camera.insta360 import GIMBAL_PIDS
+
+    assert GIMBAL_PIDS[0] == 0x4C04  # Link 2, the hero
+    assert 0x4C06 in GIMBAL_PIDS  # Link 2 Pro
+    assert 0x4C03 not in GIMBAL_PIDS and 0x4C02 not in GIMBAL_PIDS  # 2C / disputed
+
+
 def test_v4l2_ctrl_listing_parses_ranges():
     text = """
                    pan_absolute 0x009a0908 (int)    : min=-522000 max=522000 step=3600 default=0 value=0

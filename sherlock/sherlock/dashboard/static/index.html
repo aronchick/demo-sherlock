@@ -5,94 +5,295 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Sherlock</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;600&family=IBM+Plex+Sans+Condensed:wght@600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400&family=IBM+Plex+Sans:wght@400;600&family=IBM+Plex+Sans+Condensed:wght@600&display=swap" rel="stylesheet">
 <style>
   :root {
     --bg: #1f2630; --panel: #28313d; --line: #3a4656;
     --ink: #e9edf1; --dim: #97a3b2;
     --scout: #6fb1e6; --director: #e8a33d; --tool: #c9cfd6; --analyst: #8fd19e; --verifier: #f08c8c; --system: #97a3b2;
+    --alert: #ef5b4f; --alert-bg: #3b2427; --ok: #8fd19e; --busy: #e8a33d;
   }
   * { box-sizing: border-box; }
   html, body { height: 100%; margin: 0; background: var(--bg); color: var(--ink);
-    font: 15px/1.45 "IBM Plex Sans", system-ui, sans-serif; }
-  .grid { display: grid; height: 100%; grid-template-columns: 1.6fr 1fr; grid-template-rows: auto 1fr auto; gap: 12px; padding: 12px; }
-  header { grid-column: 1 / -1; display: flex; align-items: baseline; gap: 18px; }
+    font: 15px/1.45 "IBM Plex Sans", sans-serif; overflow: hidden; }
+  /* Camera column = two stacked 16:9 tiles that exactly fill the height between
+     header (48px) and footer (44px): (100vh - padding - rows - gaps) * 8/9. */
+  .grid { display: grid; height: 100%; grid-template-columns: min(calc((100vh - 152px) * 0.8889), 62vw) minmax(0, 1fr);
+    grid-template-rows: 48px minmax(0, 1fr) 44px; gap: 12px; padding: 12px; }
+  header { grid-column: 1 / -1; display: flex; align-items: center; gap: 18px; min-width: 0; }
   header h1 { margin: 0; font: 600 28px "IBM Plex Sans Condensed", sans-serif; letter-spacing: .01em; }
-  header .ratio { margin-left: auto; font-size: 15px; color: var(--dim); }
-  header .ratio b { color: var(--ink); font-size: 26px; font-weight: 600; margin-right: 4px; }
-  .cams { display: grid; grid-template-rows: 1fr 1fr; gap: 12px; min-height: 0; }
+  header .tag { color: var(--dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+  .status { display: flex; align-items: center; gap: 8px; padding: 4px 14px; border: 1px solid var(--line);
+    border-radius: 999px; font-weight: 600; white-space: nowrap; }
+  .status .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--ok); }
+  .status[data-state="busy"] { border-color: var(--busy); color: var(--busy); }
+  .status[data-state="busy"] .dot { background: var(--busy); }
+  .status[data-state="alert"] { border-color: var(--alert); background: var(--alert-bg); color: #ffd9d4; }
+  .status[data-state="alert"] .dot { background: var(--alert); }
+  .status[data-state="ignored"] .dot { background: var(--dim); }
+  header .ratio { margin-left: auto; font-size: 15px; color: var(--dim); white-space: nowrap; }
+  header .ratio b { color: var(--ink); font-size: 26px; font-weight: 600; margin-right: 6px; }
+
+  .cams { display: grid; grid-template-rows: minmax(0, 1fr) minmax(0, 1fr); gap: 12px; min-height: 0; }
   .cam { position: relative; background: #000; border-radius: 6px; overflow: hidden; min-height: 0; }
   .cam img { width: 100%; height: 100%; object-fit: contain; display: block; }
-  .cam span { position: absolute; left: 10px; top: 8px; color: var(--ink); background: rgba(31,38,48,.75); padding: 2px 8px; border-radius: 4px; font-size: 13px; }
-  .log { background: var(--panel); border-radius: 6px; padding: 10px 12px; overflow-y: auto; min-height: 0; display: flex; flex-direction: column-reverse; }
-  .ev { display: grid; grid-template-columns: 76px 1fr 64px; gap: 10px; padding: 6px 0; border-top: 1px solid var(--line); align-items: start; }
+  .cam span { position: absolute; left: 10px; bottom: 8px; color: var(--ink); background: rgba(31,38,48,.8);
+    padding: 2px 8px; border-radius: 4px; font-size: 13px; }
+
+  .side { display: flex; flex-direction: column; gap: 12px; min-height: 0; min-width: 0; }
+  .incident { background: var(--panel); border: 2px solid var(--line); border-radius: 6px; padding: 10px 12px; flex: none; }
+  .incident[data-state="alert"] { border-color: var(--alert); }
+  .incident[data-state="log"] { border-color: var(--busy); }
+  .inc-head { display: flex; align-items: baseline; gap: 10px; margin-bottom: 8px; }
+  .inc-title { font: 600 18px "IBM Plex Sans Condensed", sans-serif; }
+  .incident[data-state="alert"] .inc-title { color: var(--alert); }
+  .inc-time { margin-left: auto; color: var(--dim); font-size: 13px; }
+  /* Crops cap at 20vh tall so the tool chain below keeps enough rows to read. */
+  .crops { display: flex; gap: 10px; }
+  .crops figure { margin: 0; min-width: 0; flex: 1 1 0; max-width: calc(20vh * 16 / 9); }
+  .crops .frame { position: relative; aspect-ratio: 16 / 9; background: #11161c; border-radius: 4px; overflow: hidden;
+    display: grid; place-items: center; }
+  .crops .frame img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; }
+  .crops .frame .empty { color: var(--dim); font-size: 13px; }
+  .crops figcaption { color: var(--dim); font-size: 12.5px; margin-top: 4px; }
+  .crops figcaption b { color: var(--ink); font-weight: 600; }
+  .inc-claim { margin-top: 8px; font-size: 16px; }
+  .inc-meta { margin-top: 2px; color: var(--dim); font-size: 13px; min-height: 19px; }
+
+  .log { background: var(--panel); border-radius: 6px; padding: 4px 12px; overflow: hidden; min-height: 0; flex: 1;
+    display: flex; flex-direction: column; }
+  .ev { flex: none; display: grid; grid-template-columns: 72px minmax(0, 1fr) 58px; gap: 10px; padding: 5px 0;
+    border-bottom: 1px solid var(--line); align-items: start; }
   .ev .stage { font-weight: 600; font-size: 13px; }
   .ev .ms { color: var(--dim); font-size: 13px; text-align: right; }
-  .ev .msg { word-break: break-word; }
+  .ev .msg { overflow-wrap: anywhere; }
+  .ev.tool .msg { font: 13px/1.5 "IBM Plex Mono", monospace; color: var(--tool); }
+  .ev.tool.err .msg { color: var(--verifier); }
   .ev.scout .stage { color: var(--scout); } .ev.director .stage { color: var(--director); }
   .ev.tool .stage { color: var(--tool); } .ev.analyst .stage { color: var(--analyst); }
   .ev.verifier .stage { color: var(--verifier); } .ev.system .stage { color: var(--system); }
-  .ev.report { background: #2f3b2f; border-radius: 4px; padding: 8px; }
-  footer { grid-column: 1 / -1; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
-  footer .stat { color: var(--dim); font-size: 14px; } footer .stat b { color: var(--ink); font-weight: 600; }
+  .ev.weapon .msg { color: #ffd9d4; font-weight: 600; }
+  .ev.report { background: #2f3b2f; border-radius: 4px; padding: 6px 8px; margin: 2px 0; border: 0; }
+  .ev.report.alert { background: var(--alert-bg); }
+  .ev.report.ignore { background: #2b333e; }
+
+  footer { grid-column: 1 / -1; display: flex; gap: 14px; align-items: center; min-width: 0; overflow: hidden; }
+  footer .stat { color: var(--dim); font-size: 14px; white-space: nowrap; }
+  footer .stat b { color: var(--ink); font-weight: 600; }
+  footer .stat.hot b { color: var(--alert); }
   footer .sp { flex: 1; }
-  button { background: var(--panel); color: var(--ink); border: 1px solid var(--line); border-radius: 6px; padding: 7px 12px; font: inherit; cursor: pointer; }
+  button { background: var(--panel); color: var(--ink); border: 1px solid var(--line); border-radius: 6px;
+    padding: 7px 12px; font: inherit; cursor: pointer; }
   button:hover { border-color: var(--director); }
   button:focus-visible { outline: 2px solid var(--director); outline-offset: 2px; }
-  @media (max-width: 900px) { .grid { grid-template-columns: 1fr; grid-template-rows: auto auto 1fr auto; } .cams { grid-template-rows: 220px 220px; } }
+  @media (max-width: 900px) {
+    html, body { overflow: auto; }
+    .grid { height: auto; grid-template-columns: minmax(0, 1fr); grid-template-rows: auto; }
+    footer { flex-wrap: wrap; }
+    .cams { grid-template-rows: 220px 220px; } .log { height: 420px; flex: none; }
+  }
 </style>
 </head>
 <body>
 <div class="grid">
   <header>
     <h1>Sherlock</h1>
-    <div style="color:var(--dim)">Small models that notice, decide, zoom, read, verify</div>
+    <div class="tag">Security cascade: a 10 ms Scout decides when a model is worth calling</div>
+    <div class="status" id="status" data-state="clear" role="status"><span class="dot"></span><span id="status-text">Monitoring</span></div>
     <div class="ratio"><b id="avoided">0</b>VLM calls avoided</div>
   </header>
 
   <section class="cams">
-    <div class="cam"><img src="/stream/wide" alt="Wide view"><span>Wide view</span></div>
-    <div class="cam"><img src="/stream/crop" alt="Latest zoomed crop"><span>Where the camera looked</span></div>
+    <div class="cam"><img src="/stream/wide" alt="Wide view with Scout detections"><span>Wide view</span></div>
+    <div class="cam"><img src="/stream/crop" alt="Latest zoomed crop"><span id="crop-label">Where the camera looked</span></div>
   </section>
 
-  <section class="log" id="log" aria-live="polite"></section>
+  <section class="side">
+    <article class="incident" id="incident" data-state="none" aria-live="polite">
+      <div class="inc-head"><span class="inc-title" id="inc-title">No weapon incidents</span><span class="inc-time" id="inc-time"></span></div>
+      <div class="crops">
+        <figure>
+          <div class="frame"><span class="empty">Weapon crop</span><img id="weapon-img" alt="Weapon crop" hidden></div>
+          <figcaption><b>Weapon</b> · checked by Analyst and Verifier</figcaption>
+        </figure>
+        <figure>
+          <div class="frame"><span class="empty">Face crop</span><img id="face-img" alt="Face crop" hidden></div>
+          <figcaption><b>Face</b> · stored for a human, never sent to a model</figcaption>
+        </figure>
+      </div>
+      <div class="inc-claim" id="inc-claim">Benign objects are ignored without a model call. A weapon triggers the full chain.</div>
+      <div class="inc-meta" id="inc-meta"></div>
+    </article>
+    <section class="log" id="log" aria-live="polite" aria-label="Event log"></section>
+  </section>
 
   <footer>
     <span class="stat">Frames <b id="frames">0</b></span>
-    <span class="stat">Investigations <b id="investigations">0</b></span>
+    <span class="stat hot">Alerts <b id="alerts">0</b></span>
+    <span class="stat">Ignored <b id="ignored">0</b></span>
     <span class="stat">VLM calls <b id="vlm_calls">0</b></span>
     <span class="stat">Tool errors <b id="tool_errors">0</b></span>
     <span class="stat">Recovered <b id="recoveries">0</b></span>
     <span class="stat">Verified <b id="confirmed">0</b> / rejected <b id="rejected">0</b></span>
     <span class="sp"></span>
     <button onclick="post('/demo/fail/1')">Break the next tool call</button>
+    <button onclick="post('/demo/corrupt/1')">Corrupt next tool args</button>
     <button id="cover" onclick="toggleCover()">Cover hero lens</button>
   </footer>
 </div>
 <script>
-  const log = document.getElementById('log');
-  const es = new EventSource('/events');
-  es.onmessage = e => {
-    const ev = JSON.parse(e.data);
-    const d = document.createElement('div');
-    d.className = 'ev ' + ev.stage + (ev.msg.startsWith('REPORT') ? ' report' : '');
-    d.innerHTML = `<span class="stage">${ev.stage}</span><span class="msg"></span><span class="ms">${ev.latency_ms ? Math.round(ev.latency_ms) + ' ms' : ''}</span>`;
-    d.querySelector('.msg').textContent = ev.msg;
-    log.prepend(d);
-    while (log.children.length > 200) log.lastChild.remove();
-  };
-  es.addEventListener('stats', e => {
-    const s = JSON.parse(e.data);
-    for (const k in s) { const el = document.getElementById(k); if (el) el.textContent = s[k]; }
-    document.getElementById('avoided').textContent = s.vlm_calls_avoided;
-  });
-  const post = url => fetch(url, {method: 'POST'});
+  const $ = id => document.getElementById(id);
+
+  const log = $('log');
+
+  let statusTimer = null;
+
+  let lastAlert = null;
+
+  let flagged = 'object';
+
   let covered = false;
+
+  function setStatus(state, text, holdMs) {
+    $('status').dataset.state = state;
+    $('status-text').textContent = text;
+    clearTimeout(statusTimer);
+
+    if (holdMs) statusTimer = setTimeout(() => setStatus('clear', 'Monitoring'), holdMs);
+  }
+
+  function addLog(ev) {
+    const d = ev.data || {};
+
+    const row = document.createElement('div');
+
+    const isReport = ev.msg.startsWith('REPORT');
+
+    row.className = ['ev', ev.stage,
+      isReport ? 'report ' + (d.action || '') : '',
+      ev.stage === 'scout' && d.threat === 'weapon' ? 'weapon' : '',
+      ev.stage === 'tool' && /FAILED|error|refused|corrupted/.test(ev.msg) ? 'err' : ''].join(' ');
+
+    const stage = ev.stage === 'tool' && d.step ? `tool ${d.step}` : ev.stage;
+
+    row.innerHTML = '<span class="stage"></span><span class="msg"></span><span class="ms"></span>';
+    row.querySelector('.stage').textContent = stage;
+    row.querySelector('.msg').textContent = ev.msg;
+    row.querySelector('.ms').textContent = ev.latency_ms ? Math.round(ev.latency_ms) + ' ms' : '';
+    log.prepend(row);
+
+    // Bounded, not scrolled: drop the oldest rows that no longer fit.
+    while (log.children.length > 1 && log.scrollHeight > log.clientHeight) log.lastChild.remove();
+  }
+
+  function showIncident(d) {
+    const verified = d.verified === true ? 'verified' : d.verified === false ? 'not verified' : 'unverified';
+
+    const via = d.evidence_camera && d.evidence_camera !== d.camera ? `, evidence via ${d.evidence_camera}` : '';
+
+    $('incident').dataset.state = d.action === 'alert' ? 'alert' : 'log';
+    $('inc-title').textContent = (d.action === 'alert' ? 'Weapon alert · ' : 'Logged · ') + d.label;
+    $('inc-claim').textContent = d.description || d.claim;
+    $('inc-meta').textContent = `seen on ${d.camera}${via} · ${verified} · ${d.vlm_calls} VLM calls · ${(d.total_ms / 1000).toFixed(1)} s`;
+
+    for (const name of ['weapon', 'face']) {
+      const img = $(name + '-img');
+
+      const has = (d.evidence || []).includes(name + '_crop');
+
+      img.hidden = !has;
+
+      if (has) img.src = `/evidence/${encodeURIComponent(d.incident)}/${name}_crop.jpg`;
+    }
+
+    lastAlert = d.t ? d.t * 1000 : Date.now();
+    tick();
+  }
+
+  function tick() {
+    if (!lastAlert) return;
+
+    const s = Math.round((Date.now() - lastAlert) / 1000);
+
+    $('inc-time').textContent = s < 2 ? 'just now' : `${s} s ago`;
+  }
+
+  function onReport(d) {
+    if (d.action === 'ignore') {
+      setStatus('ignored', `Ignored ${d.label} · ${d.vlm_calls} VLM calls`, 4000);
+    } else if (d.threat === 'weapon') {
+      showIncident(d);
+
+      if (d.action === 'alert') setStatus('alert', `ALERT · ${d.label} · ${d.verified ? 'verified' : 'unverified'}`, 30000);
+      else setStatus('busy', `Logged ${d.label} · not verified`, 8000);
+    } else {
+      setStatus('clear', `Logged ${d.label}`, 4000);
+    }
+  }
+
+  function onEvent(e) {
+    const ev = JSON.parse(e.data);
+
+    const d = ev.data || {};
+
+    addLog(ev);
+
+    if (ev.stage === 'scout') flagged = d.label;
+
+    // Busy only once a chain really starts: a second camera's duplicate sighting must not mask an alert.
+    if (ev.stage === 'tool' && d.step === 1 && d.tool !== 'report') setStatus('busy', `Investigating ${flagged}`);
+
+    if (ev.stage === 'tool' && d.tool === 'snapshot' && d.result && d.result.evidence_id) {
+      const id = d.result.evidence_id;
+
+      $('crop-label').textContent = id === 'face_crop'
+        ? 'Where the camera looked · face crop, not analyzed'
+        : 'Where the camera looked · ' + id.replace('_', ' ');
+    }
+
+    if (ev.msg.startsWith('REPORT')) onReport(d);
+  }
+
+  function onStats(e) {
+    const s = JSON.parse(e.data);
+
+    for (const k in s) {
+      const el = $(k);
+
+      if (el) el.textContent = s[k];
+    }
+
+    $('avoided').textContent = s.vlm_calls_avoided;
+  }
+
+  // A reload must not blank the panel mid-recording: restore the latest weapon incident.
+  function restoreLastIncident(reports) {
+    const last = reports.filter(r => r.trigger && r.trigger.threat === 'weapon').pop();
+
+    if (!last || lastAlert) return;
+
+    const {label, threat, camera} = last.trigger;
+
+    showIncident({...last, label, threat, camera});
+  }
+
+  const post = url => fetch(url, {method: 'POST'});
+
   async function toggleCover() {
     covered = !covered;
     await post(`/demo/cover/hero/${covered ? 'on' : 'off'}`);
-    document.getElementById('cover').textContent = covered ? 'Uncover hero lens' : 'Cover hero lens';
+    $('cover').textContent = covered ? 'Uncover hero lens' : 'Cover hero lens';
   }
+
+  const es = new EventSource('/events');
+
+  es.onmessage = onEvent;
+
+  es.addEventListener('stats', onStats);
+
+  setInterval(tick, 1000);
+
+  fetch('/reports').then(r => r.json()).then(restoreLastIncident);
 </script>
 </body>
 </html>

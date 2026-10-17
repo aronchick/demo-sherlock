@@ -2,8 +2,12 @@
                  `python run.py --mock --synthetic` (no hardware, no models)"""
 import argparse
 import os
+import sys
 
 import uvicorn
+
+# The package lives at sherlock/sherlock; make `python run.py` work from the repo root.
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "sherlock"))
 
 
 def main():

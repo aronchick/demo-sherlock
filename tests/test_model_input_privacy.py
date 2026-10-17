@@ -154,3 +154,38 @@ def test_the_on_screen_privacy_claims_hold(tmp_path, endpoint):
     ev = s.tools.evidence
     assert set(_images(bodies)) == {f"data:image/jpeg;base64,{_b64(ev['weapon_crop'])}"}
     assert ev["face_crop"].shape != ev["weapon_crop"].shape or not np.array_equal(ev["face_crop"], ev["weapon_crop"])
+
+
+@pytest.mark.parametrize("before", ["no look_at", "a move", "a failed look_at", "the last incident's aim"])
+def test_an_unaimed_object_snapshot_never_reaches_a_model(tmp_path, endpoint, before):
+    """An object snapshot with no successful look_at in this incident (out of order, or after a
+    move or a failed call) would be the whole camera view. Unknown aim counts as a face, so the
+    snapshot is refused before any image is taken and no request reaches a model server."""
+    ep, bodies, _ = endpoint
+    s = _frozen_sherlock(tmp_path)
+    s.tools.analyst, s.tools.verifier = Analyst(ep), Verifier(ep)
+    if before == "the last incident's aim":
+        s._investigate(_knife_det())
+        bodies.clear()
+    shots = []
+
+    def out_of_order(det):
+        tools, box = s.tools, list(det.bbox)
+        if before == "a move":
+            tools.call("look_at", {"camera": "hero", "bbox": box})
+            tools.call("move", {"camera": "hero", "pan": 5})
+        elif before == "a failed look_at":
+            tools.call("look_at", {"camera": "hero", "bbox": box})
+            tools.inject_failure(1)
+            tools.call("look_at", {"camera": "hero", "bbox": box})
+        shots.append(tools.call("snapshot", {"camera": "hero", "subject": "weapon"}))
+        return {"action": "alert", "claim": "a knife"}
+
+    s.director = SimpleNamespace(investigate=out_of_order)
+    s._recent.clear()  # the same knife again is a new incident here, not a duplicate
+    s._investigate(_knife_det())
+    assert "refused" in shots[0]["error"]
+    assert bodies == [], "no request reached a model server"
+    report = s.log[-1]
+    assert report["action"] == "log" and report["comparison"]["status"] == "uncertain"
+    assert "weapon_crop" not in report["evidence"]

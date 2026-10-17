@@ -10,7 +10,7 @@ import time
 import cv2
 import numpy as np
 
-from .agents.director import Director, RuleDirector, weapon_claim
+from .agents.director import Director, RuleDirector, names_claim, weapon_claim
 from .agents.scout import Detection, Scout, classify
 from .agents.vision import Analyst, MockAnalyst, MockVerifier, Verifier
 from .camera import Camera, CameraError, build_camera
@@ -178,13 +178,17 @@ class Sherlock:
                 saved, unsaved = [], []
 
                 def persist():
+                    # The face crop waits in memory for the verdict: a saved artifact joins the
+                    # signed history and can never be removed again.
                     nonlocal saved, unsaved
-                    saved, unsaved = self._save_evidence(iid, self.tools.evidence)
+                    held = {k: v for k, v in self.tools.evidence.items() if k != "face_crop"}
+                    saved, unsaved = self._save_evidence(iid, held)
                     pending = {"incident": iid, "t": time.time(), "action": "log",
                                "claim": weapon_claim(det.label), "verified": False,
                                "state": "investigating", "evidence": saved,
                                "evidence_unsaved": unsaved,
-                               "evidence_provenance": self.tools.provenance.copy()}
+                               "evidence_provenance": {k: v for k, v in self.tools.provenance.items()
+                                                       if k in held}}
                     try:
                         self.incidents.save(pending, custody, {
                             "mock": self.cfg.mock, "scout": self.cfg.yolo_model,
@@ -209,19 +213,6 @@ class Sherlock:
                     self.tools.provenance["original_frame"] = {
                         "camera": det.camera, "captured_at": captured,
                         "source_artifact": None, "relationship": "source_frame", "bbox": None}
-                    if det.head:
-                        height, width = source.shape[:2]
-                        x1, y1, x2, y2 = det.head
-                        x1, x2 = max(0, int(x1)), min(width, int(x2))
-                        y1, y2 = max(0, int(y1)), min(height, int(y2))
-                        if x2 > x1 and y2 > y1:
-                            self.tools.evidence["face_crop"] = source[y1:y2, x1:x2].copy()
-                            self.tools.evidence_camera["face_crop"] = det.camera
-                            self.tools.evidence_captured_at["face_crop"] = captured
-                            self.tools.provenance["face_crop"] = {
-                                "camera": det.camera, "captured_at": captured,
-                                "source_artifact": "original_frame", "relationship": "crop_of_source",
-                                "bbox": [x1, y1, x2, y2]}
                     persist()
                 try:
                     report = self.director.investigate(det)
@@ -231,15 +222,30 @@ class Sherlock:
                     BUS.emit("system", f"Investigation failed: {type(exc).__name__}")
                 if det.threat != "benign":
                     claim = weapon_claim(det.label)
-                    comparison = self.tools.assess_parallel(claim)
+                    comparison = self.tools.assess(claim)
                     report["claim"] = claim
                     report["comparison"] = comparison
-                    report["verified"] = (not report.get("error") and comparison["analyst_supports"] is True and
-                                          comparison["verifier_supports"] is True)
+                    # The Verifier's yes/no margin on the masked object crop decides alone.
+                    report["verified"] = not report.get("error") and comparison["verifier_supports"] is True
                     report["action"] = "alert" if det.threat == "weapon" and report["verified"] else "log"
                     report["verifier_reason"] = (self.tools.verdict or {}).get("reason", "")
                     eid, _ = self.tools.model_crop()
-                    report["description"] = self.tools.descriptions.get(eid, "")
+                    said = self.tools.descriptions.get(eid, "")
+                    comparison["analyst_names_claim"] = names_claim(said, claim) if said else None
+                    if report["verified"] and said and not names_claim(said, claim):
+                        # A confirmed knife described as 'Cake.' reads as a broken system. The
+                        # claim stands on the Verifier's own yes; the Analyst's words stay on file.
+                        report["description"], report["analyst_mismatch"] = "", said
+                    else:
+                        report["description"] = said
+                if report.get("action") == "alert" and report.get("verified"):
+                    self._face_from_source(det, source, captured)
+                    if "face_crop" in self.tools.evidence:
+                        face_saved, face_unsaved = self._save_evidence(
+                            iid, {"face_crop": self.tools.evidence["face_crop"]})
+                        saved, unsaved = saved + face_saved, unsaved + face_unsaved
+                else:
+                    self._drop_face_crop(report)
                 report["incident"] = iid
                 report["t"] = time.time()
                 report["evidence"] = saved
@@ -280,6 +286,43 @@ class Sherlock:
             self.tools.defer_analysis = False
             self.active = None
             self._busy.release()
+
+    def _face_from_source(self, det: Detection, source: np.ndarray | None, captured: float | None) -> None:
+        """A verified alert with no head snapshot from the Director keeps the head box cut
+        from the source frame. Only called after the Verifier confirms."""
+        tools = self.tools
+        if "face_crop" in tools.evidence or source is None or not det.head:
+            return
+        height, width = source.shape[:2]
+        x1, y1, x2, y2 = det.head
+        x1, x2 = max(0, int(x1)), min(width, int(x2))
+        y1, y2 = max(0, int(y1)), min(height, int(y2))
+        if x2 <= x1 or y2 <= y1:
+            return
+        tools.evidence["face_crop"] = source[y1:y2, x1:x2].copy()
+        tools.evidence_camera["face_crop"] = det.camera
+        tools.evidence_captured_at["face_crop"] = captured
+        tools.provenance["face_crop"] = {"camera": det.camera, "captured_at": captured,
+            "source_artifact": "original_frame", "relationship": "crop_of_source", "bbox": [x1, y1, x2, y2]}
+
+    def _drop_face_crop(self, report: dict) -> None:
+        """A face is evidence only when a weapon claim is verified and alerted. The chain
+        takes the face snapshot before the checks, so a rejected (or unverified) claim would
+        otherwise store the face of someone holding a cup. Enforced here, whatever order the
+        Director chose: the bytes leave the toolbox before the final save, persist() never
+        wrote them, and the live crop view falls back to the object crop."""
+        tools = self.tools
+        face = tools.evidence.pop("face_crop", None)
+        for held in (tools.evidence_camera, tools.evidence_captured_at, tools.provenance):
+            held.pop("face_crop", None)
+        if face is None:
+            return
+        if tools.last_crop is face:
+            _, crop = tools.model_crop()
+            tools.last_crop = crop
+        why = "weapon claim not verified" if not report.get("verified") else "no alert"
+        report["face_crop_dropped"] = why
+        BUS.emit("system", f"face crop discarded: {why} ({report.get('claim')})")
 
     def _save_evidence(self, iid: str, evidence: dict[str, np.ndarray]) -> tuple[list[str], list[str]]:
         """One folder per incident: <evidence_dir>/<incident>/<weapon_crop|face_crop|object_crop>.jpg.

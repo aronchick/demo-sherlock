@@ -28,9 +28,9 @@ def test_pipeline_page_mounts_and_uses_existing_streams():
     assert "text/html" in r.headers["content-type"]
     for needle in ("/events", "/stream/wide", "/stream/crop", "/demo/fail/1", "/demo/cover/hero/"):
         assert needle in body, needle
-    # Selected incidents carry scene and person context across the model boundary
+    # Only the masked object crop crosses the model boundary
     assert "Camera control · pan / tilt / zoom" in body
-    assert "Scene + object + person" in body
+    assert "Masked object crop" in body and "Scene + object + person" not in body
     # the template token is always replaced, never served raw
     assert "__CFG_JSON__" not in body
 

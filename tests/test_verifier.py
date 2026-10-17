@@ -104,10 +104,8 @@ def test_margin_mode_decides_by_argmax_by_default(stub, content, tokens, margin,
     assert "response_format" not in body
     assert body["logprobs"] is True and body["top_logprobs"] >= 2
     assert body["messages"][0]["content"][1]["text"] == (
-        "Does this image support the claim that the object is a knife? Use the labeled object, "
-        "scene and person context if provided; the target is the labeled object crop, not nearby objects. "
-        "Captures may have different times. "
-        "Do not identify any person or infer identity; facial recognition is prohibited. Answer yes or no.")
+        "Is the object in this image a knife? Judge the object only; do not identify or describe "
+        "any person. Answer yes or no.")
 
 
 def test_logprobs_overrule_the_sampled_word(stub):

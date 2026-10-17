@@ -1,8 +1,7 @@
-"""Concurrent prompts, explicit comparison, retained evidence and source provenance."""
-import threading
+"""Checks on the masked crop after acquisition (Verifier first, then Analyst, never both at
+once), the Verifier's decision, retained evidence and provenance."""
 from types import SimpleNamespace
 
-import cv2
 import numpy as np
 from fastapi.testclient import TestClient
 from sherlock.dashboard.server import make_app
@@ -10,69 +9,84 @@ from sherlock.events import BUS
 from test_weapon_flow import _frozen_sherlock, _knife_det
 
 
-def test_parallel_checks_share_crop_and_capture_worker_events(tmp_path):
+def test_the_verifier_runs_alone_then_the_analyst_on_the_same_masked_crop(tmp_path):
     s = _frozen_sherlock(tmp_path)
-    barrier = threading.Barrier(2)
-    seen = []
+    seen, order = [], []
 
     def assess(role, image):
-        # Sequential execution breaks this barrier, so this verifies actual overlap.
-        barrier.wait(timeout=5)
-        assert set(s.tools.evidence) == {"original_frame", "weapon_crop", "face_crop", "model_context"}
+        assert set(s.tools.evidence) == {"original_frame", "weapon_crop", "face_crop"}
         pending = s.incidents.read(s.tools.incident["id"])
         assert pending["state"] == "investigating"
         assert pending["notification"]["status"] == "not_sent"
-        for name in s.tools.evidence:
-            assert (tmp_path / s.tools.incident["id"] / f"{name}.{'png' if name == 'model_context' else 'jpg'}").exists()
+        assert {a["name"] for a in pending["artifacts"]} == {"original_frame", "weapon_crop"}
+        folder = tmp_path / s.tools.incident["id"]
+        assert (folder / "original_frame.jpg").exists() and (folder / "weapon_crop.jpg").exists()
+        assert not (folder / "face_crop.jpg").exists(), "the face waits in memory for the verdict"
         seen.append(image)
         BUS.emit(role, "worker result")
 
-    def describe(image, claim):
+    def describe(image, question):
+        order.append("analyst start")
         assess("analyst", image)
-        return {"description": "A knife.", "claim": claim, "supported": True}
+        order.append("analyst end")
+        return {"description": "A knife."}
 
     def check(image, claim):
+        order.append("verifier start")
         assess("verifier", image)
+        order.append("verifier end")
         return {"supported": True, "reason": "yes"}
 
-    s.tools.analyst = SimpleNamespace(assess=describe)
+    s.tools.analyst = SimpleNamespace(describe=describe)
     s.tools.verifier = SimpleNamespace(check=check)
     s._investigate(_knife_det())
     report = s.log[-1]
     assert report["action"] == "alert"
+    # mlx-vlm drops top_logprobs when two requests overlap: one request at a time, Verifier first.
+    assert order == ["verifier start", "verifier end", "analyst start", "analyst end"]
     assert len(seen) == 2 and seen[0] is seen[1]
-    stored = cv2.imread(str(tmp_path / report["incident"] / "model_context.png"))
-    assert np.array_equal(stored, seen[0])
     assert not seen[0].flags.writeable
-    assert np.array_equal(seen[0], s.tools.evidence["model_context"])
-    assert not np.array_equal(seen[0], s.tools.evidence["face_crop"])
-    assert not np.array_equal(seen[0], s.tools.evidence["original_frame"])
+    assert np.array_equal(seen[0], s.tools.evidence["weapon_crop"])
+    for name in ("face_crop", "original_frame"):
+        other = s.tools.evidence[name]
+        assert seen[0].shape != other.shape or not np.array_equal(seen[0], other)
+    assert "model_context" not in s.tools.evidence and not (tmp_path / report["incident"] / "model_context.png").exists()
     record = s.incidents.read(report["incident"])
     stages = [e["stage"] for e in record["custody"]]
-    assert stages.index("comparison") > stages.index("analyst")
-    assert stages.index("comparison") > stages.index("verifier")
+    assert stages.index("verifier") < stages.index("analyst") < stages.index("comparison")
     assert "model_input" not in stages
-    context = s.tools.provenance["model_context"]
-    assert context["sources"] == ["original_frame", "weapon_crop", "face_crop"]
-    assert context["relationship"] == "composite"
     BUS.emit("analyst", "outside investigation")
     assert not any(e["detail"] == "outside investigation" for e in record["custody"])
 
 
-def test_model_failure_preserves_full_package_and_yields_uncertain(tmp_path):
+def test_verifier_failure_keeps_scene_and_crop_drops_the_face_and_yields_uncertain(tmp_path):
     s = _frozen_sherlock(tmp_path)
 
     def broken(*args):
         raise RuntimeError("endpoint unavailable")
 
-    s.tools.analyst = SimpleNamespace(assess=broken)
+    s.tools.verifier = SimpleNamespace(check=broken)
     s._investigate(_knife_det())
     report = s.log[-1]
     assert report["action"] == "log" and not report["verified"]
     assert report["comparison"]["status"] == "uncertain"
-    assert set(report["evidence"]) == {"original_frame", "weapon_crop", "face_crop", "model_context"}
+    assert set(report["evidence"]) == {"original_frame", "weapon_crop"}
+    assert report["face_crop_dropped"] == "weapon claim not verified"
     assert report["custody_saved"]
     assert report["notification"]["status"] == "not_sent"
+
+
+def test_analyst_failure_never_blocks_a_confirmed_alert(tmp_path):
+    s = _frozen_sherlock(tmp_path)
+
+    def broken(*args):
+        raise RuntimeError("endpoint unavailable")
+
+    s.tools.analyst = SimpleNamespace(describe=broken)
+    s._investigate(_knife_det())
+    report = s.log[-1]
+    assert report["action"] == "alert" and report["verified"]
+    assert report["comparison"]["status"] == "confirmed" and report["description"] == ""
 
 
 def test_original_frame_timestamp_and_ptz_relationship_are_distinct(tmp_path):
@@ -100,15 +114,17 @@ def test_simulated_disagreement_is_once_and_mock_only(tmp_path):
     assert client.post("/demo/disagree/1").json()["simulated"]
     assert client.post("/demo/disagree/2").status_code == 400
     s._investigate(_knife_det())
-    assert s.log[-1]["comparison"]["status"] == "disagreed"
-    assert s.log[-1]["action"] == "log"
+    simulated = s.log[-1]
+    # The Analyst advises: its contradicting words are withheld, the Verifier's yes stands.
+    assert simulated["action"] == "alert" and simulated["comparison"]["status"] == "confirmed"
+    assert simulated["description"] == "" and "ceramic cup" in simulated["analyst_mismatch"]
     s._investigate(_knife_det())
-    assert s.log[-1]["action"] == "alert"
+    assert s.log[-1]["action"] == "alert" and "analyst_mismatch" not in s.log[-1]
     s.cfg.mock = False
     assert client.post("/demo/disagree/1").status_code == 409
 
 
-def test_acquisition_failure_keeps_source_scene_and_face(tmp_path):
+def test_acquisition_failure_keeps_the_source_scene_and_cuts_no_face(tmp_path):
     s = _frozen_sherlock(tmp_path)
 
     def broken(det):
@@ -119,16 +135,35 @@ def test_acquisition_failure_keeps_source_scene_and_face(tmp_path):
     report = s.log[-1]
     assert report["action"] == "log" and not report["verified"]
     assert report["comparison"]["status"] == "uncertain"
-    assert set(report["evidence"]) == {"original_frame", "face_crop"}
-    assert report["evidence_provenance"]["face_crop"]["relationship"] == "crop_of_source"
+    assert report["evidence"] == ["original_frame"]
+    assert "face_crop" not in report["evidence_provenance"] and "face_crop" not in s.tools.evidence
+    assert not (tmp_path / report["incident"] / "face_crop.jpg").exists()
     record = s.incidents.read(report["incident"])
     assert record["notification"]["status"] == "not_sent"
     assert any(e["stage"] == "comparison" for e in record["custody"])
 
 
-def test_unparseable_verifier_is_uncertain_not_agreement(tmp_path):
+def test_a_verified_alert_without_a_head_snapshot_cuts_the_face_from_the_source(tmp_path):
     s = _frozen_sherlock(tmp_path)
-    s.tools.analyst = SimpleNamespace(assess=lambda image, claim: {"description": "A cup.", "claim": claim, "supported": False})
+
+    def weapon_only(det):
+        s.tools.call("look_at", {"camera": det.camera, "bbox": list(det.bbox)})
+        s.tools.call("snapshot", {"camera": det.camera, "subject": "weapon"})
+        return {"action": "alert", "claim": "a knife"}
+
+    s.director = SimpleNamespace(investigate=weapon_only)
+    det = _knife_det()
+    s._investigate(det)
+    report = s.log[-1]
+    assert report["action"] == "alert" and report["verified"]
+    assert report["evidence"] == ["original_frame", "weapon_crop", "face_crop"]
+    provenance = report["evidence_provenance"]["face_crop"]
+    assert provenance["relationship"] == "crop_of_source" and provenance["bbox"] == [int(v) for v in det.head]
+
+
+def test_unparseable_verifier_is_uncertain_and_logs(tmp_path):
+    s = _frozen_sherlock(tmp_path)
+    s.tools.analyst = SimpleNamespace(describe=lambda image, question: {"description": "A knife."})
     s.tools.verifier = SimpleNamespace(check=lambda *args: {
         "supported": False, "determinate": False, "reason": "Cannot tell"})
     s._investigate(_knife_det())

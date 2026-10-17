@@ -522,6 +522,8 @@ class Insta360Camera(Camera):
         d = super().describe()
         d.update(backend=self.backend,
                  ptz=self.transport.name if self._connected else f"offline: {self.ptz_error}")
+        if not self._connected:  # the board labels the hero tile with this, not "PTZ"
+            d["warning"] = "PTZ OFFLINE"
         return d
 
     def close(self) -> None:

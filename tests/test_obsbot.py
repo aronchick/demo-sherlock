@@ -5,10 +5,18 @@ import sys
 import types
 
 import pytest
-from sherlock.camera import ObsbotCamera, build_camera
+from sherlock.camera import ObsbotCamera, build_camera, obsbot
 from sherlock.camera.base import CameraError, resolve_source
 from sherlock.camera.insta360 import SET_CUR, FakeTransport, PTZRanges, Tuning
-from sherlock.camera.obsbot import OBSBOT_VID, ObsbotUSBTransport, tracking_payload
+from sherlock.camera.obsbot import (
+    OBSBOT_VID,
+    WARN_DRIFT,
+    WARN_TRACKING_ON,
+    ObsbotUSBTransport,
+    gesture_payload,
+    make_obsbot_transport,
+    tracking_payload,
+)
 
 FAST = {"home_after_s": 0.0, "settle_s": 0.0, "cmd_timeout_s": 1.0}
 
@@ -18,8 +26,9 @@ def fake_iokit(monkeypatch, present=(OBSBOT_VID, 0xFEF9), xu_ok=True):
     opened, sent = [], []
 
     def open_vc_interface(vid, pid, iface_num):
-        opened.append((vid, pid))
-        return types.SimpleNamespace(close=lambda: None) if (vid, pid) == present else None
+        key = (vid, pid) if iface_num == 0 else (vid, pid, iface_num)
+        opened.append(key)
+        return types.SimpleNamespace(close=lambda: None) if key == present else None
 
     def control_request(handle, bm, req, w_value, w_index, data=b"", read_length=0):
         sent.append((bm, req, w_value, w_index, bytes(data)))
@@ -31,35 +40,36 @@ def fake_iokit(monkeypatch, present=(OBSBOT_VID, 0xFEF9), xu_ok=True):
     return opened, sent
 
 
-def test_opens_the_obsbot_by_its_ids_and_switches_tracking_off_first(monkeypatch):
+def test_opens_the_obsbot_by_its_ids_and_switches_tracking_and_gestures_off_first(monkeypatch):
     opened, sent = fake_iokit(monkeypatch)
     tr = ObsbotUSBTransport()
     tr.open()
     assert opened == [(0x3564, 0xFEF8), (0x3564, 0xFEF9)] and tr.pid == 0xFEF9
-    bm, req, w_value, w_index, payload = sent[0]
-    assert (bm, req, w_value, w_index) == (0x21, SET_CUR, 0x06 << 8, 2 << 8), "XU 2, selector 6"
-    assert len(payload) == 60 and payload[:4] == bytes([0x16, 2, 0, 0]) and not any(payload[4:])
+    for (bm, req, w_value, w_index, payload), head in zip(sent[:2], ([0x16, 2, 0, 0], [0x20, 5, 0, 0]),
+                                                          strict=True):
+        assert (bm, req, w_value, w_index) == (0x21, SET_CUR, 0x06 << 8, 2 << 8), "XU 2, selector 6"
+        assert len(payload) == 60 and payload[:4] == bytes(head) and not any(payload[2:])
     tr.set_pantilt(36000, -7200)
     tr.set_zoom(50)
-    assert sent[1:] == [(0x21, SET_CUR, 0x0D00, 0x0100, struct.pack("<ii", 36000, -7200)),
+    assert sent[2:] == [(0x21, SET_CUR, 0x0D00, 0x0100, struct.pack("<ii", 36000, -7200)),
                         (0x21, SET_CUR, 0x0B00, 0x0100, struct.pack("<H", 50))]
 
 
-def test_tracking_is_switched_off_once_per_fresh_open(monkeypatch):
+def test_tracking_and_gestures_are_switched_off_once_per_fresh_open(monkeypatch):
     _, sent = fake_iokit(monkeypatch)
     tr = ObsbotUSBTransport()
     tr.open()
     tr.open()  # already open: no second write
     tr.close()
     tr.open()  # a replugged camera boots with tracking back on
-    assert [s[3] >> 8 for s in sent] == [2, 2]
+    assert [s[3] >> 8 for s in sent] == [2, 2, 2, 2]
 
 
 def test_a_refused_tracking_write_still_leaves_pan_tilt_zoom(monkeypatch):
     _, sent = fake_iokit(monkeypatch, xu_ok=False)
     tr = ObsbotUSBTransport()
     tr.open()
-    assert tr.tracking_error and "rejected" in tr.tracking_error
+    assert tr.assist_error == "could not switch AI tracking or gesture control off"
     tr.set_pantilt(0, 0)  # the standard UVC controls still go through
     assert sent[-1][3] == 0x0100
 
@@ -70,8 +80,69 @@ def test_no_obsbot_on_usb_names_the_ids_it_looked_for(monkeypatch):
         ObsbotUSBTransport().open()
 
 
-def test_tracking_payload_on_is_mode_two():
+def test_switch_on_payloads():
     assert tracking_payload(True)[:4] == bytes([0x16, 2, 2, 0])
+    assert gesture_payload(True)[:7] == bytes([0x20, 5, 1, 0, 0, 0, 0])
+
+
+def test_unit_ids_and_interface_come_from_the_environment(monkeypatch):
+    """The Tiny 2 Lite's ids are not published: the probe finds them, env sets them."""
+    opened, sent = fake_iokit(monkeypatch, present=(OBSBOT_VID, 0xFEF9, 1))
+    for key, value in (("OBSBOT_CT_UNIT", "3"), ("OBSBOT_XU_UNIT", "0x04"), ("OBSBOT_IFACE", "1")):
+        monkeypatch.setenv(key, value)
+    tr = make_obsbot_transport("0", Tuning.from_env("OBSBOT", obsbot.DEFAULTS))
+    tr.open()
+    tr.set_zoom(0)
+    assert opened[-1] == (OBSBOT_VID, 0xFEF9, 1)
+    assert [s[3] for s in sent] == [0x0401, 0x0401, 0x0301]
+
+
+def test_switch_off_is_repeated_once_the_stream_flows(monkeypatch):
+    _, sent = fake_iokit(monkeypatch)
+    cam = ObsbotCamera("hero", "synthetic", transport=ObsbotUSBTransport(), tuning=Tuning(**FAST))
+    assert [s[4][0] for s in sent if s[3] >> 8 == 2] == [0x16, 0x20, 0x16, 0x20]
+    assert "warning" not in cam.describe()
+    cam.close()
+
+
+def test_a_refused_switch_off_and_a_dead_gimbal_are_labelled(monkeypatch):
+    fake_iokit(monkeypatch, xu_ok=False)
+    cam = ObsbotCamera("hero", "synthetic", transport=ObsbotUSBTransport(), tuning=Tuning(**FAST))
+    d = cam.describe()
+    assert d["warning"] == WARN_TRACKING_ON and "gesture control" in d["tracking"]
+    cam.close()
+    dead = ObsbotCamera("hero", "synthetic", transport=FakeTransport(fail=True), tuning=Tuning(**FAST))
+    assert dead.describe()["warning"] == "PTZ OFFLINE"
+    dead.close()
+
+
+class DriftingGimbal(FakeTransport):
+    live = (0, 0, 0)
+
+    def live_ptz(self):
+        return self.live
+
+
+@pytest.mark.parametrize(("samples", "flagged"), [
+    ([(36000, 0, 0), (36000, 0, 0)], True),    # 10 deg off, twice: something else moved it
+    ([(36000, 0, 0)], False),                  # once is not enough
+    ([(36000, 0, 0), (18000, 0, 0)], False),   # closing in: a slow move, not tracking
+    ([(0, 0, 50), (0, 0, 50)], True),          # zoomed to 2.5x on its own (a gesture)
+    ([(3600, 0, 0), (3600, 0, 0)], False),     # 1 deg: within tolerance
+])
+def test_a_gimbal_moving_on_its_own_is_reported(monkeypatch, samples, flagged):
+    monkeypatch.setattr(obsbot, "DRIFT_GRACE_S", 0.0)
+    monkeypatch.setattr(obsbot, "DRIFT_EVERY_S", 0.0)
+    tr = DriftingGimbal(fake_ranges=PTZRanges(pan=(-504000, 504000), tilt=(-252000, 108000), zoom=(0, 100)))
+    cam = ObsbotCamera("hero", "synthetic", transport=tr, tuning=Tuning(**FAST))
+    for live in samples:
+        tr.live = live
+        cam.wide_frame()
+    assert (cam.describe().get("warning") == WARN_DRIFT) is flagged
+    tr.live = (0, 0, 0)
+    cam.wide_frame()
+    assert "warning" not in cam.describe(), "back on its aim: the label clears"
+    cam.close()
 
 
 def camera(zoom_range: tuple[int, int]) -> tuple[ObsbotCamera, FakeTransport]:
@@ -138,19 +209,23 @@ def _load_probe():
     return mod
 
 
-def test_probe_finds_obsbots_in_the_usb_tree_including_an_unknown_model():
+def test_probe_finds_obsbots_in_the_usb_tree_and_the_hub_above_one():
     probe = _load_probe()
-    devices = [{"idVendor": 0x2E1A, "idProduct": 0x4C04, "USB Product Name": "Insta360 Link 2"},
-               {"idVendor": 0x3564, "idProduct": 0xFEF8, "USB Product Name": "OBSBOT Tiny 2"},
-               {"idVendor": 0x3564, "idProduct": 0xFF00, "kUSBProductString": "OBSBOT Tiny SE"}]
-    assert probe.obsbots(devices) == [("OBSBOT Tiny 2", 0x3564, 0xFEF8),
-                                      ("OBSBOT Tiny SE", 0x3564, 0xFF00)]
+    tiny2 = {"idVendor": 0x3564, "idProduct": 0xFEF8, "USB Product Name": "OBSBOT Tiny 2"}
+    se = {"idVendor": 0x3564, "idProduct": 0xFF00, "kUSBProductString": "OBSBOT Tiny SE"}
+    hub = {"idVendor": 0x05E3, "idProduct": 0x0610, "bDeviceClass": 9, "USB Product Name": "USB2.1 Hub",
+           "IORegistryEntryChildren": [se]}
+    link = {"idVendor": 0x2E1A, "idProduct": 0x4C04, "USB Product Name": "Insta360 Link 2"}
+    tree = {"IORegistryEntryChildren": [{"IORegistryEntryName": "AppleT6050USBXHCI",
+                                         "IORegistryEntryChildren": [link, tiny2, hub]}]}
+    assert probe.obsbots(tree) == [("OBSBOT Tiny 2", 0x3564, 0xFEF8, ()),
+                                   ("OBSBOT Tiny SE", 0x3564, 0xFF00, ("USB2.1 Hub",))]
 
 
 def test_probe_control_path_only_reads(monkeypatch):
     probe = _load_probe()
     _, sent = fake_iokit(monkeypatch, present=(OBSBOT_VID, 0xFEF8))
     tr = probe.control_path((0xFEF8, 0xFEF9))
-    assert tr is not None and tr.pid == 0xFEF8
+    assert tr is not None and tr.pid == 0xFEF8 and (tr.iface, tr.ct_unit) == (0, 1)
     assert sent and all(bm == 0xA1 for bm, *_ in sent), "no SET before --wiggle"
     tr.close()

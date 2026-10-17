@@ -448,13 +448,13 @@ Tuning (env, defaults in `sherlock/sherlock/camera/insta360.py`):
 | `INSTA360_HOME_AFTER_S` | `6` | Return to the wide home pose after this many idle seconds (`0` = never) |
 | `INSTA360_PAN_SIGN` / `INSTA360_TILT_SIGN` / `INSTA360_UNITS_PER_DEG` | `1` / `1` / `3600` | Direction and units of the raw UVC values (arc-seconds per spec) |
 
-**OBSBOT Tiny 2 / Tiny 2 Lite / Tiny SE (draft, not yet run on a real camera).** The same control path with OBSBOT's USB ids (vendor `3564`; Tiny 2 `fef8`, Tiny 2 Lite `fef9`; the Tiny SE's id is unpublished, so pass the one the probe prints as `OBSBOT_PID`). It switches AI tracking off when it connects, since tracking would undo every `look_at`. Every `INSTA360_*` knob above exists as `OBSBOT_*`, defaulting to the Tiny 2 spec sheet (72.9° FOV; the Tiny SE is 71°). Close OBSBOT Center while Sherlock runs, since it can switch tracking back on, and pick the real camera by its full name, not `OBSBOT Virtual Camera`:
+**OBSBOT Tiny 2 / Tiny 2 Lite (4K) / Tiny SE (draft, not yet run on a real camera).** The same control path with OBSBOT's USB ids (vendor `3564`; Tiny 2 `fef8`, Tiny 2 Lite `fef9`; the Tiny SE's id is unpublished, so pass the one the probe prints as `OBSBOT_PID`). AI tracking and gesture control both steer the gimbal on their own and would undo every `look_at`, so it switches both off when it connects and again once the stream flows. It then checks the live gimbal position about once a second while idle. Every `INSTA360_*` knob above exists as `OBSBOT_*`, defaulting to the Tiny 2 spec sheet (72.9° FOV; the Tiny SE is 71°). The Tiny 2 Lite's interface and unit ids are unpublished: the probe finds them, and `OBSBOT_IFACE` / `OBSBOT_CT_UNIT` / `OBSBOT_XU_UNIT` override the Tiny 2's `0` / `1` / `2`. Plug it straight into the Mac, not a hub. Close OBSBOT Center while Sherlock runs, since it can switch tracking back on, and pick the real camera by its full name, not `OBSBOT Virtual Camera`:
 ```bash
-uv run scripts/obsbot_probe.py            # ids, ranges, AI mode, camera names
-uv run scripts/obsbot_probe.py --wiggle   # sign check and move timing
+uv run scripts/obsbot_probe.py            # ids, hub, units, ranges, names
+uv run scripts/obsbot_probe.py --wiggle   # tracking hold-still, signs, timing
 CAMERAS="hero:obsbot:name:OBSBOT Tiny 2,scout1:fake:name:MacBook Pro Camera"
 ```
-If its PTZ does not answer, crop in software on the same stream: `hero:fake:name:OBSBOT Tiny 2`.
+Nothing degrades silently. If the gimbal stops answering, the hero tile says **PTZ OFFLINE**. If the switch-off is refused, it says **TRACKING NOT SWITCHED OFF**. If the gimbal moves on its own, it says **GIMBAL MOVING ON ITS OWN**. Each also logs a warning and is returned to the Director by `describe()`. If its PTZ does not answer at all, crop in software on the same stream: `hero:fake:name:OBSBOT Tiny 2`.
 
 ## Fine-tune the Scout (about 20 minutes on this Mac)
 Stock YOLOv8n knows COCO's 80 classes. It has no badge class and it was never shown our room.

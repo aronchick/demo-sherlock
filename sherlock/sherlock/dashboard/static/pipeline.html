@@ -283,7 +283,10 @@ const FONT = { mono: '"IBM Plex Mono", ui-monospace, monospace', sans: '"Schibst
 // ---- config echoed from the server ------------------------------------------------
 const M = CFG.models || {}, short = m => (m || '').split('/').pop();
 const hosts = [...new Set(['director', 'analyst', 'verifier'].map(r => (M[r] || {}).where).filter(Boolean))];
-$('modeTag').textContent = CFG.mock ? 'mock, in-process on this laptop' : 'vLLM on ' + hosts.join(', ');
+// The serving program is what each endpoint said it is (CFG.servers), never assumed.
+const SV = CFG.servers || {}, served = s => s && s.name ? s.name : s && s.reachable ? 'unidentified server' : 'unreachable server';
+const runs = [...new Set(['director', 'analyst', 'verifier'].map(r => served(SV[r])))];
+$('modeTag').textContent = CFG.mock ? 'mock, in-process on this laptop' : runs.join(' + ') + ' on ' + hosts.join(', ');
 $('laptopTag').textContent = 'scout ' + short((M.scout || {}).model);
 for (const r of ['director', 'analyst', 'verifier']) {
   const el = $(r + 'Sub'), base = el.textContent;

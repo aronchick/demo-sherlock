@@ -12,6 +12,7 @@ from fastapi import APIRouter, FastAPI, HTTPException
 from fastapi.responses import FileResponse, HTMLResponse
 
 from ..config import Config
+from .model_servers import describe
 
 STATIC = pathlib.Path(__file__).parent / "static"
 FONTS = STATIC / "fonts"
@@ -34,6 +35,8 @@ def page_config() -> dict:
     models: the configured model per role and where its endpoint points. A
     localhost endpoint is reported as the laptop (an SSH tunnel to Brev also looks
     like that, so BREV_HOST names the box when a tunnel is in use).
+    servers: which program serves each role (vLLM, Ollama, mlx-vlm), asked of the
+    server itself; None in a mock run. The pages name a runtime only from this.
     """
     cfg = Config()
     brev = os.environ.get("BREV_HOST", "").strip()
@@ -55,6 +58,7 @@ def page_config() -> dict:
         "expanso": os.environ.get("SHERLOCK_EXPANSO") == "connected",
         "cameras": [{"name": c.name, "backend": c.backend} for c in cfg.cameras],
         "models": models,
+        "servers": describe(cfg),
     }
 
 

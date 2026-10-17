@@ -60,7 +60,7 @@ def test_board_is_served_at_log_and_later_routes_still_win():
             assert client.get(f"/{asset}").status_code == 200
         assert client.get("/").json() == {"page": "flow"}  # beats the static index.html
         assert client.get("/mode").json() == {"mock": True, "director_model": None,
-                                               "vlm_model": None, "scout_ms": None}
+                                               "vlm_model": None, "scout_ms": None, "servers": None}
         assert client.get("/stream/wide/nope").status_code == 404
         assert client.get("/nope.js").status_code == 404
 

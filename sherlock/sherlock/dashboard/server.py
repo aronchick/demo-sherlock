@@ -17,6 +17,7 @@ from fastapi.staticfiles import StaticFiles
 
 from ..events import BUS
 from ..orchestrator import Sherlock
+from .model_servers import describe
 from .numbers import read_numbers
 
 STATIC = pathlib.Path(__file__).parent / "static"
@@ -42,12 +43,14 @@ def make_app(sherlock: Sherlock) -> FastAPI:
 
     @app.get("/mode")
     def mode():
-        """What the board labels itself with: the mock runtime or the live models."""
+        """What the board labels itself with: the mock runtime or the live models,
+        and which program serves them (asked of each server, never assumed)."""
         cfg = sherlock.cfg
         return {"mock": cfg.mock,
                 "director_model": None if cfg.mock else cfg.director.model,
                 "vlm_model": None if cfg.mock else cfg.analyst.model,
-                "scout_ms": BUS.snapshot().get("scout_ms")}
+                "scout_ms": BUS.snapshot().get("scout_ms"),
+                "servers": describe(cfg)}
 
     @app.get("/events")
     async def events():

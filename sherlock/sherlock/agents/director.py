@@ -26,9 +26,10 @@ class Director:
         self.model = ep.model
         self.tools = tools
         self.max_calls = max_tool_calls
-        self.thinking = (_env("DIRECTOR_THINKING", "0") == "1") if thinking is None else bool(thinking)
+        if thinking is None:
+            thinking = _env("DIRECTOR_THINKING", "0") == "1"
         # Nemotron 3.5 Lightning: thinking on by default; off keeps the tool loop fast.
-        self.extra = {"chat_template_kwargs": {"enable_thinking": self.thinking}}
+        self.extra = {"chat_template_kwargs": {"enable_thinking": bool(thinking)}}
 
     def investigate(self, detection) -> dict:
         BUS.bump("investigations")

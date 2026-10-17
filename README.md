@@ -109,6 +109,14 @@ monitors those pipelines
     the investigation to `scout1`. `--mock --synthetic` runs the whole loop
     with no models and no cameras.
 
+### Recording briefing
+
+Open `/slides` in a separate localhost tab for four slides: the problem, the
+YOLO → Brev → camera loop, human review and evidence, and projected impact.
+Use arrow keys, Space, or Back/Next. Each slide has a shareable hash;
+`/slides#impact` opens the recap. Board, Phone and Evidence links reuse named
+tabs. The final slide links to the public GitHub repository.
+
 ### Responder phone and signed case files
 
 The 16:9 board opens a custody summary modal when a saved picture is clicked.

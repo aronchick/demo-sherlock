@@ -62,8 +62,10 @@ PROMPT = (
     "Open and look at every image file in this directory ({files}), one at a time. For each, "
     "return a bounding box for every visible instance of: person (the whole visible body), "
     "weapon (a knife, scissors or bat), fedora, cap (a baseball cap, worn or held), coke (a soda "
-    "can). box_2d is [ymin, xmin, ymax, xmax] normalized to 0-1000. Include only objects that are "
-    "actually visible; an image may have none of the props. Return one entry per file."
+    "can). Box a held prop tightly around the object alone, tip to end of handle, never the hand "
+    "or fingers holding it. box_2d is [ymin, xmin, ymax, xmax] normalized to 0-1000. Include only "
+    "objects that are actually visible; an image may have none of the props. Return one entry per "
+    "file."
 )
 
 

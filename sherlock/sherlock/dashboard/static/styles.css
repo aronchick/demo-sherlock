@@ -263,18 +263,28 @@ body[data-mode="live"] .mode b { color: var(--ok); }
    The slot is whatever height the incident leaves; when the card would not fit, it
    sheds rank-3 rows, then rank-2 rows, so it never overlaps the incident. The
    thresholds are the card's heights: 248px full, 189px without rank 3, 140px minimal. */
-.m-slot { display: grid; align-content: end; min-height: 0; container: measured / size; }
-.measured { display: grid; gap: 6px; padding: 10px 14px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); }
+.m-slot { display: grid; grid-template-columns: minmax(0, 1fr); align-content: end; min-width: 0; min-height: 0;
+  container: measured / size; }
+.measured { display: grid; grid-template-columns: minmax(0, 1fr); min-width: 0; gap: 6px; padding: 10px 14px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); }
 .m-head { display: flex; align-items: baseline; gap: 12px; white-space: nowrap; }
 .m-head h3 { font-size: 13px; font-weight: 600; letter-spacing: .08em; color: var(--text-dim); }
 .m-head span { margin-left: auto; min-width: 0; color: var(--text-dim); font-size: 13px; overflow: hidden; text-overflow: ellipsis; }
-.measured dl { display: grid; margin: 0; font-size: 13px; line-height: 1.35; }
-.measured dt { margin-top: 4px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.measured dl { display: grid; grid-template-columns: minmax(0, 1fr); margin: 0; font-size: 13px; line-height: 1.35; }
+/* Name, then detail, then the runtime it was measured on: only the detail and the
+   row labels give way; the runtime and the values keep their width unless huge. */
+.measured dt { display: flex; margin-top: 4px; white-space: nowrap; }
+.measured dt b { flex: none; font-weight: 600; }
+.measured dt span { flex: 0 1 auto; min-width: 0; font-weight: 600; white-space: pre; overflow: hidden; text-overflow: ellipsis; }
+.measured dt small { flex: none; max-width: 70%; margin-left: auto; padding-left: 10px; color: var(--text-dim); font-size: 13px;
+  overflow: hidden; text-overflow: ellipsis; }
 .measured dt:first-child { margin-top: 0; }
 .measured dd { display: flex; gap: 10px; margin: 0; white-space: nowrap; }
-.measured dd span { color: var(--text-dim); }
+.measured dd span { flex: 0 1 auto; min-width: 0; color: var(--text-dim); overflow: hidden; text-overflow: ellipsis; }
 .measured dd i { font-style: normal; }
-.measured dd output { margin-left: auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.measured dd output { flex: none; max-width: 80%; margin-left: auto; overflow: hidden; text-overflow: ellipsis; }
+@container measured (max-width: 379px) {
+  .measured dd i { display: none; }  /* the → in the value still reads before → after */
+}
 @container measured (max-height: 250px) {
   .measured { gap: 4px; padding: 7px 12px; }
   .measured dl { line-height: 1.25; }

@@ -228,6 +228,23 @@ def test_ablation_requires_live_mode_and_labels_reference(tmp_path):
     assert numbers.ablation_result(summary) is None
 
 
+def test_results_say_where_they_were_measured():
+    ollama = {"name": "Ollama", "version": "0.40.5", "host": "laptop", "label": "Ollama"}
+    bare = {key: value for key, value in ablation().items() if key not in ("model_server", "runtime")}
+    assert numbers.ablation_result({**bare, "model_server": ollama})["measured_on"] == "local · Ollama"
+    assert numbers.ablation_result(ablation())["measured_on"] == "Ollama"  # a label, no host
+    assert numbers.ablation_result({**bare, "runtime": "local_ollama"})["measured_on"] == "local_ollama"
+    assert numbers.ablation_result(bare)["measured_on"] is None
+    summary = {"execution_mode": "live_endpoint", "model_server": ollama, "results": [bare]}
+    assert numbers.ablation_result(summary)["measured_on"] == "local · Ollama"  # inherited by the row
+    vllm = {"name": "vLLM", "version": "0.28.0", "host": "brev-l40s", "label": "vLLM"}
+    assert numbers.director_result({**benchmark(), "model_server": vllm})["measured_on"] == "brev-l40s · vLLM"
+    assert numbers.director_result({**benchmark(), "environment": "brev-l40s"})["measured_on"] == "brev-l40s"
+    assert numbers.director_result({**benchmark(), "environment": "unspecified"})["measured_on"] is None
+    assert numbers.director_result(benchmark())["measured_on"] is None
+    assert numbers.scout_result({**scout(), "environment": "local", "device": "mps"})["measured_on"] == "local · mps"
+
+
 def test_scout_provenance_split_and_matched_ground_truth():
     data = scout()
     result = numbers.scout_result(data)

@@ -22,7 +22,7 @@ A cheap detector just flagged something new. The event's "threat" field decides 
   Skip the two face steps if head_bbox is null.
 - "unknown": look_at -> snapshot(subject="object") -> report(action="log").
 Snapshot stores evidence. Independent Analyst and Verifier checks run after acquisition finishes;
-do not call verify or decide their outcome. Never ask about, describe or identify a person. The face crop is evidence for a human only.
+do not call verify or decide their outcome. Never ask about, describe or identify a person. The face crop is retained evidence and included in the later scene/person context.
 If a tool returns an error, do not repeat the identical call:
 try list_cameras and use a different camera, or adjust the arguments.
 Be decisive. Use at most {max_calls} tool calls. Always finish with report."""

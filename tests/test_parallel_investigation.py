@@ -106,3 +106,33 @@ def test_simulated_disagreement_is_once_and_mock_only(tmp_path):
     assert s.log[-1]["action"] == "alert"
     s.cfg.mock = False
     assert client.post("/demo/disagree/1").status_code == 409
+
+
+def test_acquisition_failure_keeps_source_scene_and_face(tmp_path):
+    s = _frozen_sherlock(tmp_path)
+
+    def broken(det):
+        raise RuntimeError("camera controller failed")
+
+    s.director = SimpleNamespace(investigate=broken)
+    s._investigate(_knife_det())
+    report = s.log[-1]
+    assert report["action"] == "log" and not report["verified"]
+    assert report["comparison"]["status"] == "uncertain"
+    assert set(report["evidence"]) == {"original_frame", "face_crop"}
+    assert report["evidence_provenance"]["face_crop"]["relationship"] == "crop_of_source"
+    record = s.incidents.read(report["incident"])
+    assert record["notification"]["status"] == "not_sent"
+    assert any(e["stage"] == "comparison" for e in record["custody"])
+
+
+def test_unparseable_verifier_is_uncertain_not_agreement(tmp_path):
+    s = _frozen_sherlock(tmp_path)
+    s.tools.analyst = SimpleNamespace(describe=lambda *args: {"description": "A cup."})
+    s.tools.verifier = SimpleNamespace(check=lambda *args: {
+        "supported": False, "determinate": False, "reason": "Cannot tell"})
+    s._investigate(_knife_det())
+    report = s.log[-1]
+    assert report["comparison"]["status"] == "uncertain"
+    assert report["comparison"]["verifier_supports"] is None
+    assert report["action"] == "log"

@@ -54,7 +54,7 @@ TOOL_SCHEMAS = [
         "name": "snapshot",
         "description": "Capture what the camera sees right now and store it as evidence. subject=weapon or "
                        "object stores the model-safe crop for the parallel checks after acquisition. subject=face only "
-                       "stores the crop: it is never sent to any model. Never snapshot a benign object.",
+                       "stores person context without invoking a model during acquisition. Never snapshot a benign object.",
         "parameters": {"type": "object", "properties": {
             "camera": {"type": "string"},
             "subject": {"type": "string", "enum": list(SUBJECTS),
@@ -143,7 +143,7 @@ def _crop(img: np.ndarray, box: tuple, margin: float = 0.3, floor: float = 0.0) 
 # The chain the dashboard draws, in plain language. A call's step comes from what
 # it does, not from how many calls came before it, so a retry keeps its number.
 _SAYS = {1: "zooming {camera} to the {subject}", 2: "capturing the {subject} crop for parallel checks",
-         3: "zooming {camera} to the head", 4: "storing the review crop · no model",
+         3: "zooming {camera} to the head", 4: "storing the person-context crop",
          5: "verifying “{claim}”", 6: "reporting · {action}"}
 
 
@@ -375,12 +375,12 @@ class ToolBox:
             "relationship": "subsequent_capture", "bbox": list(aim) if aim else None}
         if self.on_capture:
             self.on_capture()
-        if subject == "face":
+        if subject == "face" and self.defer_analysis:
             _preview("face", img, "evidence_preview", incident=self.incident["id"])
         self._shots += 1
         self._versions[eid] = self._shots  # a new crop invalidates any verdict on the old one
         if subject == "face":
-            # Evidence only. No model ever sees this crop: no recognition, no description.
+            # Acquisition only. The parallel investigation later includes it in labeled scene context.
             return {"evidence_id": eid, "stored": True, "analyzed": False}
         if self.defer_analysis:
             return {"evidence_id": eid, "stored": True, "description": "", "analysis": "pending"}

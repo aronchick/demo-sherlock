@@ -19,6 +19,7 @@ INSTA360_PAN_SIGN=-1 / INSTA360_TILT_SIGN=-1.
 from __future__ import annotations
 
 import argparse
+import importlib
 import json
 import re
 import shutil
@@ -28,26 +29,12 @@ import sys
 import time
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent.parent
-sys.path.insert(0, str(ROOT / "sherlock"))
-
 import cv2
-from sherlock.camera.insta360 import (
-    CT_PANTILT_ABSOLUTE,
-    CT_ZOOM_ABSOLUTE,
-    GET_CUR,
-    GET_DEF,
-    GET_LEN,
-    GET_MAX,
-    GET_MIN,
-    GET_RES,
-    INSTA360_VID,
-    Insta360Camera,
-    MacUSBTransport,
-    TransportError,
-    Tuning,
-    V4L2Transport,
-)
+
+ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(ROOT / "sherlock"))  # sherlock/ is not an installed package
+ins = importlib.import_module("sherlock.camera.insta360")
+
 
 AI_MODES = {0x00: "normal", 0x01: "TRACKING", 0x04: "whiteboard", 0x05: "overhead",
             0x06: "deskview", 0xFF: "switching"}
@@ -57,7 +44,7 @@ def usb_presence() -> None:
     print("== USB")
     if sys.platform != "darwin":
         if shutil.which("lsusb"):
-            out = subprocess.run(["lsusb", "-d", f"{INSTA360_VID:04x}:"], check=False,
+            out = subprocess.run(["lsusb", "-d", f"{ins.INSTA360_VID:04x}:"], check=False,
                                  capture_output=True, text=True).stdout.strip()
             print(out or "  no Insta360 device on USB")
         return
@@ -75,7 +62,7 @@ def usb_presence() -> None:
             for it in items:
                 flat = {k: v for k, v in it.items() if k != "_items"}
                 text = json.dumps(flat).lower()
-                if "insta360" in text or f"0x{INSTA360_VID:04x}" in text:
+                if "insta360" in text or f"0x{ins.INSTA360_VID:04x}" in text:
                     found = True
                     hub = [p for p in parents[1:] if "hub" in p.lower()]
                     print(f"  found: {flat}")
@@ -90,21 +77,21 @@ def usb_presence() -> None:
     print("  no Insta360 device on USB. Plug the Link 2 straight into the Mac (not the hub).")
 
 
-def macos_usb_direct() -> MacUSBTransport | None:
+def macos_usb_direct() -> ins.MacUSBTransport | None:
     print("== Control path 1: USB-direct UVC via link-ctl (IOKit)")
-    tr = MacUSBTransport()
+    tr = ins.MacUSBTransport()
     try:
         tr.open()
-    except TransportError as e:
+    except ins.TransportError as e:
         print(f"  NO: {e}")
         return None
-    print(f"  opened {INSTA360_VID:04x}:{tr.pid:04x} video-control interface")
-    for label, sel, n in (("pan/tilt", CT_PANTILT_ABSOLUTE, 8), ("zoom", CT_ZOOM_ABSOLUTE, 2)):
-        for req_name, req in (("MIN", GET_MIN), ("MAX", GET_MAX), ("RES", GET_RES),
-                              ("DEF", GET_DEF), ("CUR", GET_CUR)):
+    print(f"  opened {ins.INSTA360_VID:04x}:{tr.pid:04x} video-control interface")
+    for label, sel, n in (("pan/tilt", ins.CT_PANTILT_ABSOLUTE, 8), ("zoom", ins.CT_ZOOM_ABSOLUTE, 2)):
+        for req_name, req in (("MIN", ins.GET_MIN), ("MAX", ins.GET_MAX), ("RES", ins.GET_RES),
+                              ("DEF", ins.GET_DEF), ("CUR", ins.GET_CUR)):
             try:
                 raw = tr.request(req, sel, n)
-            except TransportError as e:
+            except ins.TransportError as e:
                 print(f"  {label:8} {req_name}: unreadable ({e})")
                 continue
             if n == 8:
@@ -114,12 +101,12 @@ def macos_usb_direct() -> MacUSBTransport | None:
             else:
                 print(f"  {label:8} {req_name}: {struct.unpack('<H', raw)[0]}")
     try:  # AI mode lives in Insta360 extension unit 9, selector 0x02 (61 bytes on Link 2)
-        (length,) = struct.unpack("<H", tr.request(GET_LEN, 0x02, 2, unit=9))
-        mode = tr.request(GET_CUR, 0x02, length, unit=9)[0]
+        (length,) = struct.unpack("<H", tr.request(ins.GET_LEN, 0x02, 2, unit=9))
+        mode = tr.request(ins.GET_CUR, 0x02, length, unit=9)[0]
         name = AI_MODES.get(mode, f"0x{mode:02x}")
         print(f"  AI mode: {name}" + ("  <- turn tracking OFF in Link Controller, it will fight"
                                       " look_at" if mode == 0x01 else ""))
-    except TransportError as e:
+    except ins.TransportError as e:
         print(f"  AI mode: unreadable ({e})")
     return tr
 
@@ -133,12 +120,12 @@ def link_controller_app() -> None:
           " absolute pan/tilt, so it cannot aim at a bbox")
 
 
-def linux_v4l2(device: str) -> V4L2Transport | None:
+def linux_v4l2(device: str) -> ins.V4L2Transport | None:
     print(f"== Control path 3: v4l2 on {device}")
-    tr = V4L2Transport(device)
+    tr = ins.V4L2Transport(device)
     try:
         tr.open()
-    except TransportError as e:
+    except ins.TransportError as e:
         print(f"  NO: {e}")
         return None
     for name in ("pan_absolute", "tilt_absolute", "zoom_absolute"):
@@ -177,9 +164,9 @@ def video_indexes() -> int | None:
 
 def wiggle(index: int) -> None:
     print(f"== Wiggle test on index {index}")
-    tuning = Tuning.from_env()
+    tuning = ins.Tuning.from_env()
     tuning.home_after_s = 0
-    cam = Insta360Camera("hero", str(index), tuning=tuning)
+    cam = ins.Insta360Camera("hero", str(index), tuning=tuning)
     print("  ", cam.describe())
     out = ROOT / "snapshots"
     out.mkdir(exist_ok=True)

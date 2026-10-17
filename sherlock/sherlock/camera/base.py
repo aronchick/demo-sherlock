@@ -41,6 +41,13 @@ class Camera(ABC):
              zoom: float | None = None) -> Pose:
         ...
 
+    def look_at(self, bbox: tuple[int, int, int, int]) -> Pose:
+        """Aim at a box seen in this camera's wide frame. Backends with real optics
+        override this because the bbox-to-angle mapping depends on the lens."""
+        h, w = self.wide_frame().shape[:2]
+        pose = FakePTZCamera.bbox_to_pose(bbox, (w, h))
+        return self.move(pose.pan, pose.tilt, pose.zoom)
+
     def _check(self) -> None:
         if self.covered:
             raise CameraError(f"{self.name}: no usable image (lens covered or stream dead)")
@@ -59,6 +66,7 @@ class _FrameSource:
         if not self.cap.isOpened():
             raise CameraError(f"cannot open video source {source!r}")
         self.frame: np.ndarray | None = None
+        self.stamp = 0.0  # time.monotonic() when self.frame arrived
         self.lock = threading.Lock()
         self.running = True
         threading.Thread(target=self._loop, daemon=True).start()
@@ -72,12 +80,14 @@ class _FrameSource:
                 time.sleep(0.01)
                 continue
             with self.lock:
-                self.frame = f
+                self.frame, self.stamp = f, time.monotonic()
 
-    def read(self) -> np.ndarray:
+    def read(self, newer_than: float = 0.0) -> np.ndarray:
+        """Latest frame; with `newer_than`, wait for one captured after that
+        monotonic time (a PTZ camera must not hand over a mid-slew frame)."""
         for _ in range(100):
             with self.lock:
-                if self.frame is not None:
+                if self.frame is not None and self.stamp >= newer_than:
                     return self.frame.copy()
             time.sleep(0.02)
         raise CameraError("no frames from source")
@@ -90,7 +100,7 @@ class SyntheticSource:
     def __init__(self, w: int = 1280, h: int = 720):
         self.w, self.h, self.t0 = w, h, time.time()
 
-    def read(self) -> np.ndarray:
+    def read(self, newer_than: float = 0.0) -> np.ndarray:  # synthetic frames are always fresh
         t = time.time() - self.t0
         f = np.full((self.h, self.w, 3), 40, np.uint8)
         cv2.rectangle(f, (0, int(self.h * 0.7)), (self.w, self.h), (70, 70, 70), -1)

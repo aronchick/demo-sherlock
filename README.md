@@ -18,7 +18,11 @@ pip install -r requirements.txt            # ultralytics optional for this mode
 CAMERAS=hero:fake:synthetic,scout1:fake:synthetic python run.py --mock --synthetic
 open http://localhost:8000
 ```
-Rule-based director, mock VLMs, generated video. Press **Break the next tool call** and **Cover hero lens** on the dashboard to see recovery.
+Rule-based director, mock VLMs, a scripted room on a 26 s loop: someone holds up a cup (ignored, 0 VLM calls),
+then someone holds up a knife (look_at → snapshot → look_at head → face snapshot → verify → alert with both crops).
+Press **Break the next tool call**, **Corrupt next tool args** or **Cover hero lens** on the dashboard to see recovery.
+Evidence lands in `snapshots/<incident>/` (`EVIDENCE_DIR` overrides). The face crop is stored for a human only:
+no model ever sees it, and nothing identifies or describes the person.
 
 ## Run on a Mac with real models
 ```bash
@@ -47,9 +51,10 @@ If the endpoint is unreachable the Director automatically drops to the rule-base
 sherlock/camera/     Camera interface, FakePTZ (crop/zoom), ObsbotCamera (UVC), SyntheticSource
 sherlock/agents/     scout.py (YOLO + motion fallback + dedupe/dwell), director.py (tool loop + RuleDirector), vision.py (Analyst, Verifier, mocks)
 sherlock/tools.py    Tool schemas + dispatcher + failure injection
-sherlock/orchestrator.py   Scout → investigate → verify loop, stats
+sherlock/orchestrator.py   Scout → investigate → verify loop, per-incident evidence, stats
+sherlock/scene.py    Scripted synthetic room (cup, then knife) for --synthetic
 sherlock/dashboard/  FastAPI SSE + MJPEG + the judge-facing UI
-tests/               End-to-end mock run incl. tool failure recovery and covered-lens fallback
+tests/               End-to-end mock run: alert chain, ignore path (zero VLM calls), evidence, recovery
 ```
 
 ## Development
@@ -61,7 +66,9 @@ uvx ruff@0.17.1 check .
 
 ## Demo script (3 min)
 1. Dashboard up, wide view showing the room, counter climbing with zero VLM calls.
-2. Judge holds up an object. Scout flags it, camera whirs over and zooms, Analyst reads the label, Verifier confirms. Point at latency per stage.
+2. Judge holds up a cup: Scout tags it benign, Director ignores it, 0 VLM calls. Judge holds up a knife (or scissors):
+   camera zooms on the weapon, Analyst describes it, camera zooms on the head for a face crop (never analyzed),
+   Verifier checks the weapon crop, alert with both crops. Point at latency per stage.
 3. Press **Break the next tool call** → Director gets an error, retries differently, still reports.
 4. Cover the hero lens → Director lists cameras, finishes on scout1.
 5. Close on the ratio: frames handled by a 10 ms model vs. VLM calls actually made.

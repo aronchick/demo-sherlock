@@ -5,8 +5,6 @@ import queue
 from types import SimpleNamespace
 
 import numpy as np
-from test_pipeline_mock import is_alert, wait_for
-
 from sherlock.agents.director import Director
 from sherlock.agents.scout import Detection, Scout, head_region
 from sherlock.agents.vision import Analyst, MockAnalyst, MockVerifier, Verifier
@@ -16,6 +14,7 @@ from sherlock.events import BUS
 from sherlock.orchestrator import Sherlock
 from sherlock.scene import ScriptedScene
 from sherlock.tools import TOOL_SCHEMAS, ToolBox
+from test_pipeline_mock import is_alert, wait_for
 
 PERSON, KNIFE, CUP = (500, 230, 700, 646), (672, 254, 696, 404), (100, 300, 140, 360)
 

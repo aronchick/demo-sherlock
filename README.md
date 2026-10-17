@@ -484,8 +484,9 @@ the exact images and labels. Match those plus confidence/IoU/image size before
 comparing separate runs. The current class list is person, weapon, badge, bottle,
 fedora and cap. Stock YOLOv8n has no badge, fedora or cap class: it scores zero
 recall on their annotated boxes. Zero-support rows in the COCO-only report
-are not measurements of those classes. This COCO subset is not yet confirmed
-as the fine-tune owner's held-out split.
+are not measurements of those classes. This COCO subset is not the fine-tune's held-out room set. No reviewed room
+test data existed at measurement time. Once it is built, the paired evaluator
+will score stock and fine-tuned models on that same room test split.
 
 The [measured local MPS confidence sweep](results/scout_confidence_sweep_local_mps.json)
 uses the same 107 images, labels, weights, 640-pixel input and IoU 0.5. Its 0.35

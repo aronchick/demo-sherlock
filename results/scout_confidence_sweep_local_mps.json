@@ -497,7 +497,7 @@
     }
   ],
   "limitations": [
-    "Same standalone licensed COCO val subset as baseline; not confirmed as fine-tune held-out data.",
+    "Same standalone licensed COCO val2017 subset as baseline (107 images, local MPS); not the fine-tune held-out room set.",
     "Per-image box metrics, not temporal live-event recall or measured downstream Verifier load.",
     "Weapon means knife, scissors and baseball bat; no firearm evaluation.",
     "No badge/fedora/cap ground truth in this subset; zero-support rows do not measure recall."

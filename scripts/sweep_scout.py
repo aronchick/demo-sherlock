@@ -60,7 +60,7 @@ def main(argv=None):
         "packages": {name: importlib.metadata.version(name) for name in ("torch", "ultralytics")},
         "curve": curve,
         "limitations": [
-            "Same standalone licensed COCO val subset as baseline; not confirmed as fine-tune held-out data.",
+            "Same standalone licensed COCO val subset as baseline; not the fine-tune held-out room set.",
             "Per-image box metrics, not temporal live-event recall or measured downstream Verifier load.",
             "Weapon means knife, scissors and baseball bat; no firearm evaluation.",
             "No badge/fedora/cap ground truth in this subset; zero-support rows do not measure recall.",

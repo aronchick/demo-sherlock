@@ -10,11 +10,18 @@ DIRECTOR=${DIRECTOR:-nvidia/NVIDIA-Nemotron-3.5-Lightning-30B-A3B-NVFP4}
 VLM=${VLM:-HuggingFaceTB/SmolVLM-Instruct}
 TOOL_PARSER=${TOOL_PARSER:-qwen3_coder}
 REASONING_PARSER=${REASONING_PARSER:-nemotron_v3}
+PREFIX_CACHING=${PREFIX_CACHING:-1}
+if [[ "$PREFIX_CACHING" == "1" ]]; then
+  PREFIX_CACHE_FLAGS=(--enable-prefix-caching --prefix-caching-hash-algo sha256)
+else
+  PREFIX_CACHE_FLAGS=(--no-enable-prefix-caching)
+fi
 
 docker run -d --name director --gpus all --ipc=host -p 8001:8000 \
   -v ~/.cache/huggingface:/root/.cache/huggingface "$IMG" \
   --model "$DIRECTOR" --served-model-name "$DIRECTOR" director \
   --max-model-len 32768 --gpu-memory-utilization 0.60 --max-num-seqs 16 \
+  "${PREFIX_CACHE_FLAGS[@]}" \
   --enable-auto-tool-choice --tool-call-parser "$TOOL_PARSER" --reasoning-parser "$REASONING_PARSER"
 
 docker run -d --name vlm --gpus all --ipc=host -p 8002:8000 \

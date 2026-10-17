@@ -2,10 +2,14 @@
 with software crop/zoom and a motorized OBSBOT are interchangeable."""
 from __future__ import annotations
 
+import json
+import subprocess
+import sys
 import threading
 import time
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
+from pathlib import Path
 
 import cv2
 import numpy as np
@@ -57,10 +61,48 @@ class Camera(ABC):
                 "zoom": self.pose.zoom, "covered": self.covered}
 
 
+NAME_PREFIX = "name:"
+
+
+def list_video_devices() -> list[str]:
+    """Camera names in OpenCV index order. On macOS OpenCV sorts AVFoundation
+    devices by uniqueID (cap_avfoundation_mac.mm), which is not the order
+    ffmpeg or Photo Booth show, so indexes must be derived the same way."""
+    if sys.platform == "darwin":
+        r = subprocess.run(["system_profiler", "-json", "SPCameraDataType"], check=False,
+                           capture_output=True, text=True, timeout=10)
+        if r.returncode != 0:
+            raise CameraError(f"system_profiler failed: {r.stderr.strip()}")
+        cams = json.loads(r.stdout or "{}").get("SPCameraDataType", [])
+        return [c.get("_name", "?") for c in sorted(cams, key=lambda c: c.get("spcamera_unique-id", ""))]
+    if sys.platform.startswith("linux"):
+        devs = sorted(Path("/sys/class/video4linux").glob("video*"), key=lambda d: int(d.name[5:]))
+        return [(d / "name").read_text().strip() for d in devs]
+    raise CameraError(f"name-based camera selection is not supported on {sys.platform}")
+
+
+def resolve_source(source: str, devices: list[str] | None = None) -> str:
+    """`name:<camera name>` -> OpenCV index as a string; anything else passes through.
+    Indexes reshuffle whenever a camera is plugged in, so names are the stable way
+    to pick one. Exact (case-insensitive) match wins, else a unique substring."""
+    if not source.startswith(NAME_PREFIX):
+        return source
+    want = source[len(NAME_PREFIX):].strip().lower()
+    devices = list_video_devices() if devices is None else devices
+    names = [d.lower() for d in devices]
+    hits = [i for i, n in enumerate(names) if n == want] or \
+           [i for i, n in enumerate(names) if want in n]
+    if len(hits) != 1:
+        what = "no camera" if not hits else "several cameras"
+        raise CameraError(f"{what} named {source[len(NAME_PREFIX):]!r}; available: {devices}")
+    return str(hits[0])
+
+
 class _FrameSource:
     """Background reader so slow consumers never see a stale buffer."""
 
     def __init__(self, source: str):
+        source = resolve_source(source)
         src = int(source) if source.isdigit() else source
         self.cap = cv2.VideoCapture(src)
         if not self.cap.isOpened():

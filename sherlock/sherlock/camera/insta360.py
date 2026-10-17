@@ -36,6 +36,7 @@ from collections.abc import Callable
 from dataclasses import dataclass, field, replace
 from typing import TypeVar
 
+import cv2
 import numpy as np
 
 from .base import Camera, CameraError, Pose, SyntheticSource, _FrameSource
@@ -369,14 +370,18 @@ def make_transport(source: str, tuning: Tuning) -> PTZTransport:
 class Insta360Camera(Camera):
     """Real optics: the stream already is the aimed, zoomed view, so snapshot()
     never crops. wide_frame() is the live view at whatever pose the gimbal holds;
-    it returns home on its own after `home_after_s` idle seconds."""
+    it returns home on its own after `home_after_s` idle seconds.
+
+    With a synthetic source there is no gimbal, so the optics are simulated by
+    cropping the home view where the pose points (`simulate_optics`)."""
 
     def __init__(self, name: str, source: str | None, transport: PTZTransport | None = None,
-                 tuning: Tuning | None = None, frames=None):
+                 tuning: Tuning | None = None, frames=None, simulate_optics: bool | None = None):
         self.name = name
         self.tuning = tuning or Tuning.from_env()
         synthetic = source in (None, "synthetic")
         self.src = frames or (SyntheticSource() if synthetic else _FrameSource(str(source)))
+        self.simulate_optics = synthetic if simulate_optics is None else simulate_optics
         if transport is None:
             transport = FakeTransport() if synthetic else make_transport(str(source), self.tuning)
         self.transport = transport
@@ -403,7 +408,7 @@ class Insta360Camera(Camera):
     def wide_frame(self) -> np.ndarray:
         self._check()
         pose = replace(self.pose)  # no lock: a hung gimbal must not stall the Scout
-        f = self.src.read()
+        f = self._read(pose)
         self._view_pose, self._view_wh = pose, (f.shape[1], f.shape[0])
         return f
 
@@ -412,7 +417,7 @@ class Insta360Camera(Camera):
         wait = self._settle_until - time.monotonic()
         if wait > 0:
             time.sleep(wait)
-        f = self.src.read(newer_than=self._settle_until)
+        f = self._read(replace(self.pose), newer_than=self._settle_until)
         self._arm_home()
         return f
 
@@ -448,6 +453,24 @@ class Insta360Camera(Camera):
         self.transport.close()
 
     # --- internals -----------------------------------------------------------------
+    def _read(self, pose: Pose, newer_than: float = 0.0) -> np.ndarray:
+        f = self.src.read(newer_than=newer_than)
+        return self._optics(f, pose) if self.simulate_optics else f
+
+    def _optics(self, f: np.ndarray, pose: Pose) -> np.ndarray:
+        """Where `pose` looks inside the home view, cropped and scaled back up.
+        Inverse of aim_at from the home pose, so look_at lands on the box."""
+        h, w = f.shape[:2]
+        half_w = math.tan(math.radians(self.tuning.hfov_deg) / 2)
+        p = math.radians(pose.pan - self.home.pan)
+        t = math.radians(pose.tilt - self.home.tilt)
+        cx = w / 2 + math.tan(p) / half_w * (w / 2)
+        cy = h / 2 - math.tan(t) / math.cos(p) / (half_w * h / w) * (h / 2)
+        cw, ch = int(w / pose.zoom), int(h / pose.zoom)
+        x0 = int(min(max(cx - cw / 2, 0), w - cw))
+        y0 = int(min(max(cy - ch / 2, 0), h - ch))
+        return cv2.resize(f[y0:y0 + ch, x0:x0 + cw], (w, h), interpolation=cv2.INTER_LINEAR)
+
     def _limits(self) -> tuple[tuple[float, float], tuple[float, float], float]:
         """Hardware ranges as degrees (pan, tilt) and the max zoom factor."""
         u, r = self.tuning.units_per_deg, self.ranges

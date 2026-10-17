@@ -92,3 +92,10 @@ def test_page_only_claims_what_is_running(monkeypatch, env, expected):
     assert {k: cfg[k] for k in expected} == expected
     assert "expanso" not in cfg
     assert "pollExpanso(" in r.text
+
+
+@pytest.mark.parametrize("name", ["phone.js", "phone.css", "custody-detail.js", "casefile.css"])
+def test_casefile_and_responder_assets_are_served(name):
+    response = TestClient(mount_pipeline(FastAPI())).get(f"/pipeline/assets/{name}")
+    assert response.status_code == 200
+    assert len(response.content) > 100

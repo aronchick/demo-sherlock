@@ -95,34 +95,50 @@ monitors those pipelines
     the investigation to `scout1`. `--mock --synthetic` runs the whole loop
     with no models and no cameras.
 
-### Simulated responder phone and evidence history
+### Responder phone and signed case files
 
-The 16:9 flow page includes a compact phone indicator. Clicking it opens
-or focuses the named `/phone` tab; `/custody` has its own reusable tab.
-The phone shows the original scene and available object and face details. Only a verified `alert` produces a simulated delivery;
-`log` and `ignore` do not. Select **Acknowledge · Investigating** to save a
-responder acknowledgment against that incident. No SMS or push message is sent.
+The 16:9 board opens a custody summary modal when a saved picture is clicked.
+The modal links to `/custody?incident=<id>`. The evidence register at `/custody`
+is a paginated list with expandable cases, image provenance, timeline,
+comparison, complete signatures and syntax-colored JSON. JSON is paginated by
+line; copy and download retain the complete record.
 
-Click a saved picture on the evidence shelf or phone to open `/custody` for
-that incident. It shows the recorded tool/model events, trigger and evidence
-cameras, saved images, SHA-256 integrity checks, simulated delivery, and
-acknowledgment. Face images require an explicit reveal in the custody browser; the responder
-phone displays them with the incident context.
-The evidence browser uses pagination; the full timeline scrolls with the page.
+`/phone` presents a full-height simulated responder device. Select a notice,
+page through its scene/object/face/model-input images, choose **Investigate**,
+then **Notify team** or **Resolve**. These actions are persisted locally as signed
+revisions. No SMS, push notification or team message leaves the application.
+Mock locations map `hero` to Building A / Level 1 / North lobby and `scout1` to
+East corridor; live cameras without location data display unknown.
 
-Each new investigation writes `snapshots/<incident>/manifest.json`, including
-configured model names and mock/live mode. Records and acknowledgments survive
-a restart. Old snapshot folders without manifests are not backfilled. A missing
-or changed image is flagged when the record is read. These records provide local
-application history, not independently attested or immutable chain of custody.
-Manifest write failures are reported and do not claim successful delivery.
+New records use Ed25519 signatures. Each signed revision binds the payload
+SHA-256, signer public key and fingerprint, revision number, previous envelope
+SHA-256 and signing time. The payload covers recorded metadata, image hashes,
+provenance, model/comparison results, custody events and responder state.
+Images are preserved under content-addressed filenames so later PTZ captures
+cannot replace earlier signed evidence. Readback verifies signatures, history
+links and both current and historical image hashes separately. Damaged records
+cannot be acknowledged or revised. Unsigned older history stays unsigned.
 
-The mock-only **Simulate disagreement** control makes the next assessment
-produce differing answers so the Review path can be rehearsed. No external
-phone delivery occurs. The cloud card says **Simulated destination · no upload**
-in mock mode. An enabled Edge sink can accept or spool a package, but that is
-not proof of remote storage. Core currently stores JSONL packages; there is no
-per-incident cloud receipt or object-bucket readback in this UI.
+The local private key is `<EVIDENCE_DIR>/.signing-key`, created with mode 0600
+and excluded from Git. Public keys and full signatures appear in the case view.
+This is local application signing, not independently attested identity, camera
+authenticity or time, and not immutable storage. Protect the key and evidence
+store together; deleting the key prevents updates to previously signed cases.
+
+For independent verification, download `/incidents/<id>/signed-history`.
+Each envelope uses UTF-8 JSON with sorted keys, compact separators,
+`ensure_ascii=False`, and no NaN. Remove `signature`, `verification` and each
+artifact's runtime `integrity` field to reconstruct the payload. Its SHA-256
+must equal `signature.payload_sha256`. Decode the base64 public key and
+signature, then verify Ed25519 over the canonical signature metadata with its
+`signature` field removed. Each `previous_sha256` hashes the preceding complete
+signed envelope. The repository tests perform this verification independently.
+
+The mock-only **Simulate disagreement** control demonstrates Review. The cloud
+card says **Simulated destination · no upload** in mock mode. Edge acceptance
+can mean local spooling; it does not establish remote storage. The signing and
+responder checks described here are local. There is no per-incident cloud
+receipt or object-bucket readback in this UI.
 
 ### Where each piece runs
 

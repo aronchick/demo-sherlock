@@ -148,7 +148,9 @@
     } else gallery.append(node('p', 'Evidence images are not available yet.'));
     app.append(gallery);
     const actions = node('div', '', 'responder-actions');
-    const disabled = pending || !connected;
+    const verification = record.verification;
+    const trusted = verification?.signature === 'verified' && verification?.artifacts === 'verified' && verification?.history === 'verified';
+    const disabled = pending || !connected || !trusted;
     const resolved = record.response?.status === 'resolved';
     actions.append(button(record.response?.status === 'investigating' ? 'Investigating' : 'Investigate', () => { void respond('investigate'); }, disabled || resolved || record.response?.status === 'investigating'), button(record.response?.team_notified_at ? 'Team notified' : 'Notify team', () => { void respond('notify_team'); }, disabled || resolved || record.response?.status !== 'investigating' || Boolean(record.response?.team_notified_at)));
     const footer = node('div', '', 'responder-detail-footer');
@@ -169,7 +171,8 @@
     app.append(chrome);
 
     if (selected) detail(); else inbox();
-    const feedback = node('p', message || (connected ? 'Feed connected · simulated delivery' : 'Feed disconnected · retrying automatically'), 'responder-feedback');
+    const integrityNote = selected && (!selected.signature ? 'Older unsigned notice. Evidence is viewable; response actions are unavailable.' : selected.verification?.signature !== 'verified' || selected.verification?.artifacts !== 'verified' || selected.verification?.history !== 'verified' ? 'Evidence verification failed. Response actions are unavailable.' : '');
+    const feedback = node('p', message || integrityNote || (connected ? 'Feed connected · simulated delivery' : 'Feed disconnected · retrying automatically'), 'responder-feedback');
     feedback.setAttribute('role', 'status');
     app.append(feedback);
 

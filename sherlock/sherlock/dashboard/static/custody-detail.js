@@ -183,7 +183,7 @@ async function showCustodySummary(iid) {
     }
 
     const decision = record.state === 'investigating' ? 'Investigation in progress' : record.action === 'alert' ? 'Alert' : record.action === 'ignore' ? 'Archived' : 'Review required';
-    content.append(custodyNode('p', `${decision} · ${record.artifacts.length} evidence images`, 'modal-decision'), custodyNode('p', record.comparison?.reason || 'No model comparison requested.', 'modal-meta'), custodyNode('p', custodyIntegrity(record), 'integrity-status'));
+    content.append(custodyNode('p', `${decision} · ${record.artifacts.length} evidence image${record.artifacts.length === 1 ? '' : 's'}`, 'modal-decision'), custodyNode('p', record.comparison?.reason || 'No model comparison requested.', 'modal-meta'), custodyNode('p', custodyIntegrity(record), 'integrity-status'));
     const link = document.createElement('a');
     link.href = `/custody?incident=${encodeURIComponent(iid)}`;
     link.target = 'sherlock-evidence';

@@ -101,10 +101,11 @@ const live = c => !covered[c] && !(c in unavailable);
 
 const feedBuffer = [];
 
-// The latest Analyst event and its feed row: the report can still withhold its words.
-const WITHHELD = "named another object in the crop · not shown";
+// Analyst rows wait for the report, which shows their words or withholds them when they name
+// another object than the verified claim. Shown on arrival, "Cake." sat under a knife alert.
+const READING = "reading the crop…", WITHHELD = "named another object in the crop · not shown";
 
-let analystEv = null, analystLi = null;
+const held = []; // { ev, said, li } per Analyst row the next report settles
 
 /* ----------------------------------------------------------------- feed */
 const feed = $("feed");
@@ -147,7 +148,9 @@ function addRow(ev) {
     li.append(s);
   }
 
-  if (ev === analystEv) analystLi = li;
+  const h = held.find(x => x.ev === ev);
+
+  if (h) h.li = li;
 
   li.classList.add("fresh");
   feed.querySelector(".empty")?.remove();
@@ -755,10 +758,11 @@ function onReport(d) {
 
   stepState(6, "done", tier);
 
-  if (d.analyst_mismatch && analystEv) {
-    analystEv.msg = WITHHELD; // a row still buffered behind a paused feed renders it this way
+  // A row still buffered behind a paused feed renders the settled ev.msg when it lands.
+  for (const h of held.splice(0)) {
+    h.ev.msg = d.analyst_mismatch ? WITHHELD : h.said;
 
-    if (analystLi) analystLi.querySelector(".msg").textContent = WITHHELD;
+    if (h.li) h.li.querySelector(".msg").textContent = h.ev.msg;
   }
 
   $("node-director").dataset.active = false;
@@ -796,7 +800,10 @@ function onReport(d) {
 function onEvent(ev) {
   const d = ev.data || {};
 
-  if (ev.stage === "analyst") [analystEv, analystLi] = [ev, null];
+  if (ev.stage === "analyst") {
+    held.push({ ev, said: ev.msg });
+    ev.msg = READING;
+  }
 
   addRow(ev);
 

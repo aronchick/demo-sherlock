@@ -1,6 +1,7 @@
 # E2, laptop: one message per investigation report.
-# All captured scene/object/face evidence travels with its incident, independently
-# of the alert decision. Face, scene and model-context images are evidence, not training.
+# Each report travels with its masked weapon or object crop, whatever the decision.
+# The face crop and the original frame never leave the laptop: only their hashes,
+# in the custody metadata, go up, so a reviewer opens them on this device.
 name: sherlock-incidents
 type: pipeline
 labels:
@@ -28,12 +29,13 @@ config:
             throw("report without incident or action")
           } else { this }
 
-      # Only the named evidence artifacts may carry bytes. Hash each transmitted
-      # image; core persistence and integrity readback remain separate proof.
+      # Enforced here, not trusted from the sender: only the masked weapon or object
+      # crop may travel; any other image (a face, the full frame) is dropped. Hash each
+      # transmitted crop; core persistence and integrity readback remain separate proof.
       - label: crop_policy
         mapping: |
           root = this
-          root.crops = this.crops.or({}).filter(kv -> ["original_frame", "weapon_crop", "object_crop", "face_crop", "model_context"].contains(kv.key)).map_each(kv -> if kv.value.b64.or("") != "" {
+          root.crops = this.crops.or({}).filter(kv -> ["weapon_crop", "object_crop"].contains(kv.key)).map_each(kv -> if kv.value.b64.or("") != "" {
             kv.value.assign({"sha256_edge": kv.value.b64.decode("base64").hash("sha256").encode("hex")})
           } else { kv.value })
 

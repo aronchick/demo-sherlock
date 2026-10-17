@@ -37,10 +37,10 @@ monitors those pipelines
       ▼                                      shared Analyst + Verifier
  Director tool loop ── HTTP /v1 ─────────► :8001
    look_at / move ──► gimbal or crop
-   snapshot ──► save scene/object/face
-      ├─ Analyst ── context PNG ─────────► :8002
-      └─ Verifier ─ context PNG ─────────► :8002
-   compare both results → report
+   snapshot ──► save scene/object; face only on alert
+      ├─ 1 Verifier ─ masked crop JPEG ──► :8002
+      └─ 2 Analyst ── masked crop JPEG ──► :8002
+   Verifier margin decides → report
       │
       ▼
  snapshots/<incident>/
@@ -69,27 +69,40 @@ monitors those pipelines
 5. **The Director acquires evidence.** It uses `look_at`, `move` and
    `snapshot` to obtain object and face detail. The orchestrator saves the
    original scene before acquisition and persists each available image and
-   a pending manifest before model assessment. A later PTZ capture records
+   a pending manifest before model assessment, except the face crop, which
+   waits in memory for the verdict (step 9). A later PTZ capture records
    its own camera and timestamp; it is linked to, rather than described as
    a direct crop of, the original frame.
 6. **`look_at` moves real hardware.** On the Insta360 Link 2 it sends UVC
    pan/tilt/zoom over USB with `link-ctl` (macOS only). Other cameras use a
    software crop (`FakePTZ`).
-7. **Analyst and Verifier run in parallel.** Both receive the same immutable
-   contact sheet: original scene, object detail and available face context.
-   The exact input is saved as lossless `model_context.png`. Separate prompts
-   ask for a description and a claim check; the endpoints may use the same
-   model. Neither receives the other's answer. Prompts allow person/object
-   context and prohibit identity recognition.
-8. **A deterministic comparison follows both answers.** Both must support
-   the weapon claim before the orchestrator can alert. Disagreement, an
-   inconclusive answer or a failed check goes to review (`log`). A failed
-   acquisition also prevents an alert. The comparison and both answers
-   appear in the custody record.
-9. **Evidence survives the outcome.** Captured scene, object, face and model
-   input stay in `snapshots/<incident>/`, including rejected or interrupted
-   investigations. SHA-256 hashes, camera, capture time and source relationships
-   accompany each artifact. Missing captures are recorded rather than fabricated.
+7. **The VLM sees only the masked object crop.** After acquisition the
+   Verifier, then the Analyst, read the same tight weapon (or object) crop,
+   with any face in it filled solid. One request at a time, Verifier first:
+   mlx-vlm drops logprobs from overlapping requests. No model ever receives
+   the face crop or the original frame: those are evidence for a human
+   reviewer. The Analyst describes the object; the Verifier asks a yes/no
+   question about the claim and decides on `log P(yes) - log P(no)` against
+   `VERIFIER_MARGIN` (0.0 by default; the demo runs -1.0), or on the reply's
+   first word when the server returns no usable logprobs
+   ([Verifier verdicts](#verifier-verdicts)).
+8. **The Verifier decides; the Analyst advises.** The orchestrator alerts
+   only on a weapon claim the Verifier confirms. A rejected or inconclusive
+   verdict, a failed check or a failed acquisition goes to review (`log`).
+   The Analyst never gates: when its description names another object than
+   a confirmed claim (a knife read as "Cake."), the card withholds the words
+   and the record keeps them as `analyst_mismatch`. The verdict and the
+   description appear in the custody record.
+9. **Evidence survives the outcome; a face crop only with an alert.** The
+   original scene and the object crop stay in `snapshots/<incident>/`,
+   including rejected or interrupted investigations. A face crop is kept only
+   for a verified alert: otherwise it is discarded before anything is saved,
+   and the custody record says `face crop discarded: weapon claim not
+   verified`. The original scene is kept for every outcome, so anyone in it
+   stays visible to a reviewer on this laptop; it never goes to a model or
+   leaves the laptop. SHA-256 hashes, camera, capture time and source
+   relationships accompany each artifact. Missing captures are recorded
+   rather than fabricated.
 10. **Fallbacks.** If the Director endpoint is unreachable, `RuleDirector`
     runs the same tools with no LLM. A covered or failed hero camera hands
     the investigation to `scout1`. `--mock --synthetic` runs the whole loop
@@ -134,7 +147,9 @@ signature, then verify Ed25519 over the canonical signature metadata with its
 `signature` field removed. Each `previous_sha256` hashes the preceding complete
 signed envelope. The repository tests perform this verification independently.
 
-The mock-only **Simulate disagreement** control demonstrates Review. The cloud
+The mock-only **Simulate disagreement** control makes the next Analyst
+description name a cup. The decision still follows the Verifier, so a
+confirmed knife alerts and its card withholds the Analyst's words. The cloud
 card says **Simulated destination · no upload** in mock mode. Edge acceptance
 can mean local spooling; it does not establish remote storage. The signing and
 responder checks described here are local. There is no per-incident cloud
@@ -220,7 +235,7 @@ is dropped on failure.
 | Job | Node | Input | What it does | Output |
 |---|---|---|---|---|
 | E1 `sherlock-telemetry` | Laptop | `http_server` `127.0.0.1:23111/events`; the sink sends every bus event in batches | Splits batches, drops any `*_b64` field, stamps node and time | Core `/telemetry` in batches; local spool if the core is unreachable |
-| E2 `sherlock-incidents` | Laptop | `http_server` `:23112/incident`; one POST per report | Rejects a report without incident or action. Sends available scene, object, face and lossless model-context bytes for each captured outcome, with hashes and provenance. `switch`: alerts go at once, other reports in 1 s batches | Core `/incident`; local spool on failure |
+| E2 `sherlock-incidents` | Laptop | `http_server` `:23112/incident`; one POST per report | Rejects a report without incident or action. Sends the report metadata and the masked weapon or object crop for every outcome, with hashes and provenance. Drops any other image (face crop, original frame) whatever the sender included. `switch`: alerts go at once, other reports in 1 s batches | Core `/incident`; local spool on failure |
 | E3 `sherlock-examples` | Laptop | `http_server` `:23113/example`; sent only with `SHERLOCK_EDGE_EXAMPLES=1` | Crops the Verifier did not confirm, for the next Scout fine-tune. Rejects anything but a weapon or object crop | Core `/example`; local spool on failure |
 | C1 `sherlock-core-intake` | Brev box | `http_server` `127.0.0.1:23121/{endpoint}` | Splits batches, rejects unknown streams, stamps receipt, logs each alert | `file` per stream and day; `http_client` to `SHERLOCK_ALERT_WEBHOOK` if set |
 | C2 `sherlock-vllm-metrics` | Brev box | `generate` every 10 s, then GET both vLLM `/metrics` | KV-cache use, prefix-cache queries and hits, running and waiting requests; a down server is recorded as `up: false` | `file` per day; the laptop dashboard, dropped if the tunnel is down |
@@ -230,8 +245,9 @@ response. (An Expanso `catch` clears the error flag, so the jobs log
 failures with a `switch` on `errored()` instead; a test guards this.)
 
 **Decisions taken:** the core runs on the Brev box next to vLLM, so
-stopping Brev stops it. Enabled incident transport includes captured scene and
-face context. E3 remains off by default and accepts only object/weapon crops.
+stopping Brev stops it. Incident transport carries only the masked object
+crop and metadata: the face crop and the original frame never leave the
+laptop. E3 remains off by default and accepts only object/weapon crops.
 
 **Dashboard.** The footer on `/` and `/topology` polls `/expanso`. It says
 "connected" only while the Edge pipelines accepted this run's events in the
@@ -568,8 +584,8 @@ stay out of the upload unless `--include-room-photos`, and that needs everyone p
 ## vLLM
 
 vLLM is the serving layer for Sherlock's investigation loop. The Director
-chooses camera tools; Analyst and Verifier independently assess a shared
-scene/object/person contact sheet. Scout gates these calls locally.
+chooses camera tools; the Analyst describes and the Verifier checks the
+claim on the masked object crop. Scout gates these calls locally.
 The planned Brev setup runs two vLLM **0.28.0** containers on one H100:
 
 | Role | Model | Served name | Port |

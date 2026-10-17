@@ -110,7 +110,7 @@ class ModelCards {
       image.hidden = true;
       image.removeAttribute('src');
       modelElement(`${role}Empty`).hidden = false;
-      modelElement(`${role}PreviewState`).textContent = role === 'director' ? 'Detection context' : 'Waiting for context';
+      modelElement(`${role}PreviewState`).textContent = role === 'director' ? 'Detection context' : 'Waiting for the crop';
       modelElement(`st-${role}`).dataset.evaluating = 'false';
     }
   }
@@ -128,13 +128,13 @@ class ModelCards {
 
     image.src = source;
 
-    modelElement(`${role}PreviewState`).textContent = role === 'director' ? 'Ticket only' : 'Evaluating context';
+    modelElement(`${role}PreviewState`).textContent = role === 'director' ? 'Ticket only' : 'Reading the crop';
     modelElement(`st-${role}`).dataset.evaluating = 'true';
   }
 
   /** @param {string} role */
   complete(role) {
     modelElement(`st-${role}`).dataset.evaluating = 'false';
-    modelElement(`${role}PreviewState`).textContent = role === 'director' ? 'Ticket only' : 'Evaluated context';
+    modelElement(`${role}PreviewState`).textContent = role === 'director' ? 'Ticket only' : 'Read the crop';
   }
 }

@@ -6,8 +6,9 @@ the bus already drops events for a subscriber that falls behind, and every
 POST has a short timeout and is dropped on failure.
 
 - E1 telemetry: every bus event, sent in small JSON-array batches.
-- E2 incidents: one message per report, with the complete saved evidence package.
-  Scene, face and exact model-input images are evidence, not training examples.
+- E2 incidents: one message per report: its metadata and the masked weapon or
+  object crop. The face crop and the original frame never leave the laptop; the
+  custody metadata carries their hashes, so a reviewer opens them on this device.
 - E3 examples (SHERLOCK_EDGE_EXAMPLES=1 only): crops the Verifier did not
   confirm, for the next Scout fine-tune. Never faces.
 """
@@ -31,7 +32,6 @@ LIVE_SECONDS = 30.0  # a delivery this recent means the Edge pipeline is carryin
 _BATCH_MAX = 50
 _BATCH_WAIT = 1.0
 _SENDABLE_CROPS = ("weapon_crop", "object_crop")
-_EVIDENCE_NAMES = {*_SENDABLE_CROPS, "face_crop", "original_frame", "model_context"}
 
 
 def _on(name: str) -> bool:
@@ -148,10 +148,7 @@ def telemetry_record(ev: Event) -> dict:
 
 
 def _evidence_file(evidence_dir: pathlib.Path, incident: str, filename: str) -> pathlib.Path:
-    if not ID.fullmatch(incident) or filename not in {
-        "manifest.json", "model_context.png",
-        *(f"{name}.jpg" for name in _EVIDENCE_NAMES if name != "model_context")
-    }:
+    if not ID.fullmatch(incident) or filename not in {"manifest.json", *(f"{n}.jpg" for n in _SENDABLE_CROPS)}:
         raise ValueError("invalid evidence path")
     root = pathlib.Path(evidence_dir).resolve()
     folder = root / incident
@@ -162,12 +159,12 @@ def _evidence_file(evidence_dir: pathlib.Path, incident: str, filename: str) -> 
 
 
 def _crop_file(evidence_dir: pathlib.Path, incident: str, name: str) -> pathlib.Path:
-    extension = "png" if name == "model_context" else "jpg"
-    return _evidence_file(evidence_dir, incident, f"{name}.{extension}")
+    return _evidence_file(evidence_dir, incident, f"{name}.jpg")
 
 
 def incident_record(report: dict, evidence_dir: pathlib.Path) -> dict:
-    """Send saved scene/object/face evidence regardless of the incident decision.
+    """The report's metadata plus the saved masked weapon or object crop, whatever the
+    decision. No face crop or original frame bytes: the sink cannot even open those files.
 
     Only known manifest metadata and named evidence files are read. Local paths
     are provenance, never instructions to read an arbitrary file from a manifest.
@@ -184,7 +181,7 @@ def incident_record(report: dict, evidence_dir: pathlib.Path) -> dict:
     crops: dict[str, dict] = {}
     provenance = source.get("evidence_provenance") or {}
     for name in source.get("evidence") or []:
-        if not isinstance(name, str) or name not in _EVIDENCE_NAMES:
+        if not isinstance(name, str) or name not in _SENDABLE_CROPS:
             continue
         try:
             path = _crop_file(evidence_dir, incident, name)
@@ -192,8 +189,7 @@ def incident_record(report: dict, evidence_dir: pathlib.Path) -> dict:
         except (OSError, ValueError):
             continue
         entry = {"sha256": hashlib.sha256(raw).hexdigest(), "bytes": len(raw), "path": str(path),
-                 "b64": base64.b64encode(raw).decode(),
-                 "content_type": "image/png" if name == "model_context" else "image/jpeg"}
+                 "b64": base64.b64encode(raw).decode(), "content_type": "image/jpeg"}
         if isinstance(provenance, dict) and isinstance(provenance.get(name), dict):
             entry["provenance"] = provenance[name]
         crops[name] = entry

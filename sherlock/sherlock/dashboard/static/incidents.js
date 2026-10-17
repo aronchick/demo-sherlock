@@ -3,7 +3,7 @@
 
 /** @typedef {{name:string, sha256:string, url:string, integrity:string, camera?:string,captured_at?:number|null,source_artifact?:string|null,relationship?:string,sources?:string[],missing_sources?:string[],bbox?:number[]|null}} Artifact */
 /** @typedef {{stage:string, t:number, detail:string}} CustodyEvent */
-/** @typedef {{incident:string, action:string, state?:string, claim:string, t:number, verified?:boolean, comparison?:{status:string,reason:string,claim:string,analyst_supports:boolean|null,verifier_supports:boolean|null}, evidence_camera?:string, trigger?:{camera:string}, artifacts:Artifact[], custody:CustodyEvent[], models?:{mock?:boolean,scout?:string,director?:string,analyst?:string,verifier?:string}, notification:{simulated:boolean,status:string,delivered_at?:number,acknowledged_at?:number}}} Incident */
+/** @typedef {{incident:string, action:string, state?:string, claim:string, t:number, verified?:boolean, comparison?:{status:string,reason:string,claim:string,verifier_supports:boolean|null,analyst_names_claim?:boolean|null}, evidence_camera?:string, trigger?:{camera:string}, artifacts:Artifact[], custody:CustodyEvent[], models?:{mock?:boolean,scout?:string,director?:string,analyst?:string,verifier?:string}, notification:{simulated:boolean,status:string,delivered_at?:number,acknowledged_at?:number}}} Incident */
 
 (() => {
   const phoneError = document.getElementById('phone-error');
@@ -114,7 +114,7 @@
 
     if (record.comparison) {
       const comparison = element('section', '', 'comparison-record');
-      comparison.append(element('h3', `Comparison: ${record.comparison.status}`), element('p', record.comparison.reason), element('p', `Analyst supports claim: ${verdictLabel(record.comparison.analyst_supports)} · Verifier supports claim: ${verdictLabel(record.comparison.verifier_supports)}`));
+      comparison.append(element('h3', `Comparison: ${record.comparison.status}`), element('p', record.comparison.reason), element('p', `Verifier supports claim: ${verdictLabel(record.comparison.verifier_supports)} · Analyst description names it: ${verdictLabel(record.comparison.analyst_names_claim)} (advisory)`));
       custody.append(comparison);
     }
 
@@ -152,7 +152,7 @@
         figure.append(association);
       }
 
-      if (artifact.relationship === 'composite') figure.append(element('p', 'Model context assembled from this incident’s scene and crops. Both checks receive this context.'));
+      if (artifact.relationship === 'composite') figure.append(element('p', 'Model context from an earlier version, which sent this composite of the scene and crops to both checks.'));
 
       if (artifact.bbox) figure.append(element('p', `Target box in source coordinates: ${artifact.bbox.join(', ')}`));
       const good = artifact.integrity === 'verified';

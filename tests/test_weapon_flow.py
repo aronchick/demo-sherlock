@@ -240,6 +240,21 @@ def test_llm_director_weapon_chain_reports_evidence():
     assert first_user["threat"] == "weapon" and first_user["head_bbox"] == list(head)
 
 
+def test_director_event_names_the_claim_to_verify():
+    """Nemotron claimed "a knife" for both Scout "scissors" events on 2026-10-17, copying the
+    prompt's example. The event now carries the claim; benign events stay unchanged."""
+    for label, threat, claim in (("scissors", "weapon", "a pair of scissors"), ("knife", "weapon", "a knife"),
+                                 ("cup", "benign", None)):
+        tools = _toolbox()
+        det = Detection(label, 0.9, CUP, "hero", threat=threat)
+        tools.begin_incident(det, "x")
+        d = Director(Endpoint("http://unused/v1", "m"), tools)
+        d.client = _ScriptedLLM(enumerate([("report", {"claim": "x", "confidence": 0.5, "action": "log"})]))
+        d.investigate(det)
+        event = json.loads(d.client.prompts[0][1]["content"])
+        assert event.get("claim") == claim and ("claim" in event) == (threat == "weapon")
+
+
 def test_director_turns_thinking_off_for_vllm_and_ollama():
     """Ollama ignores chat_template_kwargs; only reasoning_effort="none" stops Nemotron
     thinking there, and on 2026-10-17 the thinking ate all 300 tokens with no tool call."""

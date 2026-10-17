@@ -9,7 +9,8 @@ move the prop around, change hands, distance and angle while it runs. Aim for
 session (empty room, a person with nothing in hand) for hard negatives.
 
 The camera comes from CAMERAS in .env (same names as the dashboard), or --source
-overrides it (a device index like 0, a file, or "synthetic" for a dry run)."""
+overrides it (a device index like 0, a file, or "synthetic" for a dry run).
+scripts/capture_web.py runs the same capture from a browser with a live preview."""
 from __future__ import annotations
 
 import argparse
@@ -37,19 +38,27 @@ def open_camera(name: str, source: str | None):
     raise SystemExit(f"no camera named {name!r} in CAMERAS (known: {known}); pass --source")
 
 
-def capture(cam, out_dir: Path, n: int, interval: float, countdown: float = 0.0) -> list[Path]:
+def session_dir(out: Path, prop: str, camera: str) -> Path:
+    return out / prop / f"{camera}-{time.strftime('%Y%m%d-%H%M%S')}"
+
+
+def capture(cam, out_dir: Path, n: int, interval: float, countdown: float = 0.0,
+            on_frame=None, stop=None) -> list[Path]:
+    """on_frame(path) runs after each save; a set `stop` Event ends the session early."""
     out_dir.mkdir(parents=True, exist_ok=True)
     if countdown:
         print(f"starting in {countdown:.0f} s: get the prop in frame")
         time.sleep(countdown)
     saved: list[Path] = []
     next_at = time.monotonic()
-    while len(saved) < n:
+    while len(saved) < n and not (stop and stop.is_set()):
         frame = cam.wide_frame()
         path = out_dir / f"{len(saved):04d}.jpg"
         if not cv2.imwrite(str(path), frame):
             raise SystemExit(f"could not write {path}")
         saved.append(path)
+        if on_frame:
+            on_frame(path)
         print(f"\r{len(saved)}/{n} {path}", end="", flush=True)
         next_at += interval
         time.sleep(max(0.0, next_at - time.monotonic()))
@@ -67,13 +76,13 @@ def main(argv: list[str] | None = None) -> list[Path]:
     p.add_argument("--countdown", type=float, default=3.0)
     p.add_argument("--out", type=Path, default=ROOT / "data" / "props")
     a = p.parse_args(argv)
-    session = f"{a.camera}-{time.strftime('%Y%m%d-%H%M%S')}"
+    session = session_dir(a.out, a.prop, a.camera)
     cam = open_camera(a.camera, a.source)
     try:
-        saved = capture(cam, a.out / a.prop / session, a.n, a.interval, a.countdown)
+        saved = capture(cam, session, a.n, a.interval, a.countdown)
     finally:
         cam.close()  # stop the reader thread, or Python segfaults on exit (macOS)
-    print(f"{len(saved)} frames of {a.prop!r} in {a.out / a.prop / session}")
+    print(f"{len(saved)} frames of {a.prop!r} in {session}")
     print("next: uv run --extra yolo scripts/build_scout_dataset.py prelabel")
     return saved
 

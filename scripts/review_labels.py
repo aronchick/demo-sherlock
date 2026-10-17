@@ -5,7 +5,7 @@
     uv run scripts/review_labels.py --status         # counts only, no window
 
 Mouse: drag = new box in the current class, right-click = delete the box under
-the pointer. Keys: 1-4 pick the class (1 person, 2 weapon, 3 badge, 4 bottle),
+the pointer. Keys: 1-6 pick the class (1 person, 2 weapon, 3 badge, 4 bottle, 5 fedora, 6 cap),
 r = give the box under the pointer the current class, u = undo, x = clear all,
 n / space / enter = save and next, p = save and back, q / esc = save and quit.
 Saving marks the photo reviewed (data/props/reviewed.txt); prelabel never
@@ -18,6 +18,7 @@ from pathlib import Path
 import cv2
 from scout_data import (
     CLASSES,
+    PROP_CLASS,
     REVIEWED,
     load_reviewed,
     read_labels,
@@ -27,16 +28,17 @@ from scout_data import (
 )
 
 ROOT = Path(__file__).resolve().parents[1]
-COLORS = [(200, 170, 120), (70, 70, 240), (60, 200, 240), (130, 200, 140)]  # BGR per class
+COLORS = [(200, 170, 120), (70, 70, 240), (60, 200, 240), (130, 200, 140),
+          (60, 60, 200), (200, 200, 200)]  # BGR per class
 MIN_SIDE = 4  # pixels; smaller drags are mis-clicks
 
 
 class LabelEditor:
     """Box edits for one photo. No window code, so it can be tested headless."""
 
-    def __init__(self, labels: list[tuple[int, tuple]]):
+    def __init__(self, labels: list[tuple[int, tuple]], cls: str = "weapon"):
         self.labels = list(labels)
-        self.cls = CLASSES.index("weapon")
+        self.cls = CLASSES.index(cls)
         self._history: list[list[tuple[int, tuple]]] = []
 
     def _push(self) -> None:
@@ -109,6 +111,12 @@ def _draw(img, ed: LabelEditor, scale: float, drag, header: str):
     return view
 
 
+def prop_default_class(rel: str) -> str:
+    """Start each photo on its session's class: stock YOLO drafts no fedora or cap
+    box, so those photos are all hand drags and should not need a keypress first."""
+    return PROP_CLASS.get(Path(rel).parts[0]) or "weapon"
+
+
 def review(props: Path, photos: list[Path], max_width: int = 1280) -> None:
     win = "sherlock labels"
     cv2.namedWindow(win)
@@ -119,7 +127,8 @@ def review(props: Path, photos: list[Path], max_width: int = 1280) -> None:
         img = cv2.imread(str(path))
         h, w = img.shape[:2]
         scale = min(1.0, max_width / w)
-        ed = LabelEditor(read_labels(path.with_suffix(".txt"), w, h))
+        rel = str(path.relative_to(props))
+        ed = LabelEditor(read_labels(path.with_suffix(".txt"), w, h), prop_default_class(rel))
 
         def on_mouse(event, x, y, _flags, _param, ed=ed, scale=scale):
             state["mouse"] = (x / scale, y / scale)
@@ -135,7 +144,6 @@ def review(props: Path, photos: list[Path], max_width: int = 1280) -> None:
                 ed.delete_at(x / scale, y / scale)
 
         cv2.setMouseCallback(win, on_mouse)
-        rel = str(path.relative_to(props))
         step = 0
         while not step:
             header = (f"[{i + 1}/{len(photos)}] {rel}   class: {ed.cls + 1} {CLASSES[ed.cls]}   "

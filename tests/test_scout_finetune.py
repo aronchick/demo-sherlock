@@ -106,6 +106,16 @@ def test_label_editor_add_delete_relabel_undo():
     assert len(ed.labels) == 2
 
 
+def test_hat_props_label_as_their_own_classes():
+    assert sd.CLASSES[:4] == ("person", "weapon", "badge", "bottle"), "appending keeps old label ids"
+    assert sd.PROP_CLASS["fedora"] == "fedora" and sd.PROP_CLASS["cap"] == "cap"
+    assert len(review_labels.COLORS) == len(sd.CLASSES), "every class needs a box colour in the reviewer"
+    assert review_labels.prop_default_class("fedora/hero-1/0000.jpg") == "fedora"
+    assert review_labels.prop_default_class("none/hero-1/0000.jpg") == "weapon"
+    ed = review_labels.LabelEditor([], review_labels.prop_default_class("cap/hero-1/0000.jpg"))
+    assert ed.add((10, 10), (40, 40)) and sd.CLASSES[ed.labels[0][0]] == "cap"
+
+
 # --- build, capture, publish ----------------------------------------------------------
 def _img(path: Path, color=(40, 40, 40), w=96, h=96, box=None):
     im = np.full((h, w, 3), color, np.uint8)

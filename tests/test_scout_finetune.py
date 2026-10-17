@@ -8,7 +8,7 @@ from pathlib import Path
 import cv2
 import numpy as np
 import pytest
-from sherlock.dashboard.numbers import scout_result
+from sherlock.dashboard.numbers import read_numbers, scout_result
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "scripts"))
@@ -187,6 +187,35 @@ def test_train_picks_cuda_then_mps_then_cpu(monkeypatch):
     assert train_scout.PROFILES["mps"]["device"] == "mps" and train_scout.PROFILES["cuda"]["device"] == "0"
 
 
+# --- evaluation evidence labels ------------------------------------------------------
+@pytest.mark.parametrize("smoke", [False, True])
+def test_eval_labels_persist_and_control_dashboard_evidence(tmp_path, monkeypatch, smoke):
+    ds = tmp_path / "scout"
+    _img(ds / "images/test/room_knife.jpg", box=(20, 10, 44, 80))
+    labels = ds / "labels/test/room_knife.txt"
+    labels.parent.mkdir(parents=True)
+    sd.write_labels(labels, [(1, (20, 10, 44, 80))], 96, 96)
+
+    # Exercise the real reader/scorer/writer without optional Torch or downloads.
+    def predict(model, images, _conf, _imgsz):
+        predictions = [("weapon", 0.9, (20, 10, 44, 80))] if model == "tuned.pt" else []
+        return dict.fromkeys(images, predictions)
+
+    monkeypatch.setattr(eval_scout, "predict", predict)
+    output = tmp_path / "runs/scout/eval.json"
+    args = ["--after", "tuned.pt", "--before", "stock.pt", "--dataset", str(ds), "--out", str(output)]
+    report = eval_scout.main([*args, "--smoke"] if smoke else args)
+    saved = json.loads(output.read_text())
+    assert saved == report
+    assert saved["evidence_kind"] == "model_evaluation"
+    assert saved["execution_mode"] == ("smoke" if smoke else "measured")
+    result = read_numbers(tmp_path)["scout"]
+    if smoke:
+        assert result is None
+    else:
+        assert result["before_recall"] == 0 and result["after_recall"] == 1
+
+
 # --- tiny CPU train + eval ------------------------------------------------------------
 @pytest.mark.skipif(importlib.util.find_spec("ultralytics") is None, reason="ultralytics not installed")
 def test_smoke_train_and_eval_on_cpu(tmp_path):
@@ -205,11 +234,11 @@ def test_smoke_train_and_eval_on_cpu(tmp_path):
                              **{**train_scout.SMOKE, "imgsz": 64})
     assert best.is_file()
     report = eval_scout.main(["--after", str(best), "--before", str(best), "--dataset", str(ds),
-                              "--imgsz", "64", "--out", str(tmp_path / "eval.json")])
+                              "--smoke", "--imgsz", "64", "--out", str(tmp_path / "eval.json")])
     assert set(report["images"]) == {"room", "coco"}
     assert {"room", "coco", "all"} <= set(report["after"]) and report["headline"].startswith("Scout weapon detection (room")
     written = json.loads((tmp_path / "eval.json").read_text())
+    assert written == report
     assert written["split"] == "test" and written["evidence_kind"] == "model_evaluation"
-    # The dashboard's reader must accept what the producer writes.
-    shown = scout_result(written)
-    assert shown is not None and shown["source"] == "room"
+    assert written["execution_mode"] == "smoke"
+    assert scout_result(written) is None

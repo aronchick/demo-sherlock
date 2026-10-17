@@ -47,7 +47,7 @@ def no_stub(data):
         or data.get("is_stub") is True
         or data.get("mock") is True
         or data.get("evidence_kind") in {"stub", "mock", "synthetic"}
-        or data.get("execution_mode") in {"local_stub", "stub", "mock", "synthetic"}
+        or data.get("execution_mode") in {"local_stub", "stub", "mock", "synthetic", "smoke"}
     )
 
 
@@ -144,23 +144,13 @@ def ablation_result(data):
 
 
 def scout_result(data):
-    # eval_scout.py has no stub execution path and its original report has no
-    # provenance field. Recognize that complete producer format while allowing
-    # an explicit model_evaluation marker; never accept a conflicting stub flag.
-    images = mapping(data.get("images"))
-    image_counts = [count(value) for value in images.values()]
-    legacy_report = (
-        "evidence_kind" not in data
-        and "execution_mode" not in data
-        and number(data.get("conf"), maximum=1) is not None
-        and number(data.get("iou"), minimum=0.01, maximum=1) is not None
-        and bool(image_counts)
-        and None not in image_counts
-        and sum(image_counts) > 0
-    )
+    # A complete legacy report can still come from the tiny CPU smoke test.
+    # Require both producer labels; model scores alone are not provenance.
     if (
-        data.get("evidence_kind") != "model_evaluation" and not legacy_report
-    ) or not no_stub(data):
+        data.get("evidence_kind") != "model_evaluation"
+        or data.get("execution_mode") != "measured"
+        or not no_stub(data)
+    ):
         return None
     if data.get("split") not in {"test", "val"}:
         return None

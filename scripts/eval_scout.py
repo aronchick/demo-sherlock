@@ -1,6 +1,6 @@
 """Scout precision and recall, before vs after the fine-tune, on the held-out test split.
 
-    python scripts/eval_scout.py --after runs/scout/weights/best.pt
+    uv run scripts/eval_scout.py --after runs/scout/weights/best.pt
 
 Before = stock YOLOv8n, its COCO names mapped onto the Scout classes (knife,
 scissors, baseball bat -> weapon; bottle; person). It has no badge class, so its
@@ -8,7 +8,10 @@ badge recall is 0 by construction. After = the fine-tuned Scout. Both models see
 the same images and are scored by the same code: a prediction counts only if it
 has the right class and IoU >= 0.5 with an unmatched ground-truth box, at the 0.35
 confidence the runtime Scout uses. In-room photos and COCO images are reported
-separately: the room is where the demo runs, COCO shows nothing else broke."""
+separately: the room is where the demo runs, COCO shows nothing else broke.
+Pass --smoke for pipeline checks or evaluations of smoke-trained weights; these
+reports are labelled smoke and excluded from the dashboard's measured results.
+Normal evaluations are labelled measured, including real CPU evaluations."""
 from __future__ import annotations
 
 import argparse
@@ -108,6 +111,8 @@ def main(argv: list[str] | None = None) -> dict:
     p.add_argument("--split", default="test")
     p.add_argument("--conf", type=float, default=RUNTIME_CONF)
     p.add_argument("--imgsz", type=int, default=640)
+    p.add_argument("--smoke", action="store_true",
+                   help="label a pipeline/test evaluation as smoke, never dashboard evidence")
     p.add_argument("--out", type=Path, default=ROOT / "runs" / "scout" / "eval.json")
     a = p.parse_args(argv)
     gts = ground_truth(a.dataset, a.split)
@@ -119,9 +124,9 @@ def main(argv: list[str] | None = None) -> dict:
     sources = defaultdict(int)
     for img in images:
         sources[source_of(img)] += 1
-    # Provenance for the dashboard, which shows only labelled real-model runs:
-    # this script always runs both models on real images; it has no stub path.
+    # Both modes run model inference; smoke scores are not measured demo evidence.
     report = {"evidence_kind": "model_evaluation",
+              "execution_mode": "smoke" if a.smoke else "measured",
               "split": a.split, "conf": a.conf, "iou": 0.5, "images": dict(sources),
               "before": {"model": a.before, **before}, "after": {"model": a.after, **after},
               "headline": headline(before, after)}

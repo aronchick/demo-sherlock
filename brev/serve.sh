@@ -3,13 +3,13 @@
 # Director container to Qwen/Qwen2.5-7B-Instruct when DIRECTOR_PRESET=qwen.
 # Generative params per run (never co-resident):
 #   - Default (DIRECTOR_PRESET=lightning):
-#     32.25B by model card (30B + 2.25B); 33.82B by checkpoint tensor count (31.58B + 2.25B, over the 33B cap).
+#     30.51B by model card (30B + 0.51B); 32.09B by checkpoint tensor count (31.58B + 0.51B, under the 33B cap).
 #       - Director (:8001): Nemotron 3.5 Lightning 30B-A3B (30B total / 3B active by card; BF16 shard headers:
 #         31.58B without MTP, 32.91B with its 270 embedded mtp.* tensors, which vLLM skips without a
 #         speculative config; see README "Parameter budget and speculation")
-#       - Analyst + Verifier (:8002): shared SmolVLM 2.2B (2,246,272,880 params, Idefics3 arch in vLLM)
+#       - Analyst + Verifier (:8002): shared SmolVLM-500M (507,482,304 params, Idefics3 arch in vLLM)
 #   - Qwen ablation (DIRECTOR_PRESET=qwen):
-#     9.86B total (7.62B Qwen/Qwen2.5-7B-Instruct + 2.25B SmolVLM-Instruct, <= 33B by both card and tensors).
+#     8.12B total (7.62B Qwen/Qwen2.5-7B-Instruct + 0.51B SmolVLM-500M-Instruct, <= 33B by both card and tensors).
 #     Stops/removes the Lightning `director` container first, then starts `Qwen/Qwen2.5-7B-Instruct` on :8001
 #     with `--enable-auto-tool-choice --tool-call-parser hermes` (verified from vLLM v0.28.0 tool-calling docs).
 # No speculative-decoding draft models are loaded (draft weights count toward the parameter budget).
@@ -32,7 +32,7 @@ else
   REASONING_PARSER=${REASONING_PARSER:-nemotron_v3}
 fi
 
-VLM=${VLM:-HuggingFaceTB/SmolVLM-Instruct}
+VLM=${VLM:-HuggingFaceTB/SmolVLM-500M-Instruct}
 PREFIX_CACHING=${PREFIX_CACHING:-1}
 if [[ "$PREFIX_CACHING" == "1" ]]; then
   PREFIX_CACHE_FLAGS=(--enable-prefix-caching --prefix-caching-hash-algo sha256)

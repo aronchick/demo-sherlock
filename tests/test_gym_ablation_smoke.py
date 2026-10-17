@@ -316,6 +316,7 @@ def test_brev_vllm_ablation_artifacts_record_vllm_runtime() -> None:
         "ablation_terse_tools.json",
         "ablation_thinking_on.json",
         "ablation_nemotron_lightning.json",
+        "ablation_qwen_director.json",
         "ablation_summary.json",
     ]
     for fname in expected_files:
@@ -330,6 +331,8 @@ def test_brev_vllm_ablation_artifacts_record_vllm_runtime() -> None:
         assert payload["model_server"]["label"] == "vLLM"
 
     summary = json.loads((brev_dir / "ablation_summary.json").read_text())
+    assert summary["num_configs"] == 5
+    assert summary["num_skipped"] == 0
     parsed = ablation_result(summary)
     assert parsed is not None
     assert parsed["config"] == "nemotron_lightning"

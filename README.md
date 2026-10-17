@@ -92,6 +92,26 @@ monitors those pipelines
     the investigation to `scout1`. `--mock --synthetic` runs the whole loop
     with no models and no cameras.
 
+### Simulated responder phone and evidence history
+
+The flow page includes a simulated responder phone. Open `/phone` for a
+separate filming view. Only a verified `alert` produces a simulated delivery;
+`log` and `ignore` do not. Select **Acknowledge · Investigating** to save a
+responder acknowledgment against that incident. No SMS or push message is sent.
+
+Click a saved picture on the evidence shelf or phone to open `/custody` for
+that incident. It shows the recorded tool/model events, trigger and evidence
+cameras, saved images, SHA-256 integrity checks, simulated delivery, and
+acknowledgment. Face images require an explicit reveal for human review.
+The evidence browser uses pagination; the full timeline scrolls with the page.
+
+Each new investigation writes `snapshots/<incident>/manifest.json`, including
+configured model names and mock/live mode. Records and acknowledgments survive
+a restart. Old snapshot folders without manifests are not backfilled. A missing
+or changed image is flagged when the record is read. These records provide local
+application history, not independently attested or immutable chain of custody.
+Manifest write failures are reported and do not claim successful delivery.
+
 ### Where each piece runs
 
 | Piece | Runs on | Code | What it is |

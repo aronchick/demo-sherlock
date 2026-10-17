@@ -7,6 +7,7 @@ import statistics
 import threading
 import time
 from collections import deque
+from contextlib import contextmanager
 from dataclasses import asdict, dataclass, field
 
 
@@ -26,6 +27,7 @@ class Bus:
     def __init__(self) -> None:
         self._subs: list[queue.Queue] = []
         self._lock = threading.Lock()
+        self._capture = threading.local()
         self.stats = {"frames": 0, "scout_hits": 0, "investigations": 0,
                       "vlm_calls": 0, "vlm_calls_avoided": 0, "tool_errors": 0,
                       "recoveries": 0, "confirmed": 0, "rejected": 0,
@@ -53,8 +55,22 @@ class Bus:
             self._subs.append(q)
         return q
 
+    @contextmanager
+    def capture(self):
+        """Collect this investigation thread's textual events, never image payloads."""
+        previous = getattr(self._capture, "events", None)
+        events = []
+        self._capture.events = events
+        try:
+            yield events
+        finally:
+            self._capture.events = previous
+
     def emit(self, stage: str, msg: str, latency_ms: float | None = None, **data) -> None:
         ev = Event(stage, msg, latency_ms, data)
+        captured = getattr(self._capture, "events", None)
+        if captured is not None and stage != "model_input":
+            captured.append({"stage": stage, "t": ev.t, "detail": msg})
         print(f"[{stage:9}] {msg}" + (f"  ({latency_ms:.0f} ms)" if latency_ms else ""), flush=True)  # live in redirected logs
         with self._lock:
             for q in self._subs:

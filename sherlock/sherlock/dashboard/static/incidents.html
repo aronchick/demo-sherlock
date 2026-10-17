@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sherlock / evidence and response</title>
+  <link rel="stylesheet" href="/pipeline/assets/incidents.css">
+  <script src="/pipeline/assets/incidents.js" defer></script>
+</head>
+<body class="incident-page">
+  <header class="incident-header">
+    <a href="/">Sherlock / data flow</a>
+    <nav aria-label="Views"><a href="/phone">Responder phone</a><a href="/custody">Evidence</a></nav>
+  </header>
+  <main id="incident-main">
+    <section id="phone-view" hidden>
+      <div class="page-intro"><p class="eyebrow">Detection to response</p><h1>The alert reaches a responder.</h1><p>Simulated delivery on this computer. No SMS or push notification is sent.</p></div>
+      <section class="phone-shell phone-full" aria-label="Simulated responder phone">
+        <div class="phone-speaker" aria-hidden="true"></div>
+        <div class="phone-label">Sherlock security <span>SIMULATED</span></div>
+        <div id="phone-content"><p>Waiting for a verified alert.</p></div>
+        <p class="phone-error" id="phone-error" role="status"></p>
+      </section>
+      <p class="phone-footnote">Acknowledgment is saved in the incident history.</p>
+    </section>
+    <section id="custody-view" hidden>
+      <div class="page-intro"><p class="eyebrow">Evidence / chain of custody</p><h1 id="custody-title">Recorded incident history</h1><p>Local capture, model decisions, saved evidence, and simulated responder delivery. Image hashes check file integrity; this is not an independently attested or immutable custody system.</p></div>
+      <p id="custody-error" role="status"></p>
+      <div id="custody-content"><p>Loading evidence records…</p></div>
+      <nav class="incident-pagination" id="incident-pagination" aria-label="Evidence pages" hidden><button id="previous-incidents" type="button">Previous</button><span id="incident-page-label"></span><button id="next-incidents" type="button">Next</button></nav>
+    </section>
+  </main>
+</body>
+</html>

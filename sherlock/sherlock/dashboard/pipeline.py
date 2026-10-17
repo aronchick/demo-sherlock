@@ -68,6 +68,12 @@ def topology_page() -> str:
     return _render("topology.html")
 
 
+@router.get("/phone", response_class=HTMLResponse)
+@router.get("/custody", response_class=HTMLResponse)
+def incident_page() -> str:
+    return (STATIC / "incidents.html").read_text()
+
+
 @router.get("/pipeline/fonts/{name}")
 def pipeline_font(name: str) -> FileResponse:
     """Serve a vendored font by exact file name; anything not in the folder is a 404."""
@@ -79,7 +85,7 @@ def pipeline_font(name: str) -> FileResponse:
 @router.get("/pipeline/assets/{name}")
 def pipeline_asset(name: str) -> FileResponse:
     allowed = {"pipeline-models.js", "pipeline-models.css", "brand-nvidia.svg",
-               "brand-huggingface.svg", "brand-ultralytics.svg"}
+               "brand-huggingface.svg", "brand-ultralytics.svg", "incidents.js", "incidents.css"}
     if name not in allowed:
         raise HTTPException(status_code=404)
     return FileResponse(STATIC / name, headers={"Cache-Control": "no-cache"})

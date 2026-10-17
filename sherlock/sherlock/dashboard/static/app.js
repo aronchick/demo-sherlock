@@ -67,6 +67,11 @@ let lastAlert = null, feedPaused = false, connected = false;
 
 const covered = { hero: false, scout1: false };
 
+// Cameras that did not open at startup (name -> reason), from /cameras.
+const unavailable = {};
+
+const live = c => !covered[c] && !(c in unavailable);
+
 const feedBuffer = [];
 
 /* ----------------------------------------------------------------- feed */
@@ -131,7 +136,7 @@ feed.addEventListener("mouseleave", () => {
 
 /* --------------------------------------------------------------- status */
 function watching() {
-  const n = CAMS.filter(c => !covered[c]).length;
+  const n = CAMS.filter(live).length;
 
   return `${n} CAMERA${n === 1 ? "" : "S"}`;
 }
@@ -352,11 +357,24 @@ function setCovered(cam, on) {
   if (document.body.dataset.state === "clear" && connected) setPill("clear", `MONITORING · ${watching()}`);
 }
 
+// A camera that would not open at startup: the tile says so (reason on hover),
+// it gets no stream and no particles, and the hero's cover button goes inert.
+function markUnavailable(cam, why) {
+  unavailable[cam] = why;
+  $("cam-" + cam).dataset.unavailable = true;
+  $("cam-" + cam).title = why;
+  $(cam + "-empty").textContent = "UNAVAILABLE · DID NOT OPEN";
+
+  if (cam === "hero") $("btn-cover").disabled = true;
+}
+
 // Called on every (re)connect: an MJPEG stream does not reopen by itself after a restart.
 function showStreams() {
   const fresh = `?t=${Date.now()}`;
 
   for (const c of CAMS) {
+    if (c in unavailable) continue;  // its stream would 404; the tile keeps saying why
+
     $("img-" + c).src = `/stream/wide/${c}${fresh}`;
     $("img-" + c).hidden = false;
     $(c + "-empty").hidden = true;
@@ -461,7 +479,7 @@ function spawn(lane, color, opts = {}) {
 let pendingFrames = 0, frameAcc = 0, idleAcc = 0, dealt = 0, statsAt = 0;
 
 function spawnFrames(dt) {
-  const open = CAMS.filter(c => !covered[c]);
+  const open = CAMS.filter(live);
 
   if (!open.length) {
     pendingFrames = 0;
@@ -835,7 +853,11 @@ async function boot() {
   }
 
   try {
-    for (const c of (await getJson("/cameras")).cameras || []) if (c.name in covered) setCovered(c.name, !!c.covered);
+    const cams = await getJson("/cameras");
+
+    for (const c of cams.cameras || []) if (c.name in covered) setCovered(c.name, !!c.covered);
+
+    for (const c of cams.unavailable || []) if (CAMS.includes(c.name)) markUnavailable(c.name, c.error);
   } catch {
     // No runtime yet: nothing is covered.
   }

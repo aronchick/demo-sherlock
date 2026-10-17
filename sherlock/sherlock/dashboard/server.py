@@ -93,7 +93,8 @@ def make_app(sherlock: Sherlock) -> FastAPI:
 
     @app.post("/demo/cover/{camera}/{state}")
     def cover(camera: str, state: str):
-        sherlock.cover(camera, state == "on")
+        if not sherlock.cover(camera, state == "on"):
+            raise HTTPException(404, f"camera {camera!r} is not available")
         return {"ok": True}
 
     @app.post("/demo/fail/{n}")
@@ -112,6 +113,9 @@ def make_app(sherlock: Sherlock) -> FastAPI:
 
     @app.get("/cameras")
     def cameras():
-        return {"cameras": [c.describe() for c in sherlock.cameras.values()]}
+        # The pages read `unavailable` on load: a camera that failed at startup
+        # was announced before any browser was listening.
+        return {"cameras": [c.describe() for c in sherlock.cameras.values()],
+                "unavailable": [{"name": n, "error": e} for n, e in sherlock.unavailable.items()]}
 
     return app

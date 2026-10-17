@@ -18,6 +18,7 @@ def main():
     a = p.parse_args()
     if a.mock:
         os.environ["SHERLOCK_MOCK"] = "1"
+    from sherlock.camera import CameraError
     from sherlock.config import Config
     from sherlock.dashboard.pipeline import mount_pipeline
     from sherlock.dashboard.server import make_app
@@ -25,7 +26,10 @@ def main():
 
     # Config loads .env; an unset or blank host must never expose camera feeds.
     host = os.environ.get("DASHBOARD_HOST", "").strip() or "127.0.0.1"
-    s = Sherlock(Config(), synthetic=a.synthetic)
+    try:
+        s = Sherlock(Config(), synthetic=a.synthetic)
+    except CameraError as e:  # only when no camera opened; one line, not a traceback
+        sys.exit(f"Sherlock: {e}")
     s.start()
     app = mount_pipeline(make_app(s))  # /pipeline: data-flow view
     uvicorn.run(app, host=host, port=a.port, log_level="warning")

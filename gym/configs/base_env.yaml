@@ -1,0 +1,14 @@
+# Fixed Sherlock Environment & Deterministic Verifier (held constant across all ablations)
+sherlock:
+  resources_servers:
+    sherlock:
+      entrypoint: app.py
+      domain: agent
+      verified: true
+      description: Scripted Sherlock security camera environment and multi-metric verifier
+      value: Evaluates tool-call validity, task success, steps-to-report, fault recovery, and benign VLM-skip
+      datasets:
+        - name: sherlock_ablation_eval
+          type: example
+          jsonl_fpath: gym/resources_servers/sherlock/data/tasks.jsonl
+          num_repeats: 1

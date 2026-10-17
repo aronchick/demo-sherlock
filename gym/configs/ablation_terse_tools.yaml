@@ -1,0 +1,50 @@
+# Ablation 4 (Tool Descriptions Swap): tool_descriptions=terse vs verbose
+# Generative parameter budget: 30.0B (Nemotron-3.5-Lightning-30B-A3B) + 2.25B (SmolVLM-Instruct) = 32.25B <= 33B
+sherlock:
+  resources_servers:
+    sherlock:
+      entrypoint: app.py
+      domain: agent
+      verified: true
+      datasets:
+        - name: sherlock_ablation_eval
+          type: example
+          jsonl_fpath: gym/resources_servers/sherlock/data/tasks.jsonl
+          num_repeats: 1
+
+policy_model:
+  responses_api_models:
+    vllm_model:
+      entrypoint: app.py
+      base_url: ${oc.env:DIRECTOR_BASE_URL,http://127.0.0.1:18900/v1}
+      api_key: ${oc.env:DIRECTOR_API_KEY,EMPTY}
+      model: nvidia/NVIDIA-Nemotron-3.5-Lightning-30B-A3B-NVFP4
+      return_token_id_information: false
+      uses_reasoning_parser: false
+      chat_template_kwargs:
+        enable_thinking: false
+      extra_body:
+        chat_template_kwargs:
+          enable_thinking: false
+
+sherlock_agent:
+  responses_api_agents:
+    sherlock_agent:
+      entrypoint: app.py
+      resources_server:
+        type: resources_servers
+        name: sherlock
+      model_server:
+        type: responses_api_models
+        name: policy_model
+      max_steps: 6
+      weapon_extra_steps: 4
+      prompt_config: gym/prompts/system_v2.yaml
+      tool_descriptions: terse
+      ablation_id: terse_tools
+      ablation_component: "Tool Descriptions (terse vs verbose)"
+      ablation_description: "Strip tool & parameter descriptions to terse 3-word strings; hold model, prompt (v2), thinking (off) fixed"
+      director_model_name: nvidia/NVIDIA-Nemotron-3.5-Lightning-30B-A3B-NVFP4
+      director_params_b: 30.0
+      vlm_model_name: HuggingFaceTB/SmolVLM-Instruct
+      vlm_params_b: 2.25

@@ -11,7 +11,7 @@
   @font-face { font-family: "Schibsted Grotesk"; font-weight: 400 700; font-display: swap; src: url(/pipeline/fonts/schibsted-grotesk.woff2) format("woff2"); }
   :root {
     --paper: #ebe7de; --card: #f5f2ea; --card-hi: #fbf9f4; --line: #cdc7b8; --rail: #b9b2a0;
-    --ink: #1b1e22; --dim: #6f695d; --faint: #a39d8d;
+    --ink: #1b1e22; --dim: #6f695d; --faint: #625d53;
     --scout: #2d5f90; --director: #b4690e; --analyst: #2a7a78; --verifier: #94456a;
     --weapon: #d1391c; --benign: #8c8678; --ok: #2f7d4f; --bad: #b3342c;
     --sans: "Schibsted Grotesk", "Helvetica Neue", sans-serif;
@@ -60,8 +60,8 @@
   @keyframes blink { 50% { opacity: .25; } }
   .view { position: relative; min-height: 0; background: #16181b; }
   .view img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; display: block; }
-  .frame.alert { border-color: var(--weapon); box-shadow: 0 0 0 1px var(--weapon), 0 0 26px rgba(209,57,28,.28); animation: alertpulse 1.2s ease-in-out 3; }
-  @keyframes alertpulse { 50% { box-shadow: 0 0 0 1px var(--weapon), 0 0 44px rgba(209,57,28,.5); } }
+  .frame.alert { border-color: var(--weapon); outline: 1px solid var(--weapon); animation: alertpulse 1.2s ease-in-out 3; }
+  @keyframes alertpulse { 50% { outline-width: 3px; } }
   .cover { position: absolute; inset: 0; background: rgba(22,24,27,.9); display: none; align-items: center; justify-content: center;
     color: #cfc9ba; font: 500 11px var(--mono); letter-spacing: .14em; text-transform: uppercase; }
   .frame.covered .cover { display: flex; }
@@ -89,7 +89,7 @@
     transition: border-color .25s, box-shadow .25s, background .25s; }
   .stage::before { content: ""; position: absolute; left: 0; top: 10px; bottom: 10px; width: 3px; border-radius: 0 3px 3px 0; background: var(--c); }
   .stage.hot { border-color: var(--tint, var(--c)); background: var(--card-hi);
-    box-shadow: 0 0 0 1px var(--tint, var(--c)), 0 8px 18px -16px var(--tint, var(--c)); }
+    outline: 1px solid var(--tint, var(--c)); }
   .stage .kind { font: 500 10px var(--mono); letter-spacing: .14em; text-transform: uppercase; color: var(--dim); }
   .stage .name { font: 700 clamp(15px, 1.5vw, 18px)/1.2 var(--sans); }
   .stage .sub { font-size: 12px; color: var(--dim); }
@@ -150,6 +150,7 @@
   @media (prefers-reduced-motion: reduce) { .frame.alert, #d-alert.ping, .cell.on, .frame .fh i { animation: none; } }
 </style>
 <link rel="stylesheet" href="/pipeline/assets/pipeline-models.css">
+<link rel="stylesheet" href="/pipeline/assets/incidents.css">
 </head>
 <body>
 <div class="app">
@@ -200,7 +201,8 @@
       <article class="stage" id="st-bucket" style="--c: var(--benign)">
         <div class="kind">Evidence</div>
         <div class="sub">snapshots/ on this disk</div>
-        <div class="slots" aria-hidden="true"></div>
+        <div class="slots evidence-links" id="evidence-links" aria-label="Saved evidence"><span>No saved evidence yet</span></div>
+        <a href="/custody" class="custody-link">Browse chain of custody</a>
         <span class="badge"></span>
       </article>
     </div>
@@ -256,6 +258,13 @@
       <article class="dest" id="d-alert" style="--c: var(--weapon)">
         <div class="kind">Alert</div><div class="num" id="n-alerts">0</div><div class="sub">verified weapon</div>
       </article>
+      <section class="phone-shell phone-compact" aria-label="Simulated responder phone">
+        <div class="phone-speaker" aria-hidden="true"></div>
+        <div class="phone-label">Responder phone <span>SIMULATED</span></div>
+        <div id="phone-content"><p>Waiting for a verified alert.</p></div>
+        <p class="phone-error" id="phone-error" role="status"></p>
+        <a href="/phone" target="_blank" rel="noopener">Open phone in separate tab</a>
+      </section>
     </div>
   </section>
 
@@ -276,6 +285,7 @@
     <div class="expanso" id="expanso"><i></i><span id="expansoText"></span></div>
     <a href="/topology">topology</a>
     <a href="/log">event log</a>
+    <a href="/custody">evidence</a>
     <button type="button" onclick="post('/demo/fail/1')">Break next tool call</button>
     <button type="button" id="coverBtn" onclick="toggleCover()">Cover hero lens</button>
   </footer>
@@ -283,6 +293,7 @@
 <canvas id="fx"></canvas>
 
 <script src="/pipeline/assets/pipeline-models.js"></script>
+<script src="/pipeline/assets/incidents.js" defer></script>
 <script>
 'use strict';
 // ---------------------------------------------------------------------------
@@ -609,6 +620,7 @@ function playScout(ev) {
     flash($('wideFrame')); $('wideFrame').classList.remove('alert');
     setStamp($('stamp'), '', ''); setStamp($('wideStamp'), '', ''); caption('');
     $('cropFrame').classList.remove('sealed'); $('cropTag').textContent = 'waiting for a look';
+    cropImg.style.visibility = 'hidden';
     glow('scout', 1, color); latency('scout', ev.latency_ms);
     const p = bboxToPage(wideImg, bb);
     const dock = { x: R.spec.cx, y: R.spec.cy };
@@ -666,6 +678,7 @@ function onTool(ev) {
       const mm = imgMap(wideImg);
       if (bb) S.zoom = { from: S.zoom ? S.zoom.to : [0, 0, mm.nw, mm.nh], to: zoomWindow(bb, mm.nw, mm.nh), t0: now(), ms: 700, color: isHead ? C.director : cur.color };
       $('cropTag').textContent = isHead ? 'zoom: face' : 'zoom';
+      cropImg.style.visibility = 'visible';
       $('cropFrame').classList.toggle('sealed', !!isHead);
       const cf = $('cropFrame'); cf.classList.add('iris'); void cf.offsetWidth; cf.classList.remove('iris');
       await wait(600);
@@ -750,7 +763,9 @@ function onReport(ev) {
       S.archived = { bmp: cur.card, x: R.keep.cx, y: R.keep.cy, color: C.benign }; // the picture lands in Archived
       ping('ignored', C.benign);
       setStamp($('wideStamp'), 'archived', 'quiet');
-      caption(`${d.label || cur.label || 'object'} · benign · archived${calls ? ' · ' + calls : ''}`);
+      cropImg.style.visibility = 'hidden';
+      $('cropTag').textContent = 'no close-up requested';
+      caption(`${d.label || cur.label || 'object'} · benign · no close-up${calls ? ' · ' + calls : ''}`);
       cellSet('decision', 'archived', calls + secs);
       if (S.docked) S.docked.fade = true;
       for (const b of S.boxes) b.alpha = 0.99;
@@ -954,11 +969,7 @@ function drawStageArt(t) {
   const sc = R.scout, a = (t / 900) % (Math.PI * 2);                      // scan hand: the Scout never stops
   ctx.strokeStyle = C.scout; ctx.lineWidth = 2; ctx.globalAlpha = 0.85;
   ctx.beginPath(); ctx.arc(sc.r - 16, sc.t + 14, 5, a, a + 1.1); ctx.stroke(); ctx.globalAlpha = 1;
-  for (let i = 0; i < 8; i++) {                                           // evidence shelf
-    const s = shelfSlot(i), item = S.shelf[i];
-    if (item && item.bmp) drawCard({ bmp: item.bmp, color: item.color, blur: item.kind === 'face' }, s.x, s.y, Math.min(s.w, s.h) - 4, 1);
-    else { ctx.strokeStyle = 'rgba(27,30,34,.16)'; ctx.setLineDash([2, 3]); ctx.strokeRect(s.x - s.w / 2, s.y - s.h / 2, s.w, s.h); ctx.setLineDash([]); }
-  }
+  // Saved images are accessible links populated from persisted incident records.
 }
 function drawFeed(t) {
   const view = wideImg.parentElement.getBoundingClientRect(), m = imgMap(wideImg), Rr = m.r;

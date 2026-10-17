@@ -20,6 +20,15 @@
         ],
         "createdAt": "2026-10-17T17:03:19.053Z",
         "reason": "Code inspection and mock-run screenshot: existing cam and frame containers hold edge-to-edge images; camera labels are inset 10px/8px and empty crop text is grid-centered. Adding container padding would alter the intended image framing."
+      },
+      {
+        "rule": "broken-image",
+        "value": "*",
+        "files": [
+          "sherlock/sherlock/dashboard/static/pipeline.html"
+        ],
+        "createdAt": "2026-10-17T19:47:57.359Z",
+        "reason": "Agent verified existing model preview images are hidden until pipeline-models.js assigns real data URLs; these are event-driven images, not shipped broken placeholders."
       }
     ]
   }

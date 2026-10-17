@@ -1,0 +1,251 @@
+"""Insta360 Link 2 adapter against fake transports: geometry, wire format,
+clamping, settle, auto-home, and failure -> CameraError -> next camera."""
+import math
+import struct
+import sys
+import time
+import types
+
+import numpy as np
+import pytest
+from sherlock.agents.director import RuleDirector
+from sherlock.agents.scout import Detection
+from sherlock.agents.vision import MockAnalyst
+from sherlock.camera import (
+    CameraError,
+    FakePTZCamera,
+    Insta360Camera,
+    Pose,
+    build_camera,
+)
+from sherlock.camera.insta360 import (
+    CT_PANTILT_ABSOLUTE,
+    CT_ZOOM_ABSOLUTE,
+    GET_MAX,
+    GET_MIN,
+    SET_CUR,
+    FakeTransport,
+    MacUSBTransport,
+    PTZRanges,
+    Tuning,
+    aim_at,
+    parse_v4l2_ctrls,
+)
+from sherlock.config import Config
+from sherlock.events import BUS
+from sherlock.tools import ToolBox
+
+W, H = 1280, 720
+HALF_HFOV = 33.5  # Insta360 spec: 67 deg HFOV
+
+
+class Frames:
+    """Stand-in for _FrameSource; records the freshness each read asked for."""
+
+    def __init__(self):
+        self.asked: list[float] = []
+
+    def read(self, newer_than: float = 0.0) -> np.ndarray:
+        self.asked.append(newer_than)
+        return np.zeros((H, W, 3), np.uint8)
+
+
+def make(transport=None, **tuning) -> Insta360Camera:
+    t = Tuning(**{"home_after_s": 0.0, "settle_s": 0.0, "cmd_timeout_s": 1.0, **tuning})
+    return Insta360Camera("hero", "0", transport=transport or FakeTransport(), tuning=t,
+                          frames=Frames())
+
+
+def box_at(cx: float, cy: float, size: int = 40) -> tuple[int, int, int, int]:
+    return (int(cx - size / 2), int(cy - size / 2), int(cx + size / 2), int(cy + size / 2))
+
+
+# --- geometry ----------------------------------------------------------------------
+
+def test_centered_box_keeps_aim_and_zooms_to_fill():
+    cam = make(max_zoom=4.0, fill=0.6)
+    pose = cam.look_at((W // 2 - 320, H // 2 - 180, W // 2 + 320, H // 2 + 180))  # half the frame
+    assert pose.pan == pytest.approx(0, abs=1e-6)
+    assert pose.tilt == pytest.approx(0, abs=1e-6)
+    assert pose.zoom == pytest.approx(1.2)  # 0.6 fill * 2x smaller than the frame
+
+
+def test_box_at_right_edge_pans_half_the_hfov():
+    cam = make()
+    pose = cam.look_at(box_at(W, H / 2))
+    assert pose.pan == pytest.approx(HALF_HFOV, abs=0.05)
+    assert pose.tilt == pytest.approx(0, abs=1e-6)
+
+
+def test_box_at_top_tilts_up_by_half_the_vfov():
+    cam = make()
+    pose = cam.look_at(box_at(W / 2, 0))
+    half_vfov = math.degrees(math.atan(math.tan(math.radians(HALF_HFOV)) * H / W))
+    assert pose.tilt == pytest.approx(half_vfov, abs=0.05)
+    assert pose.pan == pytest.approx(0, abs=1e-6)
+
+
+def test_zoomed_view_maps_offsets_through_the_narrower_fov():
+    cam = make()
+    cam.move(pan=20, tilt=0, zoom=2)
+    cam.wide_frame()
+    pose = cam.look_at(box_at(W, H / 2))
+    expected = 20 + math.degrees(math.atan(math.tan(math.radians(HALF_HFOV)) / 2))
+    assert pose.pan == pytest.approx(expected, abs=0.05)
+
+
+@pytest.mark.parametrize("pan,tilt,zoom", [(0, 0, 1), (35, 20, 2), (-80, -40, 3.5), (120, 25, 1)])
+def test_centered_box_is_a_fixed_point_at_any_pose(pan, tilt, zoom):
+    got = aim_at(box_at(W / 2, H / 2), (W, H), Pose(pan, tilt, zoom), 67.0)
+    assert got == pytest.approx((pan, tilt), abs=1e-6)
+
+
+def test_aims_from_the_pose_the_scout_frame_was_taken_at():
+    cam = make()
+    cam.wide_frame()            # Scout grabs a frame at home
+    cam.move(pan=50, tilt=10)   # gimbal moves before the Director acts
+    pose = cam.look_at(box_at(W / 2, H / 2))
+    assert (pose.pan, pose.tilt) == pytest.approx((0, 0), abs=1e-6)
+
+
+# --- wire format and limits -------------------------------------------------------
+
+def test_degrees_become_arcseconds_with_configurable_signs():
+    tr = FakeTransport()
+    cam = make(tr, pan_sign=-1.0)
+    cam.move(pan=10, tilt=-5, zoom=2)
+    assert ("pantilt", -36000, -18000) in tr.calls
+    assert tr.calls[-1] == ("zoom", 200)
+
+
+def test_clamps_to_ranges_the_camera_reports():
+    tr = FakeTransport(fake_ranges=PTZRanges(pan=(-90 * 3600, 90 * 3600),
+                                             tilt=(-30 * 3600, 45 * 3600), zoom=(100, 400)))
+    cam = make(tr, max_zoom=3.0)
+    pose = cam.move(pan=150, tilt=-80, zoom=9)
+    assert (pose.pan, pose.tilt, pose.zoom) == (90, -30, 3.0)
+    assert tr.calls[-1] == ("zoom", 300)
+
+
+def test_mac_usb_transport_wire_format(monkeypatch):
+    sent: list[tuple] = []
+    replies = {(GET_MIN, CT_PANTILT_ABSOLUTE): struct.pack("<ii", -522000, -324000),
+               (GET_MAX, CT_PANTILT_ABSOLUTE): struct.pack("<ii", 522000, 108000),
+               (GET_MIN, CT_ZOOM_ABSOLUTE): struct.pack("<H", 100),
+               (GET_MAX, CT_ZOOM_ABSOLUTE): struct.pack("<H", 400)}
+    opened: list[int] = []
+
+    def open_vc_interface(vid, pid, iface_num):
+        opened.append(pid)
+        return types.SimpleNamespace(close=lambda: None) if pid == 0x4C04 else None
+
+    def control_request(handle, bm, req, w_value, w_index, data=b"", read_length=0):
+        sent.append((bm, req, w_value, w_index, bytes(data)))
+        return True, replies.get((req, w_value >> 8), b"")
+
+    fake = types.ModuleType("link_usb_macos")
+    fake.open_vc_interface, fake.control_request = open_vc_interface, control_request
+    monkeypatch.setitem(sys.modules, "link_usb_macos", fake)
+
+    tr = MacUSBTransport()
+    tr.open()
+    assert opened[0] == 0x4C04 and tr.pid == 0x4C04  # Link 2 first, not link-ctl's 0x4c01 default
+    assert tr.ranges() == PTZRanges(pan=(-522000, 522000), tilt=(-324000, 108000), zoom=(100, 400))
+    sent.clear()
+    tr.set_pantilt(36000, -7200)
+    tr.set_zoom(250)
+    assert sent == [(0x21, SET_CUR, 0x0D00, 0x0100, struct.pack("<ii", 36000, -7200)),
+                    (0x21, SET_CUR, 0x0B00, 0x0100, struct.pack("<H", 250))]
+
+
+def test_v4l2_ctrl_listing_parses_ranges():
+    text = """
+                   pan_absolute 0x009a0908 (int)    : min=-522000 max=522000 step=3600 default=0 value=0
+                  tilt_absolute 0x009a0909 (int)    : min=-324000 max=324000 step=3600 default=0 value=0
+                  zoom_absolute 0x009a090d (int)    : min=100 max=400 step=1 default=100 value=100
+"""
+    c = parse_v4l2_ctrls(text)
+    assert c["pan_absolute"]["min"] == -522000 and c["zoom_absolute"]["max"] == 400
+
+
+# --- timing ------------------------------------------------------------------------
+
+def test_snapshot_waits_for_the_gimbal_to_settle():
+    cam = make(settle_s=0.2, slew_deg_s=1e9)
+    cam.move(pan=10)
+    t0 = time.monotonic()
+    cam.snapshot()
+    assert time.monotonic() - t0 >= 0.18
+    assert cam.src.asked[-1] == pytest.approx(cam._settle_until)  # asks for a post-settle frame
+
+
+def test_returns_home_when_idle_and_new_moves_reset_the_clock():
+    tr = FakeTransport()
+    cam = make(tr, home_after_s=0.3)
+    cam.move(pan=30, zoom=2)
+    time.sleep(0.2)
+    cam.move(pan=40)  # re-arms the timer
+    time.sleep(0.2)
+    assert cam.pose.pan == 40
+    time.sleep(0.3)
+    assert cam.pose == Pose(0, 0, 1)
+    assert tr.calls[-2:] == [("pantilt", 0, 0), ("zoom", 100)]
+
+
+# --- failure paths -----------------------------------------------------------------
+
+def test_dead_gimbal_raises_camera_error_but_construction_survives():
+    cam = make(FakeTransport(fail=True))
+    assert cam.describe()["ptz"].startswith("offline")
+    with pytest.raises(CameraError, match="gimbal not responding"):
+        cam.move(pan=10)
+    with pytest.raises(CameraError):
+        cam.look_at(box_at(W, H / 2))
+
+
+def test_silent_gimbal_times_out_as_camera_error():
+    cam = make(FakeTransport(hang_s=0.5), cmd_timeout_s=0.1)
+    t0 = time.monotonic()
+    with pytest.raises(CameraError, match="no answer"):
+        cam.move(pan=10)
+    assert time.monotonic() - t0 < 0.4
+
+
+def test_reconnects_when_the_gimbal_comes_back():
+    tr = FakeTransport(fail=True)
+    cam = make(tr)
+    with pytest.raises(CameraError):
+        cam.move(pan=10)
+    tr.fail = False
+    assert cam.move(pan=10).pan == 10
+    assert cam.describe()["ptz"] == "fake"
+
+
+def test_covered_lens_is_loud():
+    cam = make()
+    cam.covered = True
+    with pytest.raises(CameraError, match="lens covered"):
+        cam.snapshot()
+
+
+def test_director_falls_back_to_next_camera_when_gimbal_dies():
+    hero = make(FakeTransport(fail=True))
+    tools = ToolBox({"hero": hero, "scout1": FakePTZCamera("scout1", None)}, MockAnalyst())
+    r = tools.call("look_at", {"camera": "hero", "bbox": [600, 300, 700, 400]})
+    assert "gimbal not responding" in r["error"]
+    before = BUS.stats.get("recoveries", 0)
+    report = RuleDirector(tools).investigate(Detection("bottle", 0.9, (600, 300, 700, 400), "hero"))
+    assert report["done"] and report["claim"] != "all cameras failed"
+    assert BUS.stats["recoveries"] > before
+
+
+# --- registration ------------------------------------------------------------------
+
+def test_backend_name_registers_and_parses(monkeypatch):
+    monkeypatch.setenv("CAMERAS", "hero:insta360:0,scout1:fake:0")
+    specs = Config().cameras
+    assert [(c.name, c.backend, c.source) for c in specs] == [("hero", "insta360", "0"),
+                                                             ("scout1", "fake", "0")]
+    cam = build_camera("hero", "insta360", "synthetic")  # --synthetic runs need no hardware
+    assert isinstance(cam, Insta360Camera) and isinstance(cam.transport, FakeTransport)
+    cam.close()

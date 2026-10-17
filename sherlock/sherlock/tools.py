@@ -6,7 +6,7 @@ import time
 
 import numpy as np
 
-from .camera import Camera, CameraError, FakePTZCamera
+from .camera import Camera, CameraError
 from .events import BUS
 
 TOOL_SCHEMAS = [
@@ -89,9 +89,7 @@ class ToolBox:
         if len(bbox) != 4 or any(not isinstance(v, (int, float)) for v in bbox):
             raise ValueError("bbox must be [x1,y1,x2,y2] numbers")
         cam = self._cam(camera)
-        h, w = cam.wide_frame().shape[:2]
-        pose = FakePTZCamera.bbox_to_pose(tuple(int(v) for v in bbox), (w, h))
-        cam.move(pose.pan, pose.tilt, pose.zoom)
+        cam.look_at(tuple(int(v) for v in bbox))  # each backend maps the box to its own optics
         return {"ok": True, **cam.describe()}
 
     def t_move(self, camera: str, pan=None, tilt=None, zoom=None) -> dict:

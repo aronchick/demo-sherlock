@@ -17,7 +17,9 @@ BBox = tuple[float, float, float, float]  # x1, y1, x2, y2 in pixels
 # people are background. Append new classes at the end so existing label ids keep
 # their meaning. The fedora and cap are the sponsor props (Red Hat fedora, Red Hat x
 # NVIDIA cap): no COCO class covers them, so they come only from in-room photos.
-CLASSES = ("person", "weapon", "badge", "bottle", "fedora", "cap")
+# Coke is a can held in the hand: a benign object the Director ignores on camera,
+# kept apart from COCO's bottle so the board names it and cans don't dilute bottle.
+CLASSES = ("person", "weapon", "badge", "bottle", "fedora", "cap", "coke")
 
 # Open COCO categories (and stock YOLOv8 names, which are the same) -> Scout class.
 # COCO has no badge and no firearm: badges come only from the in-room photos.
@@ -28,9 +30,11 @@ COCO_TARGETS = ("knife", "scissors", "baseball bat", "bottle")  # categories we 
 # In-room capture sessions. "none" = empty room or a person with no prop: hard negatives.
 PROP_CLASS = {"knife": "weapon", "bat": "weapon", "scissors": "weapon",
               "badge": "badge", "bottle": "bottle", "fedora": "fedora", "cap": "cap",
-              "none": None}
-# Stock YOLO can't see a badge; these are what it usually calls one. Pre-label hints only.
-PROP_HINTS = {"badge": frozenset({"cell phone", "remote", "book"})}
+              "coke": "coke", "none": None}
+# Stock YOLO has no badge or can class; these are what it usually calls them.
+# Pre-label hints only: in that prop's session they become drafts of the prop's class.
+PROP_HINTS = {"badge": frozenset({"cell phone", "remote", "book"}),
+              "coke": frozenset({"bottle", "cup"})}
 
 # COCO image licences that allow redistribution under CC-BY: 4 Attribution,
 # 7 No known copyright restrictions, 8 United States Government Work.

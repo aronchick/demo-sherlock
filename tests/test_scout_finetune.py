@@ -92,6 +92,15 @@ def test_draft_labels_map_stock_names_and_badge_hints():
     assert [sd.CLASSES[c] for c, _ in bsd.draft_labels(names, dets, "knife")] == ["person", "weapon"]
 
 
+def test_coke_session_drafts_a_can_from_bottle_or_cup():
+    names = {0: "person", 39: "bottle", 41: "cup"}
+    dets = [(0, 0.9, (0, 0, 9, 9)), (39, 0.6, (1, 1, 5, 5)), (41, 0.5, (2, 2, 6, 6))]
+    as_cls = [sd.CLASSES[c] for c, _ in bsd.draft_labels(names, dets, "coke")]
+    assert as_cls == ["person", "coke", "coke"]
+    assert [sd.CLASSES[c] for c, _ in bsd.draft_labels(names, dets, "none")] == ["person", "bottle"]
+    assert len(review_labels.COLORS) == len(sd.CLASSES), "the label editor draws every class"
+
+
 def test_label_editor_add_delete_relabel_undo():
     ed = review_labels.LabelEditor([(0, (0, 0, 100, 100))])
     assert not ed.add((5, 5), (6, 6)), "a mis-click is not a box"

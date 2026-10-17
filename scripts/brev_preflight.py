@@ -462,14 +462,28 @@ def parser():
         default="127.0.0.1",
         help="Host for printed Mac .env; defaults to SSH tunnel",
     )
-    cli.add_argument("--output-dir", type=Path, default=ROOT / "results")
+    cli.add_argument("--stub", action="store_true", help="Use a loopback stub; A/B restarts are simulated, never Docker")
+    cli.add_argument("--output-dir", type=Path, help="Default: results/, or .runtime/vllm-stub/ with --stub")
     return cli
 
 
 def main(argv=None):
-    load_dotenv(ROOT / ".env")
     cli = parser()
     args = cli.parse_args(argv)
+    if args.stub:
+        from vllm_stub import run_local
+
+        try:
+            return run_local(args, run, ROOT)
+        except ValueError as exc:
+            cli.error(str(exc))
+    load_dotenv(ROOT / ".env")
+    args.output_dir = args.output_dir or ROOT / "results"
+    return run(args)
+
+
+def run(args):
+    cli = parser()
     if (
         any(
             not math.isfinite(v) or v <= 0
@@ -499,6 +513,7 @@ def main(argv=None):
     report = {
         "schema_version": 1,
         "evidence_kind": args.evidence_kind,
+        "execution_mode": "local_stub" if args.evidence_kind == "stub" else "measured",
         "mode": args.mode,
         "ok": False,
         "stages": [],
@@ -514,7 +529,7 @@ def main(argv=None):
             raise ValueError(
                 "Object JPEG missing: supply --image or merge benchmark PR #11"
             )
-        if args.mode == "ab":
+        if args.mode == "ab" and not args.stub:
             for role, port in (("director", 8001), ("vlm", 8002)):
                 url = urlsplit(eps[role]["base"])
                 if (
@@ -531,7 +546,10 @@ def main(argv=None):
         for label in labels:
             stage = {"prefix_caching": label}
             report["stages"].append(stage)
-            if args.mode == "ab":
+            if args.mode == "ab" and args.stub:
+                stage["restart"] = "simulated; no containers or cache optimization"
+                print(f"STUB A/B: simulated prefix caching {label}; no Docker restart", flush=True)
+            if args.mode == "ab" and not args.stub:
                 stage["server_config_sha256"] = restart(int(label == "on"))
                 if previous_config and previous_config != stage["server_config_sha256"]:
                     raise ValueError(
@@ -548,7 +566,10 @@ def main(argv=None):
                 stage["benchmark_json"] = str(result)
                 baseline = result
         report["ok"] = True
-        mac_instructions(args, eps)
+        if args.stub:
+            print("STUB ONLY: readiness, smoke, sweep and comparison plumbing; no serving performance evidence.")
+        else:
+            mac_instructions(args, eps)
         return 0
     except (
         OSError,

@@ -680,6 +680,7 @@ def markdown(result: dict) -> str:
     def fmt(value):
         return "n/a" if value is None else f"{value:.2f}"
 
+    request_counts = ", ".join(str(n) for n in sorted({row["summary"]["attempted"] for row in result["runs"]}))
     lines = [
         "# Sherlock vLLM benchmark",
         "",
@@ -709,10 +710,12 @@ def markdown(result: dict) -> str:
             "TTFT is client-observed time to first text/reasoning/tool-name/argument delta, including network and server queueing.",
             "Tool response validity requires at least one call and every call to pass the imported schema; failed requests count as invalid.",
             "KV usage is a before/after snapshot, not peak. Prefix-cache rates use counter deltas after warmup.",
-            "With 64 requests per cell, p99 is exploratory. Use at least 200 for submission evidence.",
+            f"Requests per cell: {request_counts}. p99 is exploratory with fewer than 200 successful requests per cell.",
         ]
     )
     if result.get("comparison"):
+        if result["evidence_kind"] == "stub":
+            lines.extend(["", "Stub A/B checks comparison plumbing only; deltas are not model optimization results."])
         lines.extend(
             [
                 "",
@@ -785,13 +788,27 @@ def parser() -> argparse.ArgumentParser:
         default="unspecified",
         help="Nonsecret hardware/model revision/config label, same for A/B",
     )
-    cli.add_argument("--output-dir", type=Path, default=ROOT / "results")
+    cli.add_argument("--stub", action="store_true", help="Run with an owned loopback stub; no GPU or model")
+    cli.add_argument("--output-dir", type=Path, help="Default: results/, or .runtime/vllm-stub/ with --stub")
     return cli
 
 
 def main(argv=None) -> int:
     cli = parser()
     args = cli.parse_args(argv)
+    if args.stub:
+        from vllm_stub import run_local
+
+        try:
+            return run_local(args, run, ROOT)
+        except ValueError as exc:
+            cli.error(str(exc))
+    args.output_dir = args.output_dir or ROOT / "results"
+    return run(args)
+
+
+def run(args):
+    cli = parser()
     if (
         args.requests < 1
         or args.warmup < 0
@@ -811,6 +828,7 @@ def main(argv=None) -> int:
             "schema_version": SCHEMA_VERSION,
             "created_at": datetime.now(UTC).isoformat(),
             "evidence_kind": args.evidence_kind,
+            "execution_mode": "local_stub" if args.evidence_kind == "stub" else "measured",
             "prefix_caching": args.prefix_caching,
             "environment": args.environment,
             "image": image_info,

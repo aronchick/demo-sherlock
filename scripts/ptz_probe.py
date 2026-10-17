@@ -141,17 +141,17 @@ def linux_v4l2(device: str) -> ins.V4L2Transport | None:
 def video_indexes() -> int | None:
     print("== Video streams (OpenCV index -> name, size)")
     try:
-        names = base.list_video_devices()  # same uniqueID ordering OpenCV uses
+        devices = base.list_video_devices()  # same indexes OpenCV uses
     except base.CameraError as e:
         print(f"  cannot list camera names ({e})")
-        names = []
-    guess = next((i for i, n in enumerate(names) if "insta360" in n.lower()), None)
-    for i in range(max(len(names), 1)):
+        devices = []
+    guess = next((i for i, n in devices if "insta360" in n.lower()), None)
+    for i, name in devices or [(0, "?")]:
         cap = cv2.VideoCapture(i)
         ok, frame = cap.read() if cap.isOpened() else (False, None)
         cap.release()
         size = f"{frame.shape[1]}x{frame.shape[0]}" if ok else "no frame (camera permission?)"
-        print(f"  index {i}: {names[i] if i < len(names) else '?':28} {size}")
+        print(f"  index {i}: {name:28} {size}")
     print("  indexes reshuffle when cameras are plugged in; select by name instead:")
     print('  CAMERAS="hero:insta360:name:Insta360 Link 2,scout1:fake:name:MacBook Pro Camera"')
     if guess is None:

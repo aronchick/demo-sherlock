@@ -62,26 +62,30 @@ class Camera(ABC):
 
 
 NAME_PREFIX = "name:"
+V4L2_SYSFS = Path("/sys/class/video4linux")
 
 
-def list_video_devices() -> list[str]:
-    """Camera names in OpenCV index order. On macOS OpenCV sorts AVFoundation
+def list_video_devices() -> list[tuple[int, str]]:
+    """(OpenCV index, camera name) pairs. On macOS OpenCV sorts AVFoundation
     devices by uniqueID (cap_avfoundation_mac.mm), which is not the order
-    ffmpeg or Photo Booth show, so indexes must be derived the same way."""
+    ffmpeg or Photo Booth show, so indexes must be derived the same way. On
+    Linux the index is the /dev/videoN number, which can have gaps after an
+    unplug, so it is carried with the name rather than inferred from position."""
     if sys.platform == "darwin":
         r = subprocess.run(["system_profiler", "-json", "SPCameraDataType"], check=False,
                            capture_output=True, text=True, timeout=10)
         if r.returncode != 0:
             raise CameraError(f"system_profiler failed: {r.stderr.strip()}")
         cams = json.loads(r.stdout or "{}").get("SPCameraDataType", [])
-        return [c.get("_name", "?") for c in sorted(cams, key=lambda c: c.get("spcamera_unique-id", ""))]
+        cams = sorted(cams, key=lambda c: c.get("spcamera_unique-id", ""))
+        return [(i, c.get("_name", "?")) for i, c in enumerate(cams)]
     if sys.platform.startswith("linux"):
-        devs = sorted(Path("/sys/class/video4linux").glob("video*"), key=lambda d: int(d.name[5:]))
-        return [(d / "name").read_text().strip() for d in devs]
+        nums = sorted(int(d.name[5:]) for d in V4L2_SYSFS.glob("video*") if d.name[5:].isdigit())
+        return [(n, (V4L2_SYSFS / f"video{n}" / "name").read_text().strip()) for n in nums]
     raise CameraError(f"name-based camera selection is not supported on {sys.platform}")
 
 
-def resolve_source(source: str, devices: list[str] | None = None) -> str:
+def resolve_source(source: str, devices: list[tuple[int, str]] | None = None) -> str:
     """`name:<camera name>` -> OpenCV index as a string; anything else passes through.
     Indexes reshuffle whenever a camera is plugged in, so names are the stable way
     to pick one. Exact (case-insensitive) match wins, else a unique substring."""
@@ -89,12 +93,12 @@ def resolve_source(source: str, devices: list[str] | None = None) -> str:
         return source
     want = source[len(NAME_PREFIX):].strip().lower()
     devices = list_video_devices() if devices is None else devices
-    names = [d.lower() for d in devices]
-    hits = [i for i, n in enumerate(names) if n == want] or \
-           [i for i, n in enumerate(names) if want in n]
+    hits = [i for i, n in devices if n.lower() == want] or \
+           [i for i, n in devices if want in n.lower()]
     if len(hits) != 1:
         what = "no camera" if not hits else "several cameras"
-        raise CameraError(f"{what} named {source[len(NAME_PREFIX):]!r}; available: {devices}")
+        raise CameraError(f"{what} named {source[len(NAME_PREFIX):]!r}; "
+                          f"available: {[n for _, n in devices]}")
     return str(hits[0])
 
 

@@ -383,7 +383,7 @@ def test_synthetic_runs_simulate_the_optics_so_look_at_lands_on_the_box():
 def test_name_source_resolves_against_opencv_order():
     from sherlock.camera.base import resolve_source
 
-    devices = ["MacBook Pro Camera", "OBS Virtual Camera", "Insta360 Link 2"]
+    devices = [(0, "MacBook Pro Camera"), (1, "OBS Virtual Camera"), (2, "Insta360 Link 2")]
     assert resolve_source("name:Insta360 Link 2", devices) == "2"
     assert resolve_source("name:macbook pro camera", devices) == "0"   # case-insensitive
     assert resolve_source("name:OBS", devices) == "1"                  # unique substring
@@ -403,7 +403,21 @@ def test_macos_order_is_uniqueid_sorted_like_opencv(monkeypatch):
     monkeypatch.setattr(base.sys, "platform", "darwin")
     monkeypatch.setattr(base.subprocess, "run", lambda *a, **k: types.SimpleNamespace(
         returncode=0, stdout=json.dumps(listing), stderr=""))
-    assert base.list_video_devices() == ["MacBook Pro Camera", "OBS Virtual Camera"]
+    assert base.list_video_devices() == [(0, "MacBook Pro Camera"), (1, "OBS Virtual Camera")]
+
+
+def test_linux_keeps_real_video_numbers_across_gaps(monkeypatch, tmp_path):
+    from sherlock.camera import base
+
+    for n, name in ((2, "Insta360 Link 2"), (5, "Integrated Camera"), (10, "Insta360 Link 2 meta")):
+        (tmp_path / f"video{n}").mkdir()
+        (tmp_path / f"video{n}" / "name").write_text(name + "\n")
+    monkeypatch.setattr(base.sys, "platform", "linux")
+    monkeypatch.setattr(base, "V4L2_SYSFS", tmp_path)
+    devices = base.list_video_devices()
+    assert devices == [(2, "Insta360 Link 2"), (5, "Integrated Camera"), (10, "Insta360 Link 2 meta")]
+    assert base.resolve_source("name:Insta360 Link 2", devices) == "2"  # /dev/video2, not 0
+    assert base.resolve_source("name:integrated", devices) == "5"
 
 
 def test_cameras_env_accepts_name_sources(monkeypatch):

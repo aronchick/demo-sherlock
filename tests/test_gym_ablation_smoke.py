@@ -65,7 +65,7 @@ def test_nemo_gym_usage_compat_accepts_vllm_028_and_stub_usage() -> None:
     converter = ResponsesConverter(return_token_id_information=False)
     req_params = NeMoGymResponseCreateParamsNonStreaming(
         input="test",
-        model="nvidia/NVIDIA-Nemotron-3.5-Lightning-30B-A3B-NVFP4",
+        model="RedHatAI/NVIDIA-Nemotron-3.5-Lightning-30B-A3B-FP8",
     )
     for usage_dict in (
         # vLLM 0.28 without prompt_tokens_details
@@ -84,7 +84,7 @@ def test_nemo_gym_usage_compat_accepts_vllm_028_and_stub_usage() -> None:
                 "id": "chatcmpl-test",
                 "object": "chat.completion",
                 "created": 1700000000,
-                "model": "nvidia/NVIDIA-Nemotron-3.5-Lightning-30B-A3B-NVFP4",
+                "model": "RedHatAI/NVIDIA-Nemotron-3.5-Lightning-30B-A3B-FP8",
                 "choices": [
                     {
                         "index": 0,

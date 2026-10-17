@@ -26,8 +26,9 @@ if [[ "$DIRECTOR_PRESET" == "qwen" ]]; then
     docker container rm director >/dev/null
   fi
 else
-  # Hopper/Ampere: use the NVFP4 repo's W4A16 kernels (~20GB). Blackwell: NVFP4 natively.
-  DIRECTOR=${DIRECTOR:-nvidia/NVIDIA-Nemotron-3.5-Lightning-30B-A3B-NVFP4}
+  # Red Hat FP8 weights and activations; target the existing H100.
+  # vLLM reads compressed-tensors quantization from the checkpoint config.
+  DIRECTOR=${DIRECTOR:-RedHatAI/NVIDIA-Nemotron-3.5-Lightning-30B-A3B-FP8}
   TOOL_PARSER=${TOOL_PARSER:-qwen3_coder}
   REASONING_PARSER=${REASONING_PARSER:-nemotron_v3}
 fi

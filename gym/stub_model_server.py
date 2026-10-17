@@ -390,7 +390,7 @@ def create_stub_app() -> FastAPI:
             "object": "list",
             "data": [
                 {
-                    "id": "nvidia/NVIDIA-Nemotron-3.5-Lightning-30B-A3B-NVFP4",
+                    "id": "RedHatAI/NVIDIA-Nemotron-3.5-Lightning-30B-A3B-FP8",
                     "object": "model",
                     "owned_by": "nvidia",
                 },
@@ -404,7 +404,7 @@ def create_stub_app() -> FastAPI:
 
     @app.post("/v1/chat/completions")
     async def chat_completions(body: dict[str, Any] = _DEFAULT_DICT_BODY) -> dict[str, Any]:
-        model = str(body.get("model", "nvidia/NVIDIA-Nemotron-3.5-Lightning-30B-A3B-NVFP4"))
+        model = str(body.get("model", "RedHatAI/NVIDIA-Nemotron-3.5-Lightning-30B-A3B-FP8"))
         messages = body.get("messages") or []
         tools = body.get("tools") or []
 

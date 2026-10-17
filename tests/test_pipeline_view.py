@@ -48,12 +48,12 @@ def test_page_config_names_models_and_where_they_run(monkeypatch):
     for key in ("SHERLOCK_MOCK", "BREV_HOST"):
         monkeypatch.delenv(key, raising=False)
     monkeypatch.setenv("DIRECTOR_BASE_URL", "https://gpu.brev.example/v1")
-    monkeypatch.setenv("DIRECTOR_MODEL", "nvidia/NVIDIA-Nemotron-3.5-Lightning-30B-A3B-NVFP4")
+    monkeypatch.setenv("DIRECTOR_MODEL", "RedHatAI/NVIDIA-Nemotron-3.5-Lightning-30B-A3B-FP8")
     monkeypatch.setenv("ANALYST_BASE_URL", "http://localhost:8002/v1")
     monkeypatch.setenv("CAMERAS", "hero:insta360:name:Link,scout1:fake:1")
     cfg = _page_cfg(TestClient(mount_pipeline(FastAPI())).get("/topology").text)
     assert cfg["models"]["scout"]["where"] == "laptop"
-    assert cfg["models"]["director"] == {"model": "nvidia/NVIDIA-Nemotron-3.5-Lightning-30B-A3B-NVFP4",
+    assert cfg["models"]["director"] == {"model": "RedHatAI/NVIDIA-Nemotron-3.5-Lightning-30B-A3B-FP8",
                                          "where": "gpu.brev.example", "url": "https://gpu.brev.example/v1"}
     assert cfg["models"]["analyst"]["where"] == "laptop"          # localhost, no tunnel declared
     assert [c["backend"] for c in cfg["cameras"]] == ["insta360", "fake"]

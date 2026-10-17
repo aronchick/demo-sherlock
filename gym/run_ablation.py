@@ -190,7 +190,7 @@ async def run_single_ablation(
     default_model_id = (
         "Qwen/Qwen2.5-7B-Instruct"
         if endpoint_env_var == "QWEN_DIRECTOR_BASE_URL"
-        else "nvidia/NVIDIA-Nemotron-3.5-Lightning-30B-A3B-NVFP4"
+        else "RedHatAI/NVIDIA-Nemotron-3.5-Lightning-30B-A3B-FP8"
     )
     if not str(model_block.get("model") or "").strip():
         model_block["model"] = default_model_id

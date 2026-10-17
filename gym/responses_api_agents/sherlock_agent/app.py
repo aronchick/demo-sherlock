@@ -55,7 +55,7 @@ class SherlockAgentConfig(BaseResponsesAPIAgentConfig):
     ablation_component: str = "baseline"
     ablation_description: str = "Nemotron 3.5 Lightning (thinking off), system_v2, verbose tools"
     endpoint_env_var: str = "DIRECTOR_BASE_URL"
-    director_model_name: str = "nvidia/NVIDIA-Nemotron-3.5-Lightning-30B-A3B-NVFP4"
+    director_model_name: str = "RedHatAI/NVIDIA-Nemotron-3.5-Lightning-30B-A3B-FP8"
     director_params_b: float = 30.0
     vlm_model_name: str = "HuggingFaceTB/SmolVLM-500M-Instruct"
     vlm_params_b: float = 0.507

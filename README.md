@@ -29,10 +29,29 @@ cp .env.example .env              # CAMERAS=hero:fake:0 uses the laptop webcam w
 python run.py
 ```
 
-## When the OBSBOT arrives
-1. `python scripts/ptz_probe.py` — checks whether the camera answers standard UVC pan/tilt/zoom.
-2. If yes: `CAMERAS=hero:obsbot:0,scout1:fake:1`. Nothing else changes.
-3. If no: Plan B is OSC via OBSBOT Center; implement `ObsbotCamera.move` against it.
+## Hardware: Insta360 Link 2 hero camera
+The hero is an **Insta360 Link 2, the gimbal model** (USB `2e1a:4c04`), not the gimbal-less Link 2C. The scout is the Mac's built-in webcam on the software-crop backend.
+
+1. Plug the Link 2 **straight into a Mac port, not the hub**. It is a USB 2.0 device; sharing a hub with other cameras starves the stream.
+2. Quit the **Insta360 Link Controller** app, or at least turn AI Tracking off in it. Firmware tracking fights `look_at`. The app is not needed for control.
+3. `uv run scripts/ptz_probe.py`: reports whether the camera is on USB and behind a hub, whether USB-direct PTZ answers, the pan/tilt/zoom ranges it reports, the AI mode, and the OpenCV index of its stream. Run it from a terminal that has macOS camera permission.
+4. `uv run scripts/ptz_probe.py --wiggle --index <n>`: moves the gimbal and writes `snapshots/probe_*.jpg`. +pan must move the view right and +tilt up; otherwise set `INSTA360_PAN_SIGN=-1` / `INSTA360_TILT_SIGN=-1`.
+5. `CAMERAS=hero:insta360:<n>,scout1:fake:<mac webcam index>`. Nothing else changes.
+
+Control path on macOS: standard UVC pan/tilt/zoom control transfers sent straight over USB with [link-ctl](https://pypi.org/project/link-ctl/)'s IOKit module (no sudo, no app). On Linux: `v4l2-ctl`. The Link Controller WebSocket API is not used because it cannot set an absolute pan/tilt. If the gimbal does not answer within `INSTA360_CMD_TIMEOUT_S`, `look_at`/`move` return a tool error and the Director moves to the next camera.
+
+Tuning (env, defaults in `sherlock/camera/insta360.py`):
+
+| Variable | Default | What it does |
+| :--- | :--- | :--- |
+| `INSTA360_FILL` | `0.6` | Share of the frame the target fills after `look_at` |
+| `INSTA360_MAX_ZOOM` | `4.0` | Zoom cap (Link 2 zoom is 4x digital; lower it if crops get soft) |
+| `INSTA360_HFOV_DEG` | `67` | Horizontal FOV at 1x, from the Insta360 spec sheet |
+| `INSTA360_SETTLE_S` / `INSTA360_SLEW_DEG_S` / `INSTA360_ZOOM_SETTLE_S` | `0.35` / `120` / `0.1` | Wait before a snapshot: fixed + travel/speed + per-1x zoom change |
+| `INSTA360_HOME_AFTER_S` | `6` | Return to the wide home pose after this many idle seconds (`0` = never) |
+| `INSTA360_PAN_SIGN` / `INSTA360_TILT_SIGN` / `INSTA360_UNITS_PER_DEG` | `1` / `1` / `3600` | Direction and units of the raw UVC values (arc-seconds per spec) |
+
+The OBSBOT adapter (`hero:obsbot:<n>`) is kept as an alternate backend.
 
 ## vLLM on Brev (bounty + speed)
 Serve the Director (and optionally the VLM) with vLLM on a Brev GPU, then:
@@ -44,7 +63,7 @@ If the endpoint is unreachable the Director automatically drops to the rule-base
 
 ## Layout
 ```
-sherlock/camera/     Camera interface, FakePTZ (crop/zoom), ObsbotCamera (UVC), SyntheticSource
+sherlock/camera/     Camera interface, FakePTZ (crop/zoom), Insta360Camera (Link 2 gimbal), ObsbotCamera (UVC), SyntheticSource
 sherlock/agents/     scout.py (YOLO + motion fallback + dedupe/dwell), director.py (tool loop + RuleDirector), vision.py (Analyst, Verifier, mocks)
 sherlock/tools.py    Tool schemas + dispatcher + failure injection
 sherlock/orchestrator.py   Scout → investigate → verify loop, stats

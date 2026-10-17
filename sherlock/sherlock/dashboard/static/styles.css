@@ -217,8 +217,8 @@ body[data-mode="live"] .mode b { color: var(--ok); }
 @keyframes arrive { 0% { background: rgba(242, 193, 78, .28); } 100% { background: transparent; } }
 .feed li.empty { display: block; color: var(--text-dim); padding: 8px 4px; white-space: normal; }
 
-/* outcomes: the tiers and the incident */
-.outcomes { display: grid; grid-template-rows: auto minmax(0, 1fr); gap: 12px; }
+/* outcomes: the tiers, the incident, and the measured results */
+.outcomes { display: grid; grid-template-rows: auto auto minmax(0, 1fr); gap: 12px; }
 .tiers { display: grid; gap: 8px; }
 .tier { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 12px; align-items: center; padding: 8px 14px;
   border: 1px solid var(--line); border-left: 4px solid var(--line); border-radius: 8px; background: var(--surface); transition: border-color .3s ease; }
@@ -259,6 +259,35 @@ body[data-mode="live"] .mode b { color: var(--ok); }
 .inc-meta b { color: var(--ok); font-weight: 600; }
 .inc-meta b[data-ok="false"] { color: var(--warn); }
 
+/* Saved bench results from /numbers (numbers.js): measured or TBD, never stub runs.
+   The slot is whatever height the incident leaves; when the card would not fit, it
+   sheds rank-3 rows, then rank-2 rows, so it never overlaps the incident. The
+   thresholds are the card's heights: 248px full, 189px without rank 3, 140px minimal. */
+.m-slot { display: grid; align-content: end; min-height: 0; container: measured / size; }
+.measured { display: grid; gap: 6px; padding: 10px 14px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); }
+.m-head { display: flex; align-items: baseline; gap: 12px; white-space: nowrap; }
+.m-head h3 { font-size: 13px; font-weight: 600; letter-spacing: .08em; color: var(--text-dim); }
+.m-head span { margin-left: auto; min-width: 0; color: var(--text-dim); font-size: 13px; overflow: hidden; text-overflow: ellipsis; }
+.measured dl { display: grid; margin: 0; font-size: 13px; line-height: 1.35; }
+.measured dt { margin-top: 4px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.measured dt:first-child { margin-top: 0; }
+.measured dd { display: flex; gap: 10px; margin: 0; white-space: nowrap; }
+.measured dd span { color: var(--text-dim); }
+.measured dd i { font-style: normal; }
+.measured dd output { margin-left: auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+@container measured (max-height: 250px) {
+  .measured { gap: 4px; padding: 7px 12px; }
+  .measured dl { line-height: 1.25; }
+  .measured dt { margin-top: 2px; }
+  .measured [data-rank="3"], .measured dd i { display: none; }
+}
+@container measured (max-height: 192px) {
+  .measured [data-rank="2"] { display: none; }
+}
+@container measured (max-height: 140px) {
+  .measured { display: none; }  /* below both capture sizes: no room even for the headline rows */
+}
+
 /* ------------------------------------------------------------- responsive */
 @media (max-width: 1600px) {
   /* 1440×810 capture: tighter gutters and cards; the chain and feed keep their rows. */
@@ -280,7 +309,8 @@ body[data-mode="live"] .mode b { color: var(--ok); }
   body { grid-template-rows: 56px 44px auto; }
   .stage { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
   .cameras { grid-template-columns: repeat(3, minmax(0, 1fr)); grid-template-rows: auto; grid-column: 1 / -1; }
-  .outcomes { grid-column: 2; }
+  .outcomes { grid-column: 2; grid-template-rows: none; align-self: start; }
+  .m-slot { container-type: normal; }  /* natural height: no capture size is this narrow */
   #flow { display: none; }
   .feed { height: 280px; }
 }

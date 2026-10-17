@@ -1,10 +1,17 @@
-"""The board's backend contract: static files and routes, the chain metadata on
-tool events, the head-only review crop, and the live-only Scout latency."""
+"""The board's backend contract: static files and routes, the measured-results card,
+the chain metadata on tool events, the head-only review crop, and the live-only Scout
+latency."""
+import json
+import pathlib
 import queue
+import re
+import shutil
+import subprocess
 import time
 from types import SimpleNamespace
 
 import numpy as np
+import pytest
 from fastapi import APIRouter
 from fastapi.testclient import TestClient
 from sherlock.agents.director import RuleDirector
@@ -12,7 +19,8 @@ from sherlock.agents.scout import Detection, Scout, head_region
 from sherlock.agents.vision import MockAnalyst, MockVerifier, _mock_classify
 from sherlock.camera import FakePTZCamera
 from sherlock.config import Config
-from sherlock.dashboard.server import make_app
+from sherlock.dashboard import numbers
+from sherlock.dashboard.server import STATIC, make_app
 from sherlock.events import BUS
 from sherlock.scene import ScriptedScene
 from sherlock.tools import ToolBox
@@ -63,6 +71,56 @@ def test_board_is_served_at_log_and_later_routes_still_win():
                                                "vlm_model": None, "scout_ms": None, "servers": None}
         assert client.get("/stream/wide/nope").status_code == 404
         assert client.get("/nope.js").status_code == 404
+
+
+def measured_ids() -> set[str]:
+    """Every element numbers.js writes to."""
+    return set(re.findall(r"'(numbers?-[a-z-]+)'", (pathlib.Path(STATIC) / "numbers.js").read_text()))
+
+
+def empty_results(tmp_path, monkeypatch) -> tuple[str, dict]:
+    """The board page and /numbers when no measured result exists yet."""
+    monkeypatch.setattr(numbers, "ROOT", tmp_path)
+    with TestClient(make_app(SimpleNamespace(cfg=Config(), cameras={}))) as client:
+        assert client.get("/numbers.js").status_code == 200
+        return client.get("/log").text, client.get("/numbers").json()
+
+
+def test_board_mounts_every_measured_result_as_tbd(tmp_path, monkeypatch):
+    page, data = empty_results(tmp_path, monkeypatch)
+    assert data == {"director": None, "ablation": None, "scout": None}
+    assert '<script src="numbers.js"' in page
+    ids = measured_ids()
+    assert len(ids) == 12 and all(f'id="{i}"' in page for i in ids), "numbers.js writes to an element the board lacks"
+    outputs = re.findall(r'<output id="(number-[a-z-]+)">([^<]*)</output>', page)
+    assert len(outputs) == 8 and {text for _, text in outputs} == {"TBD"}
+
+
+# numbers.js against a stand-in DOM holding the board's ids, fed the real /numbers body.
+RUN_NUMBERS_JS = """
+const {script, data, ids} = JSON.parse(process.argv[1]);
+const shown = {};
+globalThis.document = {getElementById: id => ids.includes(id) ? (shown[id] ??= {textContent: ''}) : null};
+globalThis.fetch = async () => ({ok: true, json: async () => data});
+globalThis.setInterval = () => 0;
+require(script);
+setTimeout(() => console.log(JSON.stringify(Object.fromEntries(
+  Object.entries(shown).map(([id, el]) => [id, el.textContent])))), 0);
+"""
+
+
+@pytest.mark.skipif(shutil.which("node") is None, reason="needs node to run numbers.js")
+def test_numbers_js_renders_tbd_from_an_empty_results_dir(tmp_path, monkeypatch):
+    page, data = empty_results(tmp_path, monkeypatch)
+    arg = {"script": str(pathlib.Path(STATIC) / "numbers.js"), "data": data, "ids": re.findall(r'id="([^"]+)"', page)}
+    run = subprocess.run(["node", "-e", RUN_NUMBERS_JS, json.dumps(arg)], capture_output=True, text=True,
+                         timeout=30, check=True)
+    shown = json.loads(run.stdout)
+    assert set(shown) == measured_ids()
+    assert shown.pop("numbers-status") == "No measured results yet"
+    labels = {i: shown.pop(i) for i in ("number-director", "number-ablation", "number-scout")}
+    assert labels == {"number-director": "Director", "number-ablation": "NeMo Gym", "number-scout": "Scout · weapon"}
+    assert set(shown.values()) == {"TBD"} and len(shown) == 8
 
 
 def test_review_crop_is_the_head_not_the_knife():

@@ -28,7 +28,8 @@ def _evidence(tmp_path, incident="20261017-120000-001", crops=(("weapon_crop", W
     folder = tmp_path / incident
     folder.mkdir(parents=True)
     for name, raw in crops:
-        (folder / f"{name}.jpg").write_bytes(raw)
+        extension = "png" if name == "model_context" else "jpg"
+        (folder / f"{name}.{extension}").write_bytes(raw)
     return incident
 
 
@@ -211,7 +212,7 @@ def test_rejections_are_not_cleared_by_catch():
 
 
 def test_saved_manifest_provenance_and_scene_are_transported(tmp_path):
-    iid = _evidence(tmp_path, crops=(("original_frame", b"scene"), ("face_crop", FACE), ("model_context", b"context")))
+    iid = _evidence(tmp_path, crops=(("original_frame", b"scene"), ("face_crop", FACE), ("model_context", b"\x89PNG\r\n\x1a\ncontext")))
     manifest = {**_report(iid, "log", False, ("original_frame", "face_crop", "model_context")),
                 "custody": [{"stage": "capture"}], "models": {"analyst": "configured"},
                 "evidence_provenance": {"face_crop": {"source": "original_frame", "bbox": [1, 2, 3, 4]}},
@@ -221,7 +222,9 @@ def test_saved_manifest_provenance_and_scene_are_transported(tmp_path):
     assert rec["action"] == "log" and rec["custody"] == manifest["custody"]
     assert base64.b64decode(rec["crops"]["original_frame"]["b64"]) == b"scene"
     assert rec["crops"]["face_crop"]["provenance"]["source"] == "original_frame"
-    assert base64.b64decode(rec["crops"]["model_context"]["b64"]) == b"context"
+    assert base64.b64decode(rec["crops"]["model_context"]["b64"]) == b"\x89PNG\r\n\x1a\ncontext"
+    assert rec["crops"]["model_context"]["content_type"] == "image/png"
+    assert rec["crops"]["model_context"]["path"].endswith("/model_context.png")
     assert "unrelated_secret" not in rec
 
 

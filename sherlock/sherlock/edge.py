@@ -149,7 +149,8 @@ def telemetry_record(ev: Event) -> dict:
 
 def _evidence_file(evidence_dir: pathlib.Path, incident: str, filename: str) -> pathlib.Path:
     if not ID.fullmatch(incident) or filename not in {
-        "manifest.json", *(f"{name}.jpg" for name in _EVIDENCE_NAMES)
+        "manifest.json", "model_context.png",
+        *(f"{name}.jpg" for name in _EVIDENCE_NAMES if name != "model_context")
     }:
         raise ValueError("invalid evidence path")
     root = pathlib.Path(evidence_dir).resolve()
@@ -161,7 +162,8 @@ def _evidence_file(evidence_dir: pathlib.Path, incident: str, filename: str) -> 
 
 
 def _crop_file(evidence_dir: pathlib.Path, incident: str, name: str) -> pathlib.Path:
-    return _evidence_file(evidence_dir, incident, f"{name}.jpg")
+    extension = "png" if name == "model_context" else "jpg"
+    return _evidence_file(evidence_dir, incident, f"{name}.{extension}")
 
 
 def incident_record(report: dict, evidence_dir: pathlib.Path) -> dict:
@@ -190,7 +192,8 @@ def incident_record(report: dict, evidence_dir: pathlib.Path) -> dict:
         except (OSError, ValueError):
             continue
         entry = {"sha256": hashlib.sha256(raw).hexdigest(), "bytes": len(raw), "path": str(path),
-                 "b64": base64.b64encode(raw).decode()}
+                 "b64": base64.b64encode(raw).decode(),
+                 "content_type": "image/png" if name == "model_context" else "image/jpeg"}
         if isinstance(provenance, dict) and isinstance(provenance.get(name), dict):
             entry["provenance"] = provenance[name]
         crops[name] = entry

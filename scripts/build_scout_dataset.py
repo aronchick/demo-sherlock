@@ -36,6 +36,7 @@ from scout_data import (
     CLASSES,
     COCO_TARGETS,
     COCO_TO_SCOUT,
+    PROP_CLASS,
     PROP_HINTS,
     coco_xyxy,
     hash_split,
@@ -151,13 +152,14 @@ def cmd_coco(a: argparse.Namespace) -> None:
 # --- prelabel -------------------------------------------------------------------------
 def draft_labels(names: dict[int, str], dets: list[tuple[int, float, tuple]], prop: str) -> list[tuple[int, tuple]]:
     """Stock-YOLO detections -> Scout labels for one in-room photo. Weapon-ish COCO
-    names become weapon; in a badge session, things stock YOLO mistakes a badge for
-    (phone, remote, book) become badge drafts for the reviewer to keep or delete."""
+    names become weapon; in a badge or coke session, things stock YOLO mistakes the
+    prop for (phone for a badge, bottle or cup for a can) become drafts of the prop's
+    class for the reviewer to keep or delete."""
     out = []
     for cls_id, _, box in dets:
         name = names[cls_id]
         if name in PROP_HINTS.get(prop, ()):
-            out.append((CLASSES.index("badge"), box))
+            out.append((CLASSES.index(PROP_CLASS[prop]), box))
         elif (sc := scout_class(name)) is not None:
             out.append((CLASSES.index(sc), box))
     return out

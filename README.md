@@ -158,7 +158,7 @@ bounty evidence: the bounty requires vLLM).
 
 **Fine-tuning** touches only the Scout. Nemotron and SmolVLM run stock
 weights. The Scout kit builds an open COCO 2017 CC-BY subset plus prop
-photos from the room, trains YOLOv8n on four classes in about 20 minutes on
+photos from the room, trains YOLOv8n on seven classes in about 20 minutes on
 the M5 Max, and scores before vs after
 ([Fine-tune the Scout](#fine-tune-the-scout-about-20-minutes-on-this-mac)).
 `YOLO_MODEL=runs/scout/weights/best.pt` loads the result.
@@ -418,7 +418,9 @@ The OBSBOT adapter (`hero:obsbot:<n>`) is kept as an alternate backend.
 ## Fine-tune the Scout (about 20 minutes on this Mac)
 Stock YOLOv8n knows COCO's 80 classes. It has no badge class and it was never shown our room.
 The fine-tune keeps the same 3.2M-parameter nano model (so the Scout stays ~10 ms a frame) and teaches it
-four classes: `person`, `weapon` (knife, scissors, baseball bat), `badge`, `bottle`.
+seven classes: `person`, `weapon` (knife, scissors, baseball bat), `badge`, `bottle`, and three
+in-room props with no COCO class: `fedora`, `cap` (the sponsor hats) and `coke` (a can in the hand,
+benign: the Director ignores it without a VLM call).
 
 **Open data.** Most of the training set is an open COCO 2017 subset: COCO's own boxes for knife, scissors,
 baseball bat, bottle and person, kept only where the image licence allows CC-BY redistribution
@@ -432,6 +434,7 @@ Everything runs on the laptop with the camera attached; no Brev needed.
 # open COCO subset (~30 s measured: annotations + 1,279 images)
 uv run scripts/build_scout_dataset.py coco
 # shoot each prop; repeat with --prop bat, scissors, badge, bottle,
+# fedora, cap, coke,
 # then --prop none (empty room, empty hands)
 uv run scripts/capture_props.py --camera hero --prop knife --n 40
 # stock YOLOv8 drafts the boxes; fix the held-out test photos

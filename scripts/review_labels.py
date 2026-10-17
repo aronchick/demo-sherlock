@@ -5,7 +5,7 @@
     uv run scripts/review_labels.py --status         # counts only, no window
 
 Mouse: drag = new box in the current class, right-click = delete the box under
-the pointer. Keys: 1-6 pick the class (1 person, 2 weapon, 3 badge, 4 bottle, 5 fedora, 6 cap),
+the pointer. Keys: 1-6 pick the class (1 person, 2 weapon, 3 badge, 4 bottle, 5 fedora, 6 cap, 7 coke),
 r = give the box under the pointer the current class, u = undo, x = clear all,
 n / space / enter = save and next, p = save and back, q / esc = save and quit.
 Saving marks the photo reviewed (data/props/reviewed.txt); prelabel never
@@ -29,7 +29,7 @@ from scout_data import (
 
 ROOT = Path(__file__).resolve().parents[1]
 COLORS = [(200, 170, 120), (70, 70, 240), (60, 200, 240), (130, 200, 140),
-          (60, 60, 200), (200, 200, 200)]  # BGR per class
+          (60, 60, 200), (200, 200, 200), (40, 40, 160)]  # BGR per class
 MIN_SIDE = 4  # pixels; smaller drags are mis-clicks
 
 

@@ -16,6 +16,7 @@
 set -euo pipefail
 IMG=vllm/vllm-openai:v0.28.0
 DIRECTOR_PRESET=${DIRECTOR_PRESET:-lightning}
+MODEL_BIND_HOST=${MODEL_BIND_HOST:-127.0.0.1}
 
 if [[ "$DIRECTOR_PRESET" == "qwen" ]]; then
   DIRECTOR=${DIRECTOR:-Qwen/Qwen2.5-7B-Instruct}
@@ -47,7 +48,7 @@ if [[ -n "$REASONING_PARSER" && "$REASONING_PARSER" != "none" ]]; then
 fi
 
 if [[ "$DIRECTOR_PRESET" != "qwen" ]] || ! docker container inspect vlm >/dev/null 2>&1; then
-  docker run -d --name vlm --gpus all --ipc=host -p 8002:8000 \
+  docker run -d --name vlm --gpus all --ipc=host -p "${MODEL_BIND_HOST}:8002:8000" \
     -v ~/.cache/huggingface:/root/.cache/huggingface "$IMG" \
     --model "$VLM" --served-model-name "$VLM" vlm \
     --max-model-len 8192 --gpu-memory-utilization 0.30 --max-num-seqs 8 --limit-mm-per-prompt '{"image": 1}'
@@ -71,7 +72,7 @@ until curl -sf http://127.0.0.1:8002/v1/models >/dev/null; do
   sleep 5
 done
 
-docker run -d --name director --gpus all --ipc=host -p 8001:8000 \
+docker run -d --name director --gpus all --ipc=host -p "${MODEL_BIND_HOST}:8001:8000" \
   -v ~/.cache/huggingface:/root/.cache/huggingface "$IMG" \
   --model "$DIRECTOR" --served-model-name "$DIRECTOR" director \
   --max-model-len 32768 --gpu-memory-utilization 0.60 --max-num-seqs 16 \

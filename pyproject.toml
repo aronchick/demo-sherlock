@@ -18,6 +18,7 @@ dependencies = [
     "python-dotenv",
     # Insta360 Link 2 USB-direct PTZ
     "link-ctl>=2.2.1 ; sys_platform == 'darwin'",
+    "cryptography>=46",
 ]
 
 [project.optional-dependencies]

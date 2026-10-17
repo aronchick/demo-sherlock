@@ -28,9 +28,9 @@ def test_persistence_tamper_and_idempotent_ack(tmp_path):
     record = store.acknowledge(IID)
     assert store.acknowledge(IID) == record
     assert sum(e["stage"] == "acknowledgment" for e in record["custody"]) == 1
-    store.path(IID, "weapon_crop.jpg").write_bytes(b"tampered")
+    store.path(IID, record["artifacts"][0]["filename"]).write_bytes(b"tampered")
     assert store.read(IID)["artifacts"][0]["integrity"] == "mismatch"
-    store.path(IID, "weapon_crop.jpg").unlink()
+    store.path(IID, record["artifacts"][0]["filename"]).unlink()
     assert store.read(IID)["artifacts"][0]["integrity"] == "missing"
 
 

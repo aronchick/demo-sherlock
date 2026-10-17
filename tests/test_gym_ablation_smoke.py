@@ -189,3 +189,73 @@ def test_ablation_smoke_single_config_and_endpoint_skip(
         assert "Skipping ablation 'qwen_director'" in out
 
     asyncio.run(_run())
+
+
+def test_ollama_reasoning_effort_and_director_model_env_override(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Verify thinking-off configs pass reasoning_effort=none, thinking_on omits it, and DIRECTOR_MODEL overrides model IDs."""
+    from omegaconf import OmegaConf
+
+    repo_root = Path(__file__).resolve().parents[1]
+    thinking_off_configs = [
+        "gym/configs/ablation_prompt_v1.yaml",
+        "gym/configs/ablation_terse_tools.yaml",
+        "gym/configs/ablation_nemotron_lightning.yaml",
+        "gym/configs/ablation_qwen_director.yaml",
+    ]
+    thinking_on_config = "gym/configs/ablation_thinking_on.yaml"
+
+    monkeypatch.delenv("DIRECTOR_MODEL", raising=False)
+    monkeypatch.delenv("QWEN_DIRECTOR_MODEL", raising=False)
+
+    for rel_path in thinking_off_configs:
+        cfg = OmegaConf.to_container(OmegaConf.load(repo_root / rel_path), resolve=True)
+        assert isinstance(cfg, dict)
+        model_cfg = cfg["policy_model"]["responses_api_models"]["vllm_model"]
+        extra_body = model_cfg["extra_body"]
+        assert model_cfg["chat_template_kwargs"]["enable_thinking"] is False
+        assert extra_body["chat_template_kwargs"]["enable_thinking"] is False
+        assert extra_body.get("reasoning_effort") == "none", (
+            f"{rel_path} must set extra_body.reasoning_effort='none' for Ollama compatibility"
+        )
+
+    on_cfg = OmegaConf.to_container(OmegaConf.load(repo_root / thinking_on_config), resolve=True)
+    assert isinstance(on_cfg, dict)
+    on_model_cfg = on_cfg["policy_model"]["responses_api_models"]["vllm_model"]
+    assert on_model_cfg["chat_template_kwargs"]["enable_thinking"] is True
+    assert on_model_cfg["extra_body"]["chat_template_kwargs"]["enable_thinking"] is True
+    assert "reasoning_effort" not in on_model_cfg["extra_body"]
+    assert "reasoning_effort" not in on_model_cfg
+
+    # Verify DIRECTOR_MODEL and QWEN_DIRECTOR_MODEL env overrides for local Ollama fallback
+    monkeypatch.setenv("DIRECTOR_MODEL", "nemotron-3-nano:30b")
+    monkeypatch.setenv("QWEN_DIRECTOR_MODEL", "qwen2.5:7b")
+
+    for rel_path in [
+        "gym/configs/ablation_prompt_v1.yaml",
+        "gym/configs/ablation_terse_tools.yaml",
+        "gym/configs/ablation_thinking_on.yaml",
+        "gym/configs/ablation_nemotron_lightning.yaml",
+    ]:
+        cfg = OmegaConf.to_container(OmegaConf.load(repo_root / rel_path), resolve=True)
+        assert isinstance(cfg, dict)
+        model_cfg = cfg["policy_model"]["responses_api_models"]["vllm_model"]
+        agent_cfg = cfg["sherlock_agent"]["responses_api_agents"]["sherlock_agent"]
+        assert model_cfg["model"] == "nemotron-3-nano:30b"
+        assert agent_cfg["director_model_name"] == "nemotron-3-nano:30b"
+
+    qwen_cfg = OmegaConf.to_container(
+        OmegaConf.load(repo_root / "gym/configs/ablation_qwen_director.yaml"),
+        resolve=True,
+    )
+    assert isinstance(qwen_cfg, dict)
+    assert (
+        qwen_cfg["policy_model"]["responses_api_models"]["vllm_model"]["model"]
+        == "qwen2.5:7b"
+    )
+    assert (
+        qwen_cfg["sherlock_agent"]["responses_api_agents"]["sherlock_agent"]["director_model_name"]
+        == "qwen2.5:7b"
+    )
+

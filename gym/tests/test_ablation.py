@@ -54,18 +54,27 @@ def test_all_ablation_configs_keep_generative_models_within_33b_and_share_fixed_
         assert total_b <= 33.0, f"{rel_path} exceeds 33B budget: {total_b}B"
 
 
-def test_each_ablation_swaps_exactly_one_component_vs_reference() -> None:
+def test_each_ablation_swaps_exactly_one_component_vs_reference(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.delenv("DIRECTOR_MODEL", raising=False)
+    monkeypatch.delenv("QWEN_DIRECTOR_MODEL", raising=False)
     _, ref_model, ref_agent = _load_agent_and_model_cfg("gym/configs/ablation_nemotron_lightning.yaml")
 
     def _signature(model_cfg: dict, agent_cfg: dict) -> dict[str, object]:
+        extra_body = model_cfg.get("extra_body") or {}
         return {
             "model": model_cfg["model"],
-            "enable_thinking": bool((model_cfg.get("chat_template_kwargs") or {}).get("enable_thinking", False)),
+            "enable_thinking": (
+                bool((model_cfg.get("chat_template_kwargs") or {}).get("enable_thinking", False)),
+                extra_body.get("reasoning_effort"),
+            ),
             "prompt_config": agent_cfg["prompt_config"],
             "tool_descriptions": agent_cfg["tool_descriptions"],
         }
 
     ref_sig = _signature(ref_model, ref_agent)
+    assert ref_sig["enable_thinking"] == (False, "none")
 
     expected_swapped_key = {
         "gym/configs/ablation_qwen_director.yaml": "model",
@@ -81,6 +90,8 @@ def test_each_ablation_swaps_exactly_one_component_vs_reference() -> None:
         assert differing_keys == [expected_key], (
             f"{rel_path} should swap only {expected_key!r}, but differed on {differing_keys}"
         )
+        if expected_key == "enable_thinking":
+            assert sig["enable_thinking"] == (True, None)
 
 
 def test_end_to_end_ablation_pipeline_with_local_stub(tmp_path: Path) -> None:

@@ -110,3 +110,31 @@ bench-stub *args:
 # Judge-run readiness, smoke, sweep and simulated prefix-cache A/B; no Docker
 preflight-stub *args:
     uv run scripts/brev_preflight.py --stub --mode ab --requests 16 {{args}}
+
+# Expanso Edge data plane (scripts/expanso.sh): validate the five jobs offline
+expanso-check:
+    scripts/expanso.sh check
+
+# Both Expanso nodes on this machine, no Cloud; then SHERLOCK_EDGE=1 just up
+expanso-local:
+    scripts/expanso.sh local
+
+# Laptop node in Expanso Cloud, and deploy all five jobs from Cloud
+expanso-edge:
+    scripts/expanso.sh edge
+
+# Core node in Expanso Cloud; run this one on the Brev box
+expanso-core:
+    scripts/expanso.sh core
+
+# Expanso nodes running here, and the jobs in Cloud
+expanso-status:
+    scripts/expanso.sh status
+
+# Stop the Expanso nodes started on this machine
+expanso-down:
+    scripts/expanso.sh down
+
+# Delete the five jobs from Expanso Cloud
+expanso-clean:
+    scripts/expanso.sh clean

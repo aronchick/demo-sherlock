@@ -1,0 +1,96 @@
+# C1, cloud core (the Brev box): receives E1, E2 and E3 over the SSH tunnel.
+# Batches are split back into single records, each stream lands in its own
+# dated JSON-lines file, and alerts can also go to an operator webhook.
+name: sherlock-core-intake
+type: pipeline
+labels:
+  demo: sherlock
+  stage: core-intake
+
+selector:
+  match_labels:
+    role: sherlock-core
+
+config:
+  input:
+    label: intake
+    http_server:
+      address: "${SHERLOCK_CORE_LISTEN:127.0.0.1:23121}"
+      path: "/{endpoint}"
+      allowed_verbs: ["POST"]
+      timeout: 15s
+
+  pipeline:
+    processors:
+      # E1 and routine E2 traffic arrive as JSON arrays; one record per message.
+      - label: split_batches
+        switch:
+          - check: this.type() == "array"
+            processors:
+              - unarchive:
+                  format: json_array
+
+      - label: known_streams
+        mapping: |
+          root = if !["telemetry", "incident", "example"].contains(meta("endpoint").or("")) {
+            throw("unknown endpoint: " + meta("endpoint").or(""))
+          } else { this }
+
+      - label: core_receipt
+        mutation: |
+          root.core = {
+            "node": env("EDGE_NODE_NAME").or(hostname()),
+            "stream": meta("endpoint"),
+            "received_at": now()
+          }
+
+      - label: alert_log
+        switch:
+          - check: meta("endpoint") == "incident" && this.action == "alert"
+            processors:
+              - log:
+                  level: WARN
+                  message: >-
+                    ALERT incident=${! json("incident") } claim=${! json("claim") }
+                    verified=${! json("verified") } camera=${! json("camera") }
+
+      # Log and keep the error: `catch` would clear it and let the message
+      # through. reject_errored on the output then refuses it, so the sender
+      # gets an error response instead of a silent pass.
+      - label: report_failure
+        switch:
+          - check: errored()
+            processors:
+              - log:
+                  level: WARN
+                  message: "core intake rejected a message: ${! error() }"
+
+  output:
+    label: store_and_notify
+    reject_errored:
+      switch:
+        cases:
+          - output:
+              label: store
+              file:
+                path: >-
+                  ${SHERLOCK_CORE_DIR:/tmp/sherlock-core}/${! meta("endpoint") }/${! now().ts_format("2006-01-02") }.jsonl
+                codec: lines
+            continue: true
+          # Optional: set SHERLOCK_ALERT_WEBHOOK on the core node to notify an
+          # operator. A slow or failing webhook never holds up storage.
+          - check: >-
+              meta("endpoint") == "incident" && this.action == "alert"
+              && env("SHERLOCK_ALERT_WEBHOOK").or("") != ""
+            output:
+              label: alert_webhook
+              drop_on:
+                error: true
+                back_pressure: 10s
+                output:
+                  http_client:
+                    url: "${SHERLOCK_ALERT_WEBHOOK:http://127.0.0.1:9/unset}"
+                    verb: POST
+                    headers:
+                      Content-Type: application/json
+                    timeout: 5s

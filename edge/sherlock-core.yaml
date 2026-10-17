@@ -1,0 +1,10 @@
+# The cloud core: the Brev GPU box next to vLLM. Runs C1 and C2.
+name: sherlock-core
+api:
+  listen_addr: 127.0.0.1:23120
+log:
+  level: info
+  format: console
+labels:
+  demo: sherlock
+  role: sherlock-core

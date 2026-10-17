@@ -23,3 +23,5 @@ results/ablation_stub_*.json
 /IMG_*.PNG
 /IMG_*.MOV
 /IMG_*.mov
+# Expanso node identity (scripts/expanso.sh); owner-only, never committed.
+.cloud-state/

@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sherlock</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;600&family=IBM+Plex+Sans+Condensed:wght@600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #1f2630; --panel: #28313d; --line: #3a4656;
+    --ink: #e9edf1; --dim: #97a3b2;
+    --scout: #6fb1e6; --director: #e8a33d; --tool: #c9cfd6; --analyst: #8fd19e; --verifier: #f08c8c; --system: #97a3b2;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; background: var(--bg); color: var(--ink);
+    font: 15px/1.45 "IBM Plex Sans", system-ui, sans-serif; }
+  .grid { display: grid; height: 100%; grid-template-columns: 1.6fr 1fr; grid-template-rows: auto 1fr auto; gap: 12px; padding: 12px; }
+  header { grid-column: 1 / -1; display: flex; align-items: baseline; gap: 18px; }
+  header h1 { margin: 0; font: 600 28px "IBM Plex Sans Condensed", sans-serif; letter-spacing: .01em; }
+  header .ratio { margin-left: auto; font-size: 15px; color: var(--dim); }
+  header .ratio b { color: var(--ink); font-size: 26px; font-weight: 600; margin-right: 4px; }
+  .cams { display: grid; grid-template-rows: 1fr 1fr; gap: 12px; min-height: 0; }
+  .cam { position: relative; background: #000; border-radius: 6px; overflow: hidden; min-height: 0; }
+  .cam img { width: 100%; height: 100%; object-fit: contain; display: block; }
+  .cam span { position: absolute; left: 10px; top: 8px; color: var(--ink); background: rgba(31,38,48,.75); padding: 2px 8px; border-radius: 4px; font-size: 13px; }
+  .log { background: var(--panel); border-radius: 6px; padding: 10px 12px; overflow-y: auto; min-height: 0; display: flex; flex-direction: column-reverse; }
+  .ev { display: grid; grid-template-columns: 76px 1fr 64px; gap: 10px; padding: 6px 0; border-top: 1px solid var(--line); align-items: start; }
+  .ev .stage { font-weight: 600; font-size: 13px; }
+  .ev .ms { color: var(--dim); font-size: 13px; text-align: right; }
+  .ev .msg { word-break: break-word; }
+  .ev.scout .stage { color: var(--scout); } .ev.director .stage { color: var(--director); }
+  .ev.tool .stage { color: var(--tool); } .ev.analyst .stage { color: var(--analyst); }
+  .ev.verifier .stage { color: var(--verifier); } .ev.system .stage { color: var(--system); }
+  .ev.report { background: #2f3b2f; border-radius: 4px; padding: 8px; }
+  footer { grid-column: 1 / -1; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+  footer .stat { color: var(--dim); font-size: 14px; } footer .stat b { color: var(--ink); font-weight: 600; }
+  footer .sp { flex: 1; }
+  button { background: var(--panel); color: var(--ink); border: 1px solid var(--line); border-radius: 6px; padding: 7px 12px; font: inherit; cursor: pointer; }
+  button:hover { border-color: var(--director); }
+  button:focus-visible { outline: 2px solid var(--director); outline-offset: 2px; }
+  @media (max-width: 900px) { .grid { grid-template-columns: 1fr; grid-template-rows: auto auto 1fr auto; } .cams { grid-template-rows: 220px 220px; } }
+</style>
+</head>
+<body>
+<div class="grid">
+  <header>
+    <h1>Sherlock</h1>
+    <div style="color:var(--dim)">Small models that notice, decide, zoom, read, verify</div>
+    <div class="ratio"><b id="avoided">0</b>VLM calls avoided</div>
+  </header>
+
+  <section class="cams">
+    <div class="cam"><img src="/stream/wide" alt="Wide view"><span>Wide view</span></div>
+    <div class="cam"><img src="/stream/crop" alt="Latest zoomed crop"><span>Where the camera looked</span></div>
+  </section>
+
+  <section class="log" id="log" aria-live="polite"></section>
+
+  <footer>
+    <span class="stat">Frames <b id="frames">0</b></span>
+    <span class="stat">Investigations <b id="investigations">0</b></span>
+    <span class="stat">VLM calls <b id="vlm_calls">0</b></span>
+    <span class="stat">Tool errors <b id="tool_errors">0</b></span>
+    <span class="stat">Recovered <b id="recoveries">0</b></span>
+    <span class="stat">Verified <b id="confirmed">0</b> / rejected <b id="rejected">0</b></span>
+    <span class="sp"></span>
+    <button onclick="post('/demo/fail/1')">Break the next tool call</button>
+    <button id="cover" onclick="toggleCover()">Cover hero lens</button>
+  </footer>
+</div>
+<script>
+  const log = document.getElementById('log');
+  const es = new EventSource('/events');
+  es.onmessage = e => {
+    const ev = JSON.parse(e.data);
+    const d = document.createElement('div');
+    d.className = 'ev ' + ev.stage + (ev.msg.startsWith('REPORT') ? ' report' : '');
+    d.innerHTML = `<span class="stage">${ev.stage}</span><span class="msg"></span><span class="ms">${ev.latency_ms ? Math.round(ev.latency_ms) + ' ms' : ''}</span>`;
+    d.querySelector('.msg').textContent = ev.msg;
+    log.prepend(d);
+    while (log.children.length > 200) log.lastChild.remove();
+  };
+  es.addEventListener('stats', e => {
+    const s = JSON.parse(e.data);
+    for (const k in s) { const el = document.getElementById(k); if (el) el.textContent = s[k]; }
+    document.getElementById('avoided').textContent = s.vlm_calls_avoided;
+  });
+  const post = url => fetch(url, {method: 'POST'});
+  let covered = false;
+  async function toggleCover() {
+    covered = !covered;
+    await post(`/demo/cover/hero/${covered ? 'on' : 'off'}`);
+    document.getElementById('cover').textContent = covered ? 'Uncover hero lens' : 'Cover hero lens';
+  }
+</script>
+</body>
+</html>

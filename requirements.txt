@@ -1,0 +1,8 @@
+opencv-python
+numpy
+openai>=1.40
+fastapi
+uvicorn
+pydantic
+ultralytics      # scout backend "yolo" (optional in mock mode)
+python-dotenv

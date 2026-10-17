@@ -230,8 +230,7 @@ class MacUSBTransport(PTZTransport):
         self.open()
         ok, _ = self._usb.control_request(self._h, _REQ_OUT, SET_CUR, sel << 8,
                                           (self.ct_unit << 8) | self.iface, data=payload)
-        if not ok:
-            self.close()
+        if not ok:  # the camera owns close(): it may be reopening this transport
             raise TransportError(f"UVC SET_CUR sel 0x{sel:02x} rejected")
 
     def ranges(self) -> PTZRanges | None:
@@ -403,6 +402,9 @@ class Insta360Camera(Camera):
         self._settle_until = 0.0
         self._home_timer: threading.Timer | None = None
         self._home_gen = 0
+        # A transport call that outlived cmd_timeout_s is still running on its
+        # thread. Until it returns, the transport is neither closed nor reused.
+        self._stuck: threading.Thread | None = None
         # Pose and size of the last frame handed to the Scout: detection bboxes
         # are in that frame, even if the gimbal has moved since.
         self._view_pose = replace(self.home)
@@ -459,6 +461,9 @@ class Insta360Camera(Camera):
 
     def close(self) -> None:
         self._cancel_home()
+        if self._stuck is not None and self._stuck.is_alive():
+            log.warning("%s: leaving a hung gimbal call behind at shutdown", self.name)
+            return
         self.transport.close()
 
     # --- internals -----------------------------------------------------------------
@@ -510,6 +515,7 @@ class Insta360Camera(Camera):
         t.start()
         t.join(self.tuning.cmd_timeout_s)
         if t.is_alive():
+            self._stuck = t
             raise TransportError(f"no answer within {self.tuning.cmd_timeout_s:.1f}s")
         if "err" in box:
             raise box["err"]
@@ -520,6 +526,7 @@ class Insta360Camera(Camera):
         limits, records the settle deadline, raises CameraError on any failure."""
         tn = self.tuning
         try:
+            self._release_stuck()
             if not self._connected:
                 self._io(self.transport.open)
                 self.ranges = self._io(self.transport.ranges) or FALLBACK_RANGES
@@ -537,16 +544,31 @@ class Insta360Camera(Camera):
         except (TransportError, OSError) as e:
             self._connected = False
             self.ptz_error = str(e)
-            try:
-                self.transport.close()
-            except (TransportError, OSError):
-                pass
+            if self._stuck is None:  # a hung call is still using the transport
+                self._close_transport()
             raise CameraError(f"{self.name}: gimbal not responding ({e})") from e
         travel = max(abs(target.pan - self.pose.pan), abs(target.tilt - self.pose.tilt))
         settle = (tn.settle_s + travel / max(tn.slew_deg_s, 1e-6)
                   + abs(target.zoom - self.pose.zoom) * tn.zoom_settle_s)
         self._settle_until = max(self._settle_until, time.monotonic() + settle)
         self.pose, self.ptz_error = target, None
+
+    def _release_stuck(self) -> None:
+        """Refuse while a timed-out call is still running; once it returns, close
+        the transport it used so the next open() gets a fresh handle. Closing
+        earlier would tear the handle down under a native call in progress."""
+        if self._stuck is None:
+            return
+        if self._stuck.is_alive():
+            raise TransportError("previous command still has no answer")
+        self._stuck = None
+        self._close_transport()
+
+    def _close_transport(self) -> None:
+        try:
+            self.transport.close()
+        except (TransportError, OSError) as e:
+            log.warning("%s: closing the gimbal transport failed (%s)", self.name, e)
 
     def _arm_home(self) -> None:
         self._cancel_home()

@@ -4,6 +4,7 @@ import json
 import math
 import struct
 import sys
+import threading
 import time
 import types
 
@@ -210,6 +211,45 @@ def test_silent_gimbal_times_out_as_camera_error():
     with pytest.raises(CameraError, match="no answer"):
         cam.move(pan=10)
     assert time.monotonic() - t0 < 0.4
+
+
+class GatedTransport(FakeTransport):
+    """SETs block on a gate; logs open/close/SET start and end in order."""
+
+    def __init__(self):
+        super().__init__()
+        self.gate = threading.Event()
+        self.gate.set()
+        self.log: list[str] = []
+
+    def open(self) -> None:
+        self.log.append("open")
+
+    def close(self) -> None:
+        self.log.append("close")
+
+    def set_pantilt(self, pan: int, tilt: int) -> None:
+        self.log.append(f"set {pan} start")
+        self.gate.wait()
+        self.log.append(f"set {pan} end")
+
+
+def test_timed_out_set_quarantines_the_transport_until_it_returns():
+    tr = GatedTransport()
+    cam = make(tr, cmd_timeout_s=0.1, units_per_deg=1)
+    tr.gate.clear()  # the next SET hangs past the timeout
+    with pytest.raises(CameraError, match="no answer within"):
+        cam.move(pan=10)
+    with pytest.raises(CameraError, match="still has no answer"):
+        cam.move(pan=20)  # retry while the hung SET is still on the wire
+    assert "close" not in tr.log[tr.log.index("set 10 start"):]
+    tr.gate.set()
+    deadline = time.monotonic() + 2
+    while "set 10 end" not in tr.log and time.monotonic() < deadline:
+        time.sleep(0.01)
+    assert cam.move(pan=20).pan == 20
+    tail = tr.log[tr.log.index("set 10 start"):]
+    assert tail == ["set 10 start", "set 10 end", "close", "open", "set 20 start", "set 20 end"]
 
 
 def test_reconnects_when_the_gimbal_comes_back():

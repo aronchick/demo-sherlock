@@ -240,6 +240,27 @@ def test_llm_director_weapon_chain_reports_evidence():
     assert first_user["threat"] == "weapon" and first_user["head_bbox"] == list(head)
 
 
+def test_director_turns_thinking_off_for_vllm_and_ollama():
+    """Ollama ignores chat_template_kwargs; only reasoning_effort="none" stops Nemotron
+    thinking there, and on 2026-10-17 the thinking ate all 300 tokens with no tool call."""
+    det = Detection("cup", 0.9, CUP, "hero", threat="benign")
+    for thinking, effort in ((False, "none"), (True, None)):
+        tools = _toolbox()
+        tools.begin_incident(det, "x")
+        d = Director(Endpoint("http://unused/v1", "m"), tools, thinking=thinking)
+        bodies = []
+        llm = _ScriptedLLM(enumerate([("report", {"claim": "a cup", "confidence": 0.9, "action": "ignore"})]))
+
+        def create(llm=llm, bodies=bodies, **kw):
+            bodies.append(kw["extra_body"])
+            return llm.create(**kw)
+
+        d.client = SimpleNamespace(chat=SimpleNamespace(completions=SimpleNamespace(create=create)))
+        assert d.investigate(det)["action"] == "ignore"
+        assert bodies[0]["chat_template_kwargs"] == {"enable_thinking": thinking}  # vLLM, llama.cpp
+        assert bodies[0].get("reasoning_effort") == effort  # Ollama; vLLM maps "none" the same way
+
+
 def test_unreachable_director_falls_back_to_rules():
     """Guards the deliberately broad except in Director.investigate: any endpoint
     failure (connection error or something odd mid-pitch) must degrade, not crash."""

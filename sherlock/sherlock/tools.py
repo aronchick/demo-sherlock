@@ -2,8 +2,10 @@
 {"error": ...} rather than raising, so the model gets to decide what to do."""
 from __future__ import annotations
 
+import base64
 import time
 
+import cv2
 import numpy as np
 
 from .camera import Camera, CameraError
@@ -12,6 +14,21 @@ from .events import BUS
 SUBJECTS = ("weapon", "object", "face")
 ACTIONS = ("log", "alert", "ignore")
 _DEVICE_TOOLS = ("look_at", "move", "snapshot")
+
+
+def _preview(role: str, img: np.ndarray) -> None:
+    """Publish a bounded copy of the actual model input before inference starts.
+
+    This travels only on the dashboard bus. Face evidence never calls this.
+    PNG keeps the thumbnail faithful and limits the longest edge to 256 pixels.
+    """
+    height, width = img.shape[:2]
+    scale = min(1, 256 / max(height, width))
+    thumb = cv2.resize(img, (max(1, round(width * scale)), max(1, round(height * scale))))
+    ok, encoded = cv2.imencode(".png", thumb)
+    if ok:
+        BUS.emit("model_input", f"{role} reading the object crop", role=role,
+                 image="data:image/png;base64," + base64.b64encode(encoded).decode("ascii"))
 
 TOOL_SCHEMAS = [
     {"type": "function", "function": {
@@ -287,6 +304,7 @@ class ToolBox:
             raise ValueError("nothing to verify: snapshot the weapon first")
         if self.verifier is None:
             raise ValueError("no verifier configured")
+        _preview("verifier", crop)
         self.verdict = self.verifier.check(crop, claim)
         self._verified = (_norm(claim), eid, self._versions[eid])
         return self.verdict
@@ -327,6 +345,7 @@ class ToolBox:
             # Evidence only. No model ever sees this crop: no recognition, no description.
             return {"evidence_id": eid, "stored": True, "analyzed": False}
         BUS.bump("vlm_calls")
+        _preview("analyst", img)
         out = self.analyst.describe(img, question)
         self.descriptions[eid] = out.get("description", "")
         return {**out, "evidence_id": eid}

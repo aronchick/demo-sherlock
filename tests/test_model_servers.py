@@ -19,7 +19,7 @@ from sherlock.dashboard.server import STATIC, make_app
 
 # Response shapes copied from each server: vLLM's ModelCard (owned_by "vllm") and
 # /version, Ollama 0.40.5, mlx-vlm 0.7.8's ModelsResponse and FastAPI title.
-VLLM = {"/v1/models": {"object": "list", "data": [{"id": "nvidia/NVIDIA-Nemotron-3.5-Lightning-30B-A3B-NVFP4",
+VLLM = {"/v1/models": {"object": "list", "data": [{"id": "RedHatAI/NVIDIA-Nemotron-3.5-Lightning-30B-A3B-FP8",
                                                    "object": "model", "owned_by": "vllm"}]},
         "/version": {"version": "0.28.0"}}
 OLLAMA = {"/v1/models": {"object": "list", "data": [{"id": "nemotron-3.5-lightning:30b-mlx", "object": "model",

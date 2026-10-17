@@ -5,6 +5,17 @@ Docker with GPU access, uv, and access to the model repositories. This workflow
 does not create or provision a machine. The benchmark script and its JPEG fixture
 from PR #11 must be present before a sweep or A/B can run.
 
+## Selected checkpoint
+
+`brev/serve.sh` now defaults to
+`RedHatAI/NVIDIA-Nemotron-3.5-Lightning-30B-A3B-FP8` for the Director.
+The [model card](https://huggingface.co/RedHatAI/NVIDIA-Nemotron-3.5-Lightning-30B-A3B-FP8)
+documents FP8 weights/activations and the same `qwen3_coder` tool parser and
+`nemotron_v3` reasoning parser. The shared image model remains SmolVLM-500M.
+The H100 load and end-to-end camera loop must be checked for this checkpoint;
+previous NVFP4 results do not establish its latency or quality. Existing running
+containers are not changed by editing this repository.
+
 ## One command on the GPU
 
 For the full prefix-cache comparison, replace `my-instance` with the Brev instance

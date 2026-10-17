@@ -36,7 +36,7 @@ class Config:
     scout_conf: float = field(default_factory=lambda: float(_env("SCOUT_CONF", "0.35")))
     director: Endpoint = field(default_factory=lambda: Endpoint(
         _env("DIRECTOR_BASE_URL", "http://localhost:8001/v1"),
-        _env("DIRECTOR_MODEL", "nvidia/NVIDIA-Nemotron-3.5-Lightning-30B-A3B-NVFP4")))
+        _env("DIRECTOR_MODEL", "RedHatAI/NVIDIA-Nemotron-3.5-Lightning-30B-A3B-FP8")))
     analyst: Endpoint = field(default_factory=lambda: Endpoint(
         _env("ANALYST_BASE_URL", "http://localhost:8002/v1"),
         _env("ANALYST_MODEL", "HuggingFaceTB/SmolVLM-500M-Instruct")))

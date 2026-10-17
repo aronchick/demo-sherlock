@@ -29,7 +29,7 @@ monitors those pipelines
  scout1: MacBook camera
       │ every frame (~30 ms loop)          :8001 "director"
       ▼                                      Nemotron 3.5 Lightning
- Scout: YOLOv8n, ~10 ms a frame              30B-A3B NVFP4, tool calling,
+ Scout: YOLOv8n, ~10 ms a frame              30B-A3B FP8, tool calling,
       │ new object held 0.6 s                thinking off, prefix caching
       ▼
  Orchestrator                              :8002 "vlm"
@@ -161,7 +161,7 @@ receipt or object-bucket readback in this UI.
 |---|---|---|---|
 | Scout | Laptop | `agents/scout.py` | YOLOv8n, stock or fine-tuned here |
 | Orchestrator, tools, cameras | Laptop | `orchestrator.py`, `tools.py`, `camera/` | Loop, tool dispatcher, gimbal control |
-| Director | Brev `:8001`, vLLM | `agents/director.py` | Nemotron 3.5 Lightning 30B-A3B NVFP4 |
+| Director | Brev `:8001`, vLLM | `agents/director.py` | Nemotron 3.5 Lightning 30B-A3B FP8 |
 | Analyst + Verifier | Brev `:8002`, vLLM | `agents/vision.py` | One shared SmolVLM-500M-Instruct |
 | `RuleDirector` | Laptop | `agents/director.py` | No-LLM fallback with the same tools |
 | Dashboard | Laptop, `127.0.0.1:8000` | `dashboard/` | FastAPI, SSE events, MJPEG feeds |
@@ -170,7 +170,7 @@ receipt or object-bucket readback in this UI.
 | Scout fine-tune | Laptop (MPS) or any CUDA box | `scripts/*scout*` | The only training in the project |
 
 **Nemotron** is the Director only:
-`nvidia/NVIDIA-Nemotron-3.5-Lightning-30B-A3B-NVFP4` (30B total, 3B
+`RedHatAI/NVIDIA-Nemotron-3.5-Lightning-30B-A3B-FP8` (30B total, 3B
 active), started by `brev/serve.sh` with `--tool-call-parser qwen3_coder
 --reasoning-parser nemotron_v3`. Configuration B swaps in Nemotron Nano
 9B/12B v2 and Llama-3.1-Nemotron-Nano-VL-8B.
@@ -318,7 +318,7 @@ Every generative model runs on vLLM (`vllm/vllm-openai:v0.28.0`), covering both 
 
 | Role | Hugging Face Repo ID | Verified Parameters | Serving Details |
 | :--- | :--- | :--- | :--- |
-| **Director** | `nvidia/NVIDIA-Nemotron-3.5-Lightning-30B-A3B-NVFP4` | **30B total / 3B active** on model card. The BF16 checkpoint's safetensors headers hold **31.58B** (`31,577,940,288`) without MTP and **32.91B** (`32,913,266,240`) with its 270 embedded `mtp.*` speculative draft tensors (`1,335,325,952`), which vLLM does not load when speculative decoding is off ([evidence](#parameter-budget-and-speculation)) | vLLM on `:8001`, `--enable-auto-tool-choice --tool-call-parser qwen3_coder --reasoning-parser nemotron_v3`, thinking OFF by default (`DIRECTOR_THINKING=0` passes `chat_template_kwargs: {"enable_thinking": false}` for vLLM and `reasoning_effort: "none"`, which Ollama needs and vLLM v0.28.0 maps to the same switch) |
+| **Director** | `RedHatAI/NVIDIA-Nemotron-3.5-Lightning-30B-A3B-FP8` | **30B total / 3B active** on model card. The BF16 checkpoint's safetensors headers hold **31.58B** (`31,577,940,288`) without MTP and **32.91B** (`32,913,266,240`) with its 270 embedded `mtp.*` speculative draft tensors (`1,335,325,952`), which vLLM does not load when speculative decoding is off ([evidence](#parameter-budget-and-speculation)) | vLLM on `:8001`, `--enable-auto-tool-choice --tool-call-parser qwen3_coder --reasoning-parser nemotron_v3`, thinking OFF by default (`DIRECTOR_THINKING=0` passes `chat_template_kwargs: {"enable_thinking": false}` for vLLM and `reasoning_effort: "none"`, which Ollama needs and vLLM v0.28.0 maps to the same switch) |
 | **Analyst + Verifier** | `HuggingFaceTB/SmolVLM-500M-Instruct` | **0.51B** (`507,482,304` safetensors parameters; `Idefics3ForConditionalGeneration` in vLLM v0.28.0) | Single shared vLLM instance on `:8002` (counted once). `HuggingFaceTB/SmolVLM-Instruct` (2.25B) and `HuggingFaceTB/SmolVLM2-2.2B-Instruct` (2.25B) also run on vLLM v0.28.0 but put Configuration A at 33.82B by tensor count, over the cap |
 | **Scout** | `yolov8n.pt` (Ultralytics YOLOv8n) | **3.2M** (excluded) | Non-generative detector; excluded from the generative parameter total |
 | **Total (generative)** | | **30.51B** by model card (30B + 0.51B); **32.09B** by tensor count without MTP (31.58B + 0.51B, **0.91B under the 33B cap**); 33.42B counting the never-loaded MTP tensors | Zero draft models |
@@ -584,6 +584,20 @@ dataset card is CC-BY-4.0. The weights card defaults to AGPL-3.0 because they ar
 Ultralytics YOLOv8n (AGPL-3.0); `--model-license` overrides that. In-room photos show real people, so they
 stay out of the upload unless `--include-room-photos`, and that needs everyone pictured to agree.
 
+## FP8 Director selection
+
+The default Director is [Red Hat AI's Nemotron 3.5 Lightning FP8](https://huggingface.co/RedHatAI/NVIDIA-Nemotron-3.5-Lightning-30B-A3B-FP8).
+Its model card identifies the NVIDIA BF16 checkpoint as its base and documents
+FP8 weights and activations produced with LLM Compressor. This is the text/tool
+Director; the shared SmolVLM still handles images.
+
+FP8 halves bits per quantized value relative to BF16, not the parameter count.
+Some tensors remain unquantized. The previous default was already NVFP4, so this
+switch is not a 50% memory saving over the previous default. Existing benchmark
+artifacts describe their recorded model IDs; they are not FP8 measurements.
+Validate model loading, tool calls, quality and camera-loop latency on the H100
+before attributing any speedup or equivalent accuracy to this checkpoint.
+
 ## vLLM
 
 vLLM is the serving layer for Sherlock's investigation loop. The Director
@@ -593,7 +607,7 @@ The planned Brev setup runs two vLLM **0.28.0** containers on one H100:
 
 | Role | Model | Served name | Port |
 |---|---|---|---:|
-| Director | Nemotron 3.5 Lightning 30B, NVFP4 repository | `director` | 8001 |
+| Director | Nemotron 3.5 Lightning 30B, Red Hat FP8 repository | `director` | 8001 |
 | Analyst + Verifier | `HuggingFaceTB/SmolVLM-500M-Instruct`, 0.51B, shared | `vlm` | 8002 |
 
 The Director uses automatic tool selection and turns thinking off in every
@@ -686,7 +700,7 @@ safetensors shard headers of
 Hugging Face's model page rounds the BF16 repository to about 31.6B. Its
 API total (`31,577,937,344`) also leaves out MTP and sits 2,944 below the
 header count, exactly the base model's 23 FP32 router-bias tensors of 128
-values each. The NVFP4 repository that `serve.sh` runs packs two FP4
+values each. The previously selected NVFP4 repository packs two FP4
 weights per `U8` byte, so its raw element count (19.71B) is not a parameter
 count; the BF16 checkpoint of the same model is the reference. Under the
 tensor count, the shared VLM must be at most 1.42B (33B − 31.58B) to stay
@@ -701,7 +715,7 @@ default `speculative_config` to `None`; `create_speculative_config` returns
 `None` when no speculation options are supplied. The
 [automatic speculator detection](https://github.com/vllm-project/vllm/blob/v0.28.0/vllm/transformers_utils/config.py)
 only overrides this when the checkpoint has `speculators_config`. The
-[Lightning NVFP4 configuration](https://huggingface.co/nvidia/NVIDIA-Nemotron-3.5-Lightning-30B-A3B-NVFP4/raw/main/config.json)
+[Red Hat Lightning FP8 configuration](https://huggingface.co/RedHatAI/NVIDIA-Nemotron-3.5-Lightning-30B-A3B-FP8/raw/main/config.json)
 inspected for this build has no such key and selects `NemotronHForCausalLM`.
 
 Lightning includes 270 embedded MTP tensors (1.34B parameters), but the
@@ -994,8 +1008,8 @@ Sherlock includes a native [NeMo Gym](https://github.com/NVIDIA-NeMo/Gym) (`nemo
 
 1. **System prompt (`prompt_v1` vs `nemotron_lightning`)**: `gym/prompts/system_v1.yaml` vs `gym/prompts/system_v2.yaml` (adds zero-snapshot benign filtering and the two-crop weapon + head/face protocol).
 2. **Tool descriptions (`terse_tools` vs `nemotron_lightning`)**: `terse` (3-word tool strings, stripped parameter hints) vs `verbose` (`sherlock.tools.TOOL_SCHEMAS`).
-3. **Reasoning mode (`thinking_on` vs `nemotron_lightning`)**: `enable_thinking: true` vs `enable_thinking: false` on `nvidia/NVIDIA-Nemotron-3.5-Lightning-30B-A3B-NVFP4` (the thinking-off configs also send `reasoning_effort: none`, so they stay off on servers that ignore the chat-template switch).
-4. **Director model (`qwen_director` vs `nemotron_lightning`)**: `Qwen/Qwen2.5-7B-Instruct` (7.62B) vs `nvidia/NVIDIA-Nemotron-3.5-Lightning-30B-A3B-NVFP4` (30B total / 3B active).
+3. **Reasoning mode (`thinking_on` vs `nemotron_lightning`)**: `enable_thinking: true` vs `enable_thinking: false` on `RedHatAI/NVIDIA-Nemotron-3.5-Lightning-30B-A3B-FP8` (the thinking-off configs also send `reasoning_effort: none`, so they stay off on servers that ignore the chat-template switch).
+4. **Director model (`qwen_director` vs `nemotron_lightning`)**: `Qwen/Qwen2.5-7B-Instruct` (7.62B) vs `RedHatAI/NVIDIA-Nemotron-3.5-Lightning-30B-A3B-FP8` (30B total / 3B active).
 
 Every configuration pairs the Director with `HuggingFaceTB/SmolVLM-500M-Instruct` (0.51B) for the Analyst/Verifier VLM. By model card that is 30.51B for the Nemotron 3.5 Lightning configs and 8.12B for Qwen 2.5 7B (`7,615,616,512` + `507,482,304`). By checkpoint tensor count the Lightning configs are 32.09B (see [Parameter budget and speculation](#parameter-budget-and-speculation)). All are under the 33B limit; the ablation runner's budget check uses the model-card figures.
 
@@ -1028,13 +1042,16 @@ uv run --extra gym python -m gym.run_ablation --all --stub
 
 | Ablation Config | Endpoint Env Var | Swapped Component | Director Model | Total Gen Params (card / tensors) | Prompt | Tools | Thinking | Tool-Call Validity | Task Success | Steps to Report | Time to Report (ms) |
 |---|---|---|---|---:|---|---|---|---:|---:|---:|---:|
-| `prompt_v1` | `DIRECTOR_BASE_URL` | System prompt (`v1`) | `Nemotron-3.5-Lightning-30B-A3B-NVFP4` | 30.51B / 32.09B | `system_v1` | `verbose` | `off` | TBD (live run pending) | TBD (live run pending) | TBD (live run pending) | TBD (live run pending) |
-| `terse_tools` | `DIRECTOR_BASE_URL` | Tool schemas (`terse`) | `Nemotron-3.5-Lightning-30B-A3B-NVFP4` | 30.51B / 32.09B | `system_v2` | `terse` | `off` | TBD (live run pending) | TBD (live run pending) | TBD (live run pending) | TBD (live run pending) |
-| `thinking_on` | `DIRECTOR_BASE_URL` | Thinking (`on`) | `Nemotron-3.5-Lightning-30B-A3B-NVFP4` | 30.51B / 32.09B | `system_v2` | `verbose` | `on` | TBD (live run pending) | TBD (live run pending) | TBD (live run pending) | TBD (live run pending) |
-| `nemotron_lightning` | `DIRECTOR_BASE_URL` | Reference (`v2` + `verbose` + `off`) | `Nemotron-3.5-Lightning-30B-A3B-NVFP4` | 30.51B / 32.09B | `system_v2` | `verbose` | `off` | TBD (live run pending) | TBD (live run pending) | TBD (live run pending) | TBD (live run pending) |
+| `prompt_v1` | `DIRECTOR_BASE_URL` | System prompt (`v1`) | `Nemotron-3.5-Lightning-30B-A3B-FP8` | 30.51B / 32.09B | `system_v1` | `verbose` | `off` | TBD (live run pending) | TBD (live run pending) | TBD (live run pending) | TBD (live run pending) |
+| `terse_tools` | `DIRECTOR_BASE_URL` | Tool schemas (`terse`) | `Nemotron-3.5-Lightning-30B-A3B-FP8` | 30.51B / 32.09B | `system_v2` | `terse` | `off` | TBD (live run pending) | TBD (live run pending) | TBD (live run pending) | TBD (live run pending) |
+| `thinking_on` | `DIRECTOR_BASE_URL` | Thinking (`on`) | `Nemotron-3.5-Lightning-30B-A3B-FP8` | 30.51B / 32.09B | `system_v2` | `verbose` | `on` | TBD (live run pending) | TBD (live run pending) | TBD (live run pending) | TBD (live run pending) |
+| `nemotron_lightning` | `DIRECTOR_BASE_URL` | Reference (`v2` + `verbose` + `off`) | `Nemotron-3.5-Lightning-30B-A3B-FP8` | 30.51B / 32.09B | `system_v2` | `verbose` | `off` | TBD (live run pending) | TBD (live run pending) | TBD (live run pending) | TBD (live run pending) |
 | `qwen_director` | `QWEN_DIRECTOR_BASE_URL` | Model (`Qwen2.5-7B`) | `Qwen2.5-7B-Instruct` | 8.12B / 8.12B | `system_v2` | `verbose` | `off` | TBD (live run pending) | TBD (live run pending) | TBD (live run pending) | TBD (live run pending) |
 
 ## Demo script (3 min)
+
+For the current camera-response-first video and prerecorded playback plan, use
+[RECORDING_SCRIPT.md](RECORDING_SCRIPT.md). The hat scenario below is an alternate take.
 
 Use a red fedora with a black band and a black Red Hat / NVIDIA baseball cap.
 The fedora gives the audience an easy first object to recognize; the cap adds

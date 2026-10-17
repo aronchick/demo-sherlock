@@ -1,104 +1,133 @@
-# Recording script: a 10 ms Scout decides when a model is worth calling
+# Recording script: YOLO → Brev → camera zoom
 
-One take, about 2:00, five beats. The board at `/log` is the recording surface,
-full screen at 1920×1080. Every state below comes from the runtime; the
-operator presses two console buttons and nothing else.
+About 2:30. Record a successful run ahead of time and replay it in the browser
+for narration. Lead with the camera response. Keep the first detection-to-zoom
+sequence at its original speed, in one continuous shot. Explain the model after the
+viewer has seen the camera react.
 
-## Before you roll
+## Playback plan
 
-```bash
-just up      # warm-up: the first uv run resolves dependencies
-just down
-just up      # the take
-```
+Capture the board with its actual camera feeds and event timing. Play that video
+in the browser for the opening and model explanation. Keep the original elapsed
+time through the first close-up; trimming idle time before detection is fine.
+Do not speed up the round trip to make it look faster.
 
-Open `http://localhost:8000/log` (or your `DASHBOARD_PORT`) in one tab only: the
-board holds four streams open, and a second tab of it stalls the feeds.
+Then cut to the working phone and custody tabs for the same captured incident.
+Keep its evidence files and signed records available. A video itself is not
+clickable: interact with the actual case pages for those shots. Browser event
+replay would be a separate feature; it is not required for this recording plan.
+Keep playback instructions out of the spoken narration. Use present tense
+without claiming “live” or “happening right now.” Narrate the execution captured.
 
-**Timing.** The synthetic scene loops every 26 s: the cup is raised at 3.4 s
-and flagged about 0.6 s later; the knife is raised at 14.9 s and flagged about
-0.6 s later. Offsets below are seconds after a person first walks in from the
-left with a cup (scene 1.0 s). A slipped take runs longer; it never
-desynchronises, because each beat waits for its event on screen.
+## Before recording
 
-**Mode.** `just up` is the mock runtime and the masthead says so. Say only what
-the board shows: in mock mode the Scout reads scene truth and the models are
-canned; never call that take live.
+Use the main flow board at `http://localhost:8000/`, framed at 1920×1080.
+Keep `/phone` and `/custody` ready in separate tabs. Use the camera-control arrow
+and the close-up feed as the visual focus for the opening.
 
----
+Confirm the actual Scout is YOLO, the Director endpoint on Brev serves
+`RedHatAI/NVIDIA-Nemotron-3.5-Lightning-30B-A3B-FP8`, and the camera responds to
+its tool call before recording this narration. The repository now selects that
+checkpoint; loading and testing it on the H100 are still required. A configured
+model label alone does not establish that it ran.
 
-## Beat 1: THE GATE · 0:00–0:20
+Measure the opening from YOLO's detection event to the first returned close-up,
+including the Brev round trip and camera action. Report that complete interval
+only after measuring it. Model inference time alone is not camera response time.
+For physical PTZ, show physical movement; for software cropping, say “close-up.”
+Do not speed up this sequence or splice detection and response from separate runs.
 
-**Screen state before you speak.** `MONITORING · 2 CAMERAS`. Amber particles
-leave both cameras and die on the Scout's right edge; Director and VLM are grey.
+## 0:00–0:25 · Show the camera react
 
-**Driver**: nothing to type.
+**Screen:** Main board. Introduce the object, then let the detection, Brev
+Director and return camera-control arrow play through to the close-up.
 
-> Every frame from both cameras is one of these dots. They all stop at the
-> Scout. Behind it, the Director and the vision model are asleep.
+> Watch the camera. YOLO spots an object locally, sends the detection to the
+> Director on Brev, and the Director tells the camera where to look.
 
----
+**Pause as the close-up arrives. Leave it visible for two seconds.**
 
-## Beat 2: THE CUP · 0:20–0:40
+> There. We went from the room to the detail we need, in one loop.
 
-**Screen state before you speak.** `IGNORED CUP · 0 VLM CALLS`. Only the
-Director lit; chain steps 1–5 skipped; IGNORED counts up.
+If measured, add: “That took [measured interval] from detection to close-up.”
+Otherwise let the uninterrupted action demonstrate the response time.
 
-> A cup crosses the gate. The Director wakes, decides it is benign, and
-> reports it. Zero VLM calls.
+## 0:25–0:45 · Explain the gate
 
----
+**Screen:** Keep the camera, Scout and Director visible. Show the benign object
+if it appears naturally; do not delay the opening payoff to wait for it.
 
-## Beat 3: THE KNIFE · 0:40–1:05
+> We're monitoring a building with multiple cameras. We don't need to send
+> every frame to a large model. YOLO does the initial pass locally. The Director
+> decides whether to ask the camera for a closer look. A benign cup can stop
+> here, with zero vision-model calls.
 
-**Screen state before you speak.** `INVESTIGATING KNIFE · STEP n/6`, the gate
-bar red, both models lit, then `ALERT · KNIFE · VERIFIED` and the incident card.
+## 0:45–1:05 · Explain the FP8 choice
 
-> A knife runs the whole chain: zoom, read, zoom to the head, store the review
-> crop, verify, report. The review crop is kept for a person. No model ever
-> sees it.
+**Screen:** Director box and NVIDIA Brev heading.
 
----
+> The Director is Nemotron 3.5 Lightning, using Red Hat AI's FP8 checkpoint
+> from Hugging Face, served with vLLM on Brev. Red Hat used LLM Compressor to
+> quantize it. FP8 uses eight bits for the quantized weights instead of sixteen
+> in the BF16 version. It's the same model architecture and parameter count,
+> with less storage per quantized weight.
 
-## Beat 4: BREAK IT · 1:05–1:35
+This is the text-and-tool Director. SmolVLM handles the images. Do not call the
+FP8 checkpoint a vision model, say it has half the weights, call it lossless,
+or claim a measured speedup without a comparison. The previous repo default was
+already NVFP4; the sixteen-to-eight comparison is with the BF16 base model.
 
-**Screen state before you speak.** Monitoring again, before the next knife.
+## 1:05–1:30 · Verify the object
 
-**Driver**: press **break the next tool call**; after the alert, press
-**cover hero lens**.
+**Screen:** Close-up, then the Verifier and Analyst results.
 
-> I break the next camera call. Step one fails on hero; the Director retries on
-> scout1 and the alert still lands. Now I cover the hero lens: hero stops
-> sending frames, and the next detection comes from scout1.
+> The Verifier checks the object claim using the masked close-up. Then the
+> Analyst describes the object. The Verifier decides whether the claim is
+> supported; the description gives the responder more context.
 
----
+> The face crop and original frame stay with the evidence for a human
+> reviewer. The models only receive the masked object crop. The reviewer can
+> see who was holding the object and where it was in the scene.
 
-## Beat 5: CLOSE · 1:35–2:00
+## 1:30–2:00 · Show the human response
 
-**Screen state before you speak.** The Scout's ledger: `VLM calls avoided`
-next to the two meter tracks. Uncover hero first.
+**Screen:** Click the phone indicator, select the notice, page through the
+images, then choose Investigate and Notify team.
 
-> Read the number on the Scout card out loud, then stop. Against one VLM call
-> per frame, that is how many calls this room did not make.
+> The responder gets a notice with the building location and the pictures.
+> They can inspect the scene, choose to investigate, and notify their team.
+> This phone view demonstrates that response workflow.
 
-> **Closing line:** A ten millisecond Scout decides when a model is worth
-> calling.
+The phone delivery is a demonstration, not a real external message. Keep the
+app's response status visible; do not imply a real team received a notification.
 
-"Ten millisecond" is copy until it is measured: say it only on a live take
-whose Scout card shows about 10 ms per frame. Otherwise close with "A Scout
-decides when a model is worth calling."
+## 2:00–2:30 · Show the evidence and close
 
----
+**Screen:** Return to the board and click an evidence image for the summary.
+Open its full case file, expand the incident and show its timeline and signature.
 
-## Required lines
+> We preserve the captured evidence whether or not the incident becomes an
+> alert. Each crop links back to its source frame. The case file records the
+> camera, the analysis, the decision and the responder's actions, with image
+> hashes and signed revisions that we can verify.
 
-- "Zero VLM calls"
-- "No model ever sees it"
-- the `VLM calls avoided` number as rendered
-- the closing line, in the form the take's mode allows
+> Expanso carries the pipeline events and evidence between the stages. The
+> goal is to spend bandwidth and model work on the moments that need a closer
+> look, and give a person the context they need to act.
 
-## Prohibited
+Say the Expanso sentence only with a verified connected run and downstream
+receipt. Otherwise use: “Expanso provides the transport for this architecture.”
+The signatures establish consistency with the local application key; do not
+claim independent attestation. Do not use a blanket “under two seconds,” cost
+saving or false-positive reduction figure without evidence from this run.
 
-Never spoken or shown: port numbers, a dollar figure for the avoided calls,
-"face recognition" or anything that identifies the person, and "live" over a
-mock take. Model names are spoken only when the masthead says LIVE.
+## Optional extra, after the main take
+
+Show a failed camera tool call and recovery to the other camera. Keep this out of
+the opening: the first payoff is the fast YOLO → Brev → camera response.
+
+## Model source
+
+[Red Hat AI FP8 model card](https://huggingface.co/RedHatAI/NVIDIA-Nemotron-3.5-Lightning-30B-A3B-FP8),
+checked 2026-10-17: text input/output, FP8 weights and activations, BF16 base
+checkpoint, LLM Compressor, and vLLM serving with the Nemotron tool parsers.

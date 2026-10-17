@@ -74,7 +74,7 @@ The footer notes that Expanso Edge processes this data and Expanso Cloud deploys
 ```
 2. On the Mac, copy `.env.example` to `.env` and point at the Brev host (or local SSH tunnel on `:8001` and `:8002`):
 ```bash
-cp .env.example .env              # CAMERAS=hero:fake:0 uses the laptop webcam with software PTZ
+cp .env.example .env              # CAMERAS=hero:fake:0,scout1:fake:1 opens two webcams (software PTZ); with one, set CAMERAS=hero:fake:0
 just live                         # real cameras and models per .env; installs the `yolo` extra (ultralytics)
 ```
 Open <http://127.0.0.1:8000> on the Mac; the dashboard stays local while model calls
@@ -96,7 +96,7 @@ The hero is an **Insta360 Link 2, the gimbal model** (USB `2e1a:4c04`), not the 
 
 Control path on macOS: standard UVC pan/tilt/zoom control transfers sent straight over USB with [link-ctl](https://pypi.org/project/link-ctl/)'s IOKit module (no sudo, no app). On Linux the Link 2 cannot be aimed: its stock driver reads pan/tilt but rejects setting it, and the only workaround (detaching `uvcvideo` for a raw USB transfer) drops the video stream ([link-ctl notes](https://github.com/csmarshall/link-ctl/blob/main/docs/LINK2_LINUX.md)). The v4l2 path checks this when it opens, so on Linux the hero comes up offline and the Director uses the next camera. The Link Controller WebSocket API is not used because it cannot set an absolute pan/tilt. If the gimbal does not answer within `INSTA360_CMD_TIMEOUT_S`, `look_at`/`move` return a tool error and the Director moves to the next camera.
 
-Tuning (env, defaults in `sherlock/camera/insta360.py`):
+Tuning (env, defaults in `sherlock/sherlock/camera/insta360.py`):
 
 | Variable | Default | What it does |
 | :--- | :--- | :--- |
@@ -124,19 +124,19 @@ per-image licence and source URL in `data/coco_subset/manifest.jsonl`. COCO has 
 Everything runs on the laptop with the camera attached; no Brev needed.
 ```bash
 # open COCO subset (~30 s measured: annotations + 1,279 images)
-python scripts/build_scout_dataset.py coco
+uv run scripts/build_scout_dataset.py coco
 # shoot each prop; repeat with --prop bat, scissors, badge, bottle,
 # then --prop none (empty room, empty hands)
-python scripts/capture_props.py --camera hero --prop knife --n 40
+uv run scripts/capture_props.py --camera hero --prop knife --n 40
 # stock YOLOv8 drafts the boxes; fix the held-out test photos
 # first (they grade the eval), then the rest
-python scripts/build_scout_dataset.py prelabel
-python scripts/review_labels.py --split test
-python scripts/review_labels.py
-python scripts/build_scout_dataset.py build
+uv run --extra yolo scripts/build_scout_dataset.py prelabel
+uv run scripts/review_labels.py --split test
+uv run scripts/review_labels.py
+uv run scripts/build_scout_dataset.py build
 # train (cuda > mps > cpu, auto) and score before vs after
-python scripts/train_scout.py
-uv run scripts/eval_scout.py --measured \
+uv run --extra yolo scripts/train_scout.py
+uv run --extra yolo scripts/eval_scout.py --measured \
   --after runs/scout/weights/best.pt
 YOLO_MODEL=runs/scout/weights/best.pt just live
 ```
@@ -166,10 +166,10 @@ evaluation. Measured output defaults to
 `runs/scout/eval.json`; smoke output goes to `runs/scout/eval_smoke.json` so it
 does not replace measured results. The dashboard excludes smoke reports, and
 the publisher rejects smoke or unlabelled evaluation files before staging.
-Routing comes from the weapon flow in `agents/scout.py`: `weapon` escalates, `badge` and `bottle` are benign
+Routing comes from the weapon flow in `sherlock/sherlock/agents/scout.py`: `weapon` escalates, `badge` and `bottle` are benign
 (ignored, no VLM call), `person` is context for the face crop.
 
-**Publishing (owner approval first).** `python scripts/publish_scout_hf.py --model-repo ORG/sherlock-scout
+**Publishing (owner approval first).** `uv run --extra yolo scripts/publish_scout_hf.py --model-repo ORG/sherlock-scout
 --dataset-repo ORG/sherlock-scout-data` stages both repos with cards under `runs/hf_staging/` and lists the
 files; it uploads nothing without `--publish` (and then only to private repos unless `--public`). The
 dataset card is CC-BY-4.0. The weights card defaults to AGPL-3.0 because they are fine-tuned from
@@ -306,7 +306,7 @@ saved in the results.
 
 The command tests concurrency **1, 4, 8, 16**, with 64 measured requests per
 cell and four excluded warmups. Director traffic imports `SYSTEM` from
-`sherlock/agents/director.py` and `TOOL_SCHEMAS` from `sherlock/tools.py`.
+`sherlock/sherlock/agents/director.py` and `TOOL_SCHEMAS` from `sherlock/sherlock/tools.py`.
 It varies weapon, unknown and benign detections, including `threat` and
 `head_bbox`. Weapon traffic samples each step through verification and the
 final report, with and without face-evidence steps. Benign traffic has no
@@ -461,6 +461,7 @@ also check HTTP errors, timeouts, truncated streams, missing usage,
 invalid tool calls and counter resets. No Brev endpoint is needed.
 
 ## Layout
+The `sherlock/...` entries below live in the package directory, `sherlock/sherlock/`.
 ```
 sherlock/camera/     Camera interface, FakePTZ (crop/zoom), Insta360Camera (Link 2 gimbal), ObsbotCamera (UVC), SyntheticSource
 sherlock/agents/     scout.py (YOLO + motion fallback + dedupe/dwell), director.py (tool loop + RuleDirector), vision.py (Analyst, Verifier, mocks)
@@ -618,7 +619,7 @@ Sherlock incorporates both existing open datasets and openly published synthetic
      - Weapon escalations (`knife`, `scissors`, `baseball bat`) requiring weapon zoom + weapon crop + head zoom + unanalyzed face crop + `verify` confirmation + `report(alert)`.
      - Fault-injection and false-positive recovery scenarios (`look_at` hardware error, occluded `hero` camera requiring fallback to `scout1`, and unconfirmed Verifier claims requiring downgrade to `log`).
 3. **VLM bake-off evaluation crops (`tests/fixtures/vllm/`)**:
-   - Uses public-domain NASA imagery (`spacecraft_crop.jpg`, `astronaut_crop.jpg`, documented in [`tests/fixtures/vllm/README.md`](tests/fixtures/vllm/README.md)) and 50 CC-BY COCO 2017 object crops (`knife`, `scissors`, `baseball bat`, `cup`, `bottle`) to fit per-model Verifier log-odds thresholds (`MARGIN_DEFAULTS` in `sherlock/agents/vision.py`).
+   - Uses public-domain NASA imagery (`spacecraft_crop.jpg`, `astronaut_crop.jpg`, documented in [`tests/fixtures/vllm/README.md`](tests/fixtures/vllm/README.md)) and 50 CC-BY COCO 2017 object crops (`knife`, `scissors`, `baseball bat`, `cup`, `bottle`) to fit per-model Verifier log-odds thresholds (`MARGIN_DEFAULTS` in `sherlock/sherlock/agents/vision.py`).
 
 ## Known limitations & next steps
 

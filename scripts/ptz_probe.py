@@ -21,7 +21,6 @@ from __future__ import annotations
 import argparse
 import importlib
 import json
-import re
 import shutil
 import struct
 import subprocess
@@ -34,6 +33,7 @@ import cv2
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "sherlock"))  # sherlock/ is not an installed package
 ins = importlib.import_module("sherlock.camera.insta360")
+base = importlib.import_module("sherlock.camera.base")
 
 
 AI_MODES = {0x00: "normal", 0x01: "TRACKING", 0x04: "whiteboard", 0x05: "overhead",
@@ -139,33 +139,23 @@ def linux_v4l2(device: str) -> ins.V4L2Transport | None:
 
 
 def video_indexes() -> int | None:
-    print("== Video streams (OpenCV index -> size)")
-    names: dict[int, str] = {}
-    if sys.platform == "darwin" and shutil.which("ffmpeg"):
-        # -list_devices always exits nonzero (there is no input to open); the
-        # device list is on stderr either way, so the return code carries nothing.
-        r = subprocess.run(["ffmpeg", "-hide_banner", "-f", "avfoundation", "-list_devices",
-                            "true", "-i", ""], check=False, capture_output=True, text=True)
-        for ln in r.stderr.splitlines():
-            if "audio devices" in ln:
-                break
-            m = re.search(r"\] \[(\d+)\] (.+)$", ln)
-            if m:
-                names[int(m.group(1))] = m.group(2)
-    guess = next((i for i, n in names.items() if "insta360" in n.lower()), None)
-    for i in range(6):
+    print("== Video streams (OpenCV index -> name, size)")
+    try:
+        names = base.list_video_devices()  # same uniqueID ordering OpenCV uses
+    except base.CameraError as e:
+        print(f"  cannot list camera names ({e})")
+        names = []
+    guess = next((i for i, n in enumerate(names) if "insta360" in n.lower()), None)
+    for i in range(max(len(names), 1)):
         cap = cv2.VideoCapture(i)
         ok, frame = cap.read() if cap.isOpened() else (False, None)
         cap.release()
-        if ok:
-            h, w = frame.shape[:2]
-            print(f"  index {i}: {w}x{h}  {names.get(i, '')}")
-    if guess is not None:
-        print(f"  Link 2 looks like index {guess}:"
-              f" CAMERAS=hero:insta360:{guess},scout1:fake:<mac webcam index>")
-    else:
-        print("  could not name the Link 2 stream (no ffmpeg, or not listed); pick by size"
-              " or pass --index")
+        size = f"{frame.shape[1]}x{frame.shape[0]}" if ok else "no frame (camera permission?)"
+        print(f"  index {i}: {names[i] if i < len(names) else '?':28} {size}")
+    print("  indexes reshuffle when cameras are plugged in; select by name instead:")
+    print('  CAMERAS="hero:insta360:name:Insta360 Link 2,scout1:fake:name:MacBook Pro Camera"')
+    if guess is None:
+        print("  no Insta360 camera in the list")
     return guess
 
 

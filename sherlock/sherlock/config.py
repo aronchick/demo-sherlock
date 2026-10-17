@@ -49,7 +49,7 @@ class Config:
     def __post_init__(self) -> None:
         if not self.cameras:
             for item in _env("CAMERAS", "hero:fake:0").split(","):
-                name, backend, source = item.strip().split(":")
+                name, backend, source = item.strip().split(":", 2)  # source may be "name:<camera>"
                 self.cameras.append(CameraSpec(name, backend, source))
 
 

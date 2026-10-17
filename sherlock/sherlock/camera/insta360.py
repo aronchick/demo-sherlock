@@ -39,7 +39,14 @@ from typing import TypeVar
 import cv2
 import numpy as np
 
-from .base import Camera, CameraError, Pose, SyntheticSource, _FrameSource
+from .base import (
+    Camera,
+    CameraError,
+    Pose,
+    SyntheticSource,
+    _FrameSource,
+    resolve_source,
+)
 
 log = logging.getLogger(__name__)
 
@@ -380,6 +387,8 @@ class Insta360Camera(Camera):
         self.name = name
         self.tuning = tuning or Tuning.from_env()
         synthetic = source in (None, "synthetic")
+        if not synthetic and frames is None:
+            source = resolve_source(str(source))  # v4l2 transport needs the index too
         self.src = frames or (SyntheticSource() if synthetic else _FrameSource(str(source)))
         self.simulate_optics = synthetic if simulate_optics is None else simulate_optics
         if transport is None:

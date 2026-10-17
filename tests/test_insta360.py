@@ -1,5 +1,6 @@
 """Insta360 Link 2 adapter against fake transports: geometry, wire format,
 clamping, settle, auto-home, and failure -> CameraError -> next camera."""
+import json
 import math
 import struct
 import sys
@@ -265,3 +266,38 @@ def test_synthetic_runs_simulate_the_optics_so_look_at_lands_on_the_box():
     img = cam.snapshot()
     assert img[H // 2, W // 2].min() == 255  # target is dead centre
     assert (img == 255).mean() > 0.04        # and magnified 4x
+
+
+# --- name-based camera selection ---------------------------------------------------
+
+def test_name_source_resolves_against_opencv_order():
+    from sherlock.camera.base import resolve_source
+
+    devices = ["MacBook Pro Camera", "OBS Virtual Camera", "Insta360 Link 2"]
+    assert resolve_source("name:Insta360 Link 2", devices) == "2"
+    assert resolve_source("name:macbook pro camera", devices) == "0"   # case-insensitive
+    assert resolve_source("name:OBS", devices) == "1"                  # unique substring
+    assert resolve_source("1", devices) == "1"                         # indexes still work
+    with pytest.raises(CameraError, match="no camera"):
+        resolve_source("name:Link 2C", devices)
+    with pytest.raises(CameraError, match="several cameras"):
+        resolve_source("name:Camera", devices)
+
+
+def test_macos_order_is_uniqueid_sorted_like_opencv(monkeypatch):
+    from sherlock.camera import base
+
+    listing = {"SPCameraDataType": [
+        {"_name": "OBS Virtual Camera", "spcamera_unique-id": "7626645E-4425"},
+        {"_name": "MacBook Pro Camera", "spcamera_unique-id": "6C707041-05AC"}]}
+    monkeypatch.setattr(base.sys, "platform", "darwin")
+    monkeypatch.setattr(base.subprocess, "run", lambda *a, **k: types.SimpleNamespace(
+        returncode=0, stdout=json.dumps(listing), stderr=""))
+    assert base.list_video_devices() == ["MacBook Pro Camera", "OBS Virtual Camera"]
+
+
+def test_cameras_env_accepts_name_sources(monkeypatch):
+    monkeypatch.setenv("CAMERAS", "hero:insta360:name:Insta360 Link 2,scout1:fake:name:MacBook Pro Camera")
+    assert [(c.name, c.backend, c.source) for c in Config().cameras] == [
+        ("hero", "insta360", "name:Insta360 Link 2"),
+        ("scout1", "fake", "name:MacBook Pro Camera")]

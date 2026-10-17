@@ -1,0 +1,12 @@
+# Benchmark dependencies plus the repo's mock-pipeline test dependencies.
+httpx>=0.27,<1
+jsonschema>=4.23,<5
+numpy>=1.26
+opencv-python>=4.10
+openai>=1.40
+python-dotenv>=1
+prometheus-client>=0.21,<1
+fastapi
+uvicorn
+pytest
+ruff==0.17.1

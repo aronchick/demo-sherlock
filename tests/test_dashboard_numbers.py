@@ -75,6 +75,7 @@ def ablation():
 def scout():
     return {
         "evidence_kind": "model_evaluation",
+        "execution_mode": "measured",
         "split": "test",
         "images": {"room": 4},
         "before": {
@@ -230,6 +231,10 @@ def test_scout_provenance_split_and_matched_ground_truth():
     for overrides in (
         {"evidence_kind": "stub"},
         {"evidence_kind": None},
+        {"execution_mode": "smoke"},
+        {"execution_mode": "local_stub"},
+        {"execution_mode": "unknown"},
+        {"execution_mode": None},
         {"split": "train"},
         {"mock": True},
     ):
@@ -248,21 +253,24 @@ def test_scout_all_fallback_and_supported_locations(tmp_path):
     assert numbers.read_numbers(tmp_path)["scout"]["source"] == "room"
 
 
-def test_current_scout_producer_format_without_provenance_marker():
+@pytest.mark.parametrize("missing", [("evidence_kind",), ("execution_mode",), ("evidence_kind", "execution_mode")])
+def test_scout_unlabelled_reports_are_not_evidence(missing):
     data = scout()
-    data.pop("evidence_kind")
     data.update(conf=0.35, iou=0.5)
-    assert numbers.scout_result(data)["before_recall"] == 0.5
-    for key, value in (
-        ("stub", True),
-        ("execution_mode", "local_stub"),
-        ("evidence_kind", "stub"),
-    ):
-        assert numbers.scout_result({**data, key: value}) is None
-    for key in ("images", "conf", "iou"):
-        incomplete = dict(data)
-        incomplete.pop(key)
-        assert numbers.scout_result(incomplete) is None
+    for key in missing:
+        data.pop(key)
+    assert numbers.scout_result(data) is None
+
+
+def test_scout_newer_smoke_is_skipped_and_nested_smoke_is_rejected(tmp_path):
+    write(tmp_path, "results/scout_eval_measured.json", scout())
+    data = {**scout(), "execution_mode": "smoke"}
+    write(tmp_path, "runs/scout/eval.json", data, 2)
+    assert numbers.read_numbers(tmp_path)["scout"]["file"] == "scout_eval_measured.json"
+    for side in ("before", "after"):
+        data = scout()
+        data[side]["execution_mode"] = "smoke"
+        assert numbers.scout_result(data) is None
 
 
 def test_malformed_and_oversized_files_do_not_break_dashboard(tmp_path, monkeypatch):

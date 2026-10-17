@@ -6,7 +6,7 @@ Tracks: Multi-Agent (primary), Tool-Calling, Nemotron + vLLM bounties.
 ```
 Scout (YOLOv8n detector, every frame, ~10 ms)
   └─ new object? ──► Director (Nemotron 3.5 Lightning 30B-A3B + camera tools)
-                        ├─ look_at / move  → PTZ camera (OBSBOT or software crop)
+                        ├─ look_at / move  → PTZ camera (Insta360 Link 2 or software crop)
                         ├─ snapshot        → Analyst (SmolVLM 2.2B on the zoomed crop only)
                         └─ report          → Verifier (same SmolVLM 2.2B instance: does the crop support the claim?)
 ```
@@ -57,7 +57,6 @@ python run.py
 ```
 If the endpoint is unreachable mid-pitch, the Director automatically drops to the rule-based fallback (`RuleDirector`).
 
-<<<<<<< HEAD
 ## Hardware: Insta360 Link 2 hero camera
 The hero is an **Insta360 Link 2, the gimbal model** (USB `2e1a:4c04`), not the gimbal-less Link 2C. The scout is the Mac's built-in webcam on the software-crop backend.
 
@@ -85,7 +84,7 @@ Tuning (env, defaults in `sherlock/camera/insta360.py`):
 | `INSTA360_PAN_SIGN` / `INSTA360_TILT_SIGN` / `INSTA360_UNITS_PER_DEG` | `1` / `1` / `3600` | Direction and units of the raw UVC values (arc-seconds per spec) |
 
 The OBSBOT adapter (`hero:obsbot:<n>`) is kept as an alternate backend.
-=======
+
 ## Fine-tune the Scout (about 20 minutes on this Mac)
 Stock YOLOv8n knows COCO's 80 classes. It has no badge class and it was never shown our room.
 The fine-tune keeps the same 3.2M-parameter nano model (so the Scout stays ~10 ms a frame) and teaches it
@@ -140,12 +139,6 @@ files; it uploads nothing without `--publish` (and then only to private repos un
 dataset card is CC-BY-4.0. The weights card defaults to AGPL-3.0 because they are fine-tuned from
 Ultralytics YOLOv8n (AGPL-3.0); `--model-license` overrides that. In-room photos show real people, so they
 stay out of the upload unless `--include-room-photos`, and that needs everyone pictured to agree.
-
-## When the OBSBOT arrives
-1. `python scripts/ptz_probe.py` — checks whether the camera answers standard UVC pan/tilt/zoom.
-2. If yes: `CAMERAS=hero:obsbot:0,scout1:fake:1`. Nothing else changes.
-3. If no: Plan B is OSC via OBSBOT Center; implement `ObsbotCamera.move` against it.
->>>>>>> origin/main
 
 ## vLLM
 

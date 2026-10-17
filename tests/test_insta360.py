@@ -233,11 +233,29 @@ def test_returns_home_when_idle_and_new_moves_reset_the_clock():
     cam.move(pan=30, zoom=2)
     time.sleep(0.2)
     cam.move(pan=40)  # re-arms the timer
+    cam.snapshot()
     time.sleep(0.2)
     assert cam.pose.pan == 40
     time.sleep(0.3)
     assert cam.pose == Pose(0, 0, 1)
     assert tr.calls[-2:] == [("pantilt", 0, 0), ("zoom", 100)]
+
+
+def test_auto_home_waits_for_the_snapshot_that_follows_a_look_at():
+    cam = make(FakeTransport(), home_after_s=0.15)
+    cam.move(pan=30)  # Director's look_at; its snapshot comes in a later LLM round
+    time.sleep(0.4)
+    assert cam.pose.pan == 30  # still aimed: home deferred while no snapshot
+    cam.snapshot()
+    time.sleep(0.3)
+    assert cam.pose == Pose(0, 0, 1)
+
+
+def test_auto_home_deferral_is_capped():
+    cam = make(FakeTransport(), home_after_s=0.05)
+    cam.move(pan=30)  # never followed by a snapshot
+    time.sleep(Insta360Camera.HOME_SNAPSHOT_WAIT * 0.05 + 0.25)
+    assert cam.pose == Pose(0, 0, 1)
 
 
 # --- failure paths -----------------------------------------------------------------
@@ -516,3 +534,41 @@ def test_v4l2_open_proves_pantilt_set_works(monkeypatch, set_ok):
         with pytest.raises(TransportError, match="rejects setting"):
             tr.open()
     assert ran[1] == ("--set-ctrl", "pan_absolute=7200,tilt_absolute=-3600")  # no motion
+
+
+def test_frames_taken_after_a_partial_failure_cannot_be_aimed_from():
+    tr = ZoomFailsTransport()
+    cam = make(tr, units_per_deg=1, slew_deg_s=10000.0)
+    tr.zoom_fails = True
+    with pytest.raises(CameraError):
+        cam.move(pan=30, zoom=2)  # gimbal is now somewhere it does not know
+    cam.wide_frame()
+    tr.zoom_fails = False
+    with pytest.raises(CameraError, match="unknown gimbal position; re-homed"):
+        cam.look_at(box_at(W * 0.75, H / 2))
+    assert cam.pose == cam.home and tr.calls[-2:] == [("pantilt", 0, 0), ("zoom", 100)]
+    cam.wide_frame()  # known pose again: aiming works
+    assert cam.look_at(box_at(W * 0.75, H / 2)).pan > 0
+
+
+def test_settle_after_a_partial_failure_allows_for_the_longest_travel():
+    tr = ZoomFailsTransport()
+    cam = make(tr, units_per_deg=1, settle_s=0.0, slew_deg_s=1000.0, zoom_settle_s=0.0)
+    tr.zoom_fails = True
+    with pytest.raises(CameraError):
+        cam.move(pan=90, zoom=2)
+    tr.zoom_fails = False
+    t0 = time.monotonic()
+    cam.move(pan=0, zoom=1)  # cached pose says "already home": zero travel
+    (p0, p1), (q0, q1), _ = cam._limits()
+    assert cam._settle_until - t0 >= min(max(p1 - p0, q1 - q0), 360) / 1000.0 - 0.01
+
+
+def test_hero_runs_on_the_scripted_scene_in_synthetic_mode():
+    from sherlock.scene import ScriptedScene
+
+    cam = Insta360Camera("hero", "synthetic", tuning=Tuning(home_after_s=0.0, settle_s=0.0))
+    cam.src = ScriptedScene("hero", time.time())  # what Sherlock(synthetic=True) does
+    f = cam.wide_frame()
+    cam.look_at(box_at(f.shape[1] * 0.7, f.shape[0] * 0.5))
+    assert cam.snapshot().shape == f.shape

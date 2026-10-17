@@ -396,6 +396,8 @@ class Insta360Camera(Camera):
     With a synthetic source there is no gimbal, so the optics are simulated by
     cropping the home view where the pose points (`simulate_optics`)."""
 
+    HOME_SNAPSHOT_WAIT = 5  # after a move with no snapshot, home after at most 5x home_after_s
+
     def __init__(self, name: str, source: str | None, transport: PTZTransport | None = None,
                  tuning: Tuning | None = None, frames=None, simulate_optics: bool | None = None):
         self.name = name
@@ -426,9 +428,13 @@ class Insta360Camera(Camera):
         # Seqlock between _drive and the Scout: odd while SETs are in flight,
         # bumped again once the new pose and settle deadline are published.
         self._motion_seq = 0
+        # Auto-home waits for the snapshot that usually follows a look_at, since
+        # the Director may spend longer than home_after_s thinking in between.
+        self._snapped = True
+        self._last_move = 0.0
         # Pose and size of the last frame handed to the Scout: detection bboxes
         # are in that frame, even if the gimbal has moved since.
-        self._view_pose = replace(self.home)
+        self._view_pose: Pose | None = replace(self.home)  # None: taken at an unknown pose
         self._view_wh: tuple[int, int] | None = None
         try:
             with self._lock:
@@ -448,13 +454,18 @@ class Insta360Camera(Camera):
             if seq % 2:  # SETs in flight: the image is mid-slew
                 time.sleep(0.02)
                 continue
-            pose, settle = replace(self.pose), self._settle_until
+            pose, settle, unknown = replace(self.pose), self._settle_until, self._pose_unknown
+            if settle > deadline:
+                break
             wait = settle - time.monotonic()
             if wait > 0:
                 time.sleep(wait)
             f = self._read(pose, newer_than=settle)
             if self._motion_seq == seq:
-                self._view_pose, self._view_wh = pose, (f.shape[1], f.shape[0])
+                # After a partial failure the gimbal is somewhere between the old
+                # and the new pose, so this frame cannot be aimed from.
+                self._view_pose = None if unknown else pose
+                self._view_wh = (f.shape[1], f.shape[0])
                 return f
         raise CameraError(f"{self.name}: gimbal never settled long enough for a frame")
 
@@ -464,7 +475,9 @@ class Insta360Camera(Camera):
         if wait > 0:
             time.sleep(wait)
         f = self._read(replace(self.pose), newer_than=self._settle_until)
-        self._arm_home()
+        with self._lock:
+            self._snapped = True
+            self._arm_home()
         return f
 
     def move(self, pan: float | None = None, tilt: float | None = None,
@@ -475,6 +488,7 @@ class Insta360Camera(Camera):
                           self.pose.tilt if tilt is None else float(tilt),
                           self.pose.zoom if zoom is None else float(zoom))
             self._drive(target)
+            self._snapped, self._last_move = False, time.monotonic()
             self._arm_home()
             return replace(self.pose)
 
@@ -483,9 +497,15 @@ class Insta360Camera(Camera):
         if self._view_wh is None:
             self.wide_frame()
         assert self._view_wh is not None
+        view = self._view_pose
+        if view is None:  # the box came from a frame taken at an unknown gimbal pose
+            with self._lock:
+                self._drive(self.home)  # raises "gimbal not responding" if still dead
+            raise CameraError(f"{self.name}: that frame was taken at an unknown gimbal"
+                              " position; re-homed, look again")
         with self._lock:
-            pan, tilt = aim_at(bbox, self._view_wh, self._view_pose, self.tuning.hfov_deg)
-            zoom = zoom_for(bbox, self._view_wh, self._view_pose.zoom, self.tuning.fill)
+            pan, tilt = aim_at(bbox, self._view_wh, view, self.tuning.hfov_deg)
+            zoom = zoom_for(bbox, self._view_wh, view.zoom, self.tuning.fill)
             return self.move(pan, tilt, zoom)
 
     def describe(self) -> dict:
@@ -567,7 +587,8 @@ class Insta360Camera(Camera):
 
     def _send(self, target: Pose, force: bool) -> None:
         tn = self.tuning
-        force = force or self._pose_unknown
+        was_unknown = self._pose_unknown
+        force = force or was_unknown
         try:
             self._release_stuck()
             if not self._connected:
@@ -590,10 +611,14 @@ class Insta360Camera(Camera):
             self.ptz_error = str(e)
             if self._stuck is None:  # a hung call is still using the transport
                 self._close_transport()
+            self._arm_home()  # retry home in the background to get a known pose back
             raise CameraError(f"{self.name}: gimbal not responding ({e})") from e
-        travel = max(abs(target.pan - self.pose.pan), abs(target.tilt - self.pose.tilt))
-        settle = (tn.settle_s + travel / max(tn.slew_deg_s, 1e-6)
-                  + abs(target.zoom - self.pose.zoom) * tn.zoom_settle_s)
+        if was_unknown:  # it could be anywhere, so allow for the longest travel
+            travel, dzoom = min(max(p1 - p0, t1 - t0), 360.0), zmax - 1.0
+        else:
+            travel = max(abs(target.pan - self.pose.pan), abs(target.tilt - self.pose.tilt))
+            dzoom = abs(target.zoom - self.pose.zoom)
+        settle = tn.settle_s + travel / max(tn.slew_deg_s, 1e-6) + dzoom * tn.zoom_settle_s
         self._settle_until = max(self._settle_until, time.monotonic() + settle)
         self.pose, self.ptz_error, self._pose_unknown = target, None, False
 
@@ -616,7 +641,7 @@ class Insta360Camera(Camera):
 
     def _arm_home(self) -> None:
         self._cancel_home()
-        if self.tuning.home_after_s <= 0 or self.pose == self.home:
+        if self.tuning.home_after_s <= 0 or (self.pose == self.home and not self._pose_unknown):
             return
         self._home_timer = threading.Timer(self.tuning.home_after_s, self._go_home,
                                            args=(self._home_gen,))
@@ -634,6 +659,11 @@ class Insta360Camera(Camera):
     def _go_home(self, gen: int) -> None:
         with self._lock:
             if gen != self._home_gen:
+                return
+            waited = time.monotonic() - self._last_move
+            if (not self._snapped and not self._pose_unknown
+                    and waited < self.HOME_SNAPSHOT_WAIT * self.tuning.home_after_s):
+                self._arm_home()  # a snapshot is probably still coming; check again later
                 return
             try:
                 self._drive(self.home)

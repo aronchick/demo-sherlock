@@ -1,5 +1,5 @@
 # /// script
-# requires-python = ">=3.10"
+# requires-python = ">=3.11"  # link-ctl 2.2.1 needs 3.11
 # dependencies = ["link-ctl>=2.2.1; sys_platform == 'darwin'", "opencv-python", "numpy"]
 # ///
 """Probe the Insta360 Link 2 hero camera before trusting `CAMERAS=hero:insta360:<index>`.

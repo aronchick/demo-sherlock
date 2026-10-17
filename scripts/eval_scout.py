@@ -119,7 +119,10 @@ def main(argv: list[str] | None = None) -> dict:
     sources = defaultdict(int)
     for img in images:
         sources[source_of(img)] += 1
-    report = {"split": a.split, "conf": a.conf, "iou": 0.5, "images": dict(sources),
+    # Provenance for the dashboard, which shows only labelled real-model runs:
+    # this script always runs both models on real images; it has no stub path.
+    report = {"evidence_kind": "model_evaluation",
+              "split": a.split, "conf": a.conf, "iou": 0.5, "images": dict(sources),
               "before": {"model": a.before, **before}, "after": {"model": a.after, **after},
               "headline": headline(before, after)}
     a.out.parent.mkdir(parents=True, exist_ok=True)

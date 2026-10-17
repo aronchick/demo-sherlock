@@ -268,9 +268,9 @@ Brev box, which needs the GPU box to exist.
 
 ### Not measured yet
 
-- **vLLM on the H100:** latency, tool-call validity and the prefix-cache
-  A/B have only run against the local stub
-  ([Results pending live endpoint](#results-pending-live-endpoint)).
+- **Prefix-cache A/B in reverse order:** the H100 A/B ran once, off then
+  on ([H100 results](#h100-results-17-oct-2026)); no reverse-order run has
+  checked it for warmup or load drift.
 - **NeMo Gym ablations:** live results are pending Brev endpoints.
 - **Verifier threshold:** chosen on 90 open COCO objects cut as #62's tight
   model crop, not on room photos. At the demo's -1.0, SmolVLM-500M confirmed
@@ -570,9 +570,15 @@ for VLM. These are starting settings, not measured capacity; the serving
 owner must confirm model revisions, parser, startup flags and available
 memory on the H100. This benchmark does not change `serve.sh`.
 
-**Live H100 measurements are pending.** The benchmark is validated against
-a local streaming stub. Stub results test the measurement code and must
-not be submitted as vLLM performance evidence.
+**Measured on the H100 on 17 Oct 2026** (Brev `sherlock-h100`, 1x H100
+PCIe 80GB, vLLM 0.28.0, Configuration A; code at main @09dfd8f plus the
+`brev/serve.sh` fixes from #67 and #79): 1600 of 1600 requests succeeded
+in each A/B arm. Director at concurrency 1: TTFT p50 98 ms, end-to-end p50
+232 ms, valid tool responses 0.99; at concurrency 16, 12.05 requests/s.
+VLM at concurrency 1: end-to-end p50 25 ms; at 8, 145.7 requests/s.
+Prefix caching gave no measurable benefit
+([H100 results](#h100-results-17-oct-2026)). The local streaming stub
+still tests the measurement code only; its results are not vLLM evidence.
 
 ### Verifier verdicts
 
@@ -790,7 +796,8 @@ documents `--enable-prefix-caching`, `--no-enable-prefix-caching`, and
 `--prefix-caching-hash-algo sha256`. The
 [APC guide](https://docs.vllm.ai/en/v0.28.0/features/automatic_prefix_caching/)
 explains that reuse reduces prefill work, not decoding work. The expected
-signal is lower TTFT; the size of any benefit remains unmeasured.
+signal is lower TTFT; on the H100 it did not appear
+([H100 results](#h100-results-17-oct-2026)).
 
 1. On the Brev host, the serving owner starts the baseline with:
 
@@ -844,23 +851,55 @@ For Nemotron's hybrid layers, confirm startup's effective cache mode with
 the serving owner; the 0.28.0 CLI documents `align` when prefix caching is
 enabled and `none` when disabled. Do not add other optimizations to this A/B.
 
-### Results pending live endpoint
+### H100 results (17 Oct 2026)
+
+One A/B on Brev `sherlock-h100` (1x H100 PCIe 80GB), vLLM 0.28.0,
+Configuration A, 200 requests per cell after 4 warmup requests, prefix
+caching off then on. The table is the `on` arm, which is what
+`brev/serve.sh` runs by default. Latency in ms, successful requests only.
 
 | Workload | Concurrency | TTFT p50/p95/p99 ms | E2E p50/p95/p99 ms | Output tok/s | Req/s | Tool validity |
-|---|---:|---|---|---|---|---|
-| Director | 1 | pending | pending | pending | pending | pending |
-| Director | 4 | pending | pending | pending | pending | pending |
-| Director | 8 | pending | pending | pending | pending | pending |
-| Director | 16 | pending | pending | pending | pending | pending |
-| VLM | 1 | pending | pending | pending | pending | n/a |
-| VLM | 4 | pending | pending | pending | pending | n/a |
-| VLM | 8 | pending | pending | pending | pending | n/a |
-| VLM | 16 | pending | pending | pending | pending | n/a |
+|---|---:|---|---|---:|---:|---:|
+| Director | 1 | 97.66 / 106.20 / 108.82 | 231.83 / 304.19 / 328.12 | 210.74 | 4.47 | 0.99 |
+| Director | 4 | 170.24 / 240.06 / 457.04 | 490.37 / 708.06 / 804.58 | 399.03 | 8.25 | 0.99 |
+| Director | 8 | 235.90 / 401.14 / 509.13 | 806.13 / 1109.02 / 1262.60 | 483.15 | 10.19 | 0.99 |
+| Director | 16 | 408.08 / 899.24 / 918.13 | 1372.29 / 2127.31 / 2281.40 | 567.71 | 12.05 | 0.99 |
+| VLM | 1 | 11.57 / 12.25 / 12.68 | 25.15 / 28.05 / 28.48 | 404.43 | 38.83 | n/a |
+| VLM | 4 | 26.93 / 30.86 / 234.86 | 41.58 / 46.32 / 250.87 | 900.64 | 87.14 | n/a |
+| VLM | 8 | 38.17 / 44.43 / 48.18 | 55.08 / 60.96 / 64.45 | 1495.39 | 145.68 | n/a |
+| VLM | 16 | 75.76 / 90.59 / 104.57 | 119.76 / 133.09 / 137.28 | 1380.22 | 133.74 | n/a |
 
-Prefix-cache on/off TTFT change: **pending**. Cache hit rate: **pending**.
-KV usage: **pending**. Failure rates: **pending**.
-Replace these placeholders with the real endpoint tables before submitting
-the Red Hat vLLM bounty explanation.
+Failures: 0 of 1600 requests in each arm, no automatic retries.
+
+**Prefix caching gave no measurable benefit.** With caching on, the
+Director's prefix-cache hit rate was 0.00: about 320,000 prompt tokens
+looked up per cell and no cached block reused. Its changes against the
+`off` arm were small and of mixed sign, inside the drift of the VLM
+control, whose server settings do not change between arms (its own cache
+is on in both and hit 0.99) and which moved by up to 9%:
+
+| Workload | Concurrency | TTFT p50 % | E2E p95 % | Output tok/s % | Req/s % |
+|---|---:|---:|---:|---:|---:|
+| Director | 1 | +1.22 | +1.13 | -1.12 | -1.40 |
+| Director | 4 | +2.94 | +1.23 | +0.10 | -2.38 |
+| Director | 8 | +0.01 | -5.93 | -0.16 | -0.86 |
+| Director | 16 | +7.31 | +0.21 | +0.17 | +0.25 |
+| VLM (control) | 1 | +0.52 | +0.02 | -0.15 | -0.15 |
+| VLM (control) | 4 | +1.58 | +1.41 | -1.39 | -0.82 |
+| VLM (control) | 8 | +8.96 | +3.63 | -4.88 | -4.60 |
+| VLM (control) | 16 | -0.27 | -3.58 | -1.66 | -1.51 |
+
+Changes are (on / off - 1) x 100; negative latency is better. This is one
+run in one order, off then on, with no reverse-order control, so it makes
+no claim of a cache win. Why the Director never hit its cache is not
+diagnosed; the hybrid-layer cache mode noted above is the first thing to
+check. KV usage is a before/after snapshot (idle at both), not peak.
+
+Evidence: `results/brev_preflight_20261017T200806_125411Z/` holds the
+preflight record and both arms' benchmark JSON and Markdown; the numbers
+panel reads the `on` JSON. Their `model_server` and `code` blocks were
+added on import and are marked `"source": "declared"`; the benchmark ran
+from a copy without `.git`, so it recorded `git_commit` as null.
 
 ### Local validation
 

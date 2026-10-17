@@ -1,5 +1,6 @@
 # Ablation 2 (Model Swap): Director = Qwen2.5-7B-Instruct vs Nemotron 3.5 Lightning (all else fixed)
-# Generative parameter budget: 7.6B (Qwen2.5-7B-Instruct) + 2.25B (SmolVLM-Instruct) = 9.85B <= 33B
+# Generative parameters: 7.62B (Qwen2.5-7B-Instruct, 7,615,616,512 tensors) + 2.25B (SmolVLM-Instruct,
+# 2,246,272,880 tensors) = 9.86B <= 33B. Neither checkpoint has MTP, so card and tensor counts agree.
 sherlock:
   resources_servers:
     sherlock:
@@ -45,6 +46,6 @@ sherlock_agent:
       ablation_component: "Model (Qwen2.5-7B-Instruct vs Nemotron 3.5 Lightning)"
       ablation_description: "Swap Director model to Qwen/Qwen2.5-7B-Instruct; hold prompt (v2), tools (verbose), thinking (off) fixed"
       director_model_name: Qwen/Qwen2.5-7B-Instruct
-      director_params_b: 7.6
+      director_params_b: 7.616
       vlm_model_name: HuggingFaceTB/SmolVLM-Instruct
-      vlm_params_b: 2.25
+      vlm_params_b: 2.246

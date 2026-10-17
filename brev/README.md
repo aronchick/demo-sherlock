@@ -104,6 +104,13 @@ The existing application uses one `OPENAI_API_KEY` for all roles. The preflight
 also accepts `DIRECTOR_API_KEY` and `ANALYST_API_KEY` for testing, but never prints
 their values. Set real credentials privately if the servers require them.
 
+Start `just live` on the Mac and open <http://127.0.0.1:8000> there (or the port
+set by `DASHBOARD_PORT`). The dashboard binds to `127.0.0.1` by default so camera
+feeds and face crops stay local during demos and recording. Override with
+`DASHBOARD_HOST=0.0.0.0` in the shell or `.env` **only on a trusted network**;
+this deliberately allows LAN access to the dashboard. The model API tunnels
+above do not require changing the dashboard bind address.
+
 Brev syntax was checked against NVIDIA's [connectivity guide][connectivity] and
 [connect command guide][connect]. The port mapping is `local:remote`; repeating
 `--port` in one invocation keeps only the last mapping. Brev web-console public

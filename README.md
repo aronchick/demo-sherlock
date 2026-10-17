@@ -38,12 +38,17 @@ Configuration B swaps the Director and shared VLM via `.env` (see the commented-
 ## Run with nothing (sandbox, airplane, dead wifi)
 ```bash
 just up                                    # needs uv and just; ultralytics (the `yolo` extra) is optional for this mode
-open http://localhost:8000
+open http://127.0.0.1:8000
 just down                                  # stops what `just up` started
 ```
 `just up` runs `run.py --mock --synthetic` in the background on `DASHBOARD_PORT` (default 8000) with
 `CAMERAS=hero:fake:synthetic,scout1:fake:synthetic` (set either in your shell to change it), and keeps its
 PID and log in the gitignored `.runtime/`. The first run builds the environment from `pyproject.toml` and `uv.lock`.
+
+The dashboard binds to `127.0.0.1` by default. Keep demo and recording UIs local:
+they serve live camera feeds and saved face crops. Set `DASHBOARD_HOST=0.0.0.0`
+in the shell or `.env` **only on a trusted network** to deliberately allow LAN
+access. Unset or blank `DASHBOARD_HOST` values keep the loopback default.
 
 Rule-based director, mock VLMs, a scripted room on a 26 s loop: someone holds up a cup (ignored, 0 VLM calls),
 then someone holds up a knife (look_at → snapshot → look_at head → face snapshot → verify → alert with both crops).
@@ -61,6 +66,8 @@ no model ever sees it, and nothing identifies or describes the person.
 cp .env.example .env              # CAMERAS=hero:fake:0 uses the laptop webcam with software PTZ
 just live                         # real cameras and models per .env; installs the `yolo` extra (ultralytics)
 ```
+Open <http://127.0.0.1:8000> on the Mac; the dashboard stays local while model calls
+use the Brev endpoints or SSH tunnels.
 If the endpoint is unreachable mid-pitch, the Director automatically drops to the rule-based fallback (`RuleDirector`).
 
 ## Hardware: Insta360 Link 2 hero camera

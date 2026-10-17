@@ -8,7 +8,7 @@ import time
 
 from openai import OpenAI
 
-from ..config import Endpoint
+from ..config import Endpoint, _env
 from ..events import BUS
 from ..tools import TOOL_SCHEMAS, ToolBox
 
@@ -21,13 +21,15 @@ Be decisive. Use at most {max_calls} tool calls. Always finish with report."""
 
 
 class Director:
-    def __init__(self, ep: Endpoint, tools: ToolBox, max_tool_calls: int = 6, thinking: bool = False):
+    def __init__(self, ep: Endpoint, tools: ToolBox, max_tool_calls: int = 6, thinking: bool | None = None):
         self.client = OpenAI(base_url=ep.base_url, api_key=ep.api_key)
         self.model = ep.model
         self.tools = tools
         self.max_calls = max_tool_calls
+        if thinking is None:
+            thinking = _env("DIRECTOR_THINKING", "0") == "1"
         # Nemotron 3.5 Lightning: thinking on by default; off keeps the tool loop fast.
-        self.extra = {"chat_template_kwargs": {"enable_thinking": thinking}}
+        self.extra = {"chat_template_kwargs": {"enable_thinking": bool(thinking)}}
 
     def investigate(self, detection) -> dict:
         BUS.bump("investigations")

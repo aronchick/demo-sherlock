@@ -28,8 +28,8 @@ def _vision_call(client: OpenAI, model: str, img: np.ndarray, prompt: str, max_t
     r = client.chat.completions.create(
         model=model, max_tokens=max_tokens, temperature=0.1,
         messages=[{"role": "user", "content": [
-            {"type": "text", "text": prompt},
-            {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{_b64(img)}"}}]}])
+            {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{_b64(img)}"}},
+            {"type": "text", "text": prompt}]}])
     return (r.choices[0].message.content or "").strip()
 
 

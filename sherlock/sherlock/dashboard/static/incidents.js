@@ -14,6 +14,7 @@
   const selected = new URLSearchParams(location.search).get('incident');
   const isPhone = location.pathname === '/phone';
   const isCustody = location.pathname === '/custody';
+  window.name = isPhone ? 'sherlock-phone' : isCustody ? 'sherlock-evidence' : 'sherlock-flow';
   let page = 0;
   let phoneRevision = '';
   let shelfRevision = '';
@@ -52,6 +53,7 @@
   function pictureLink(record, artifact) {
     const link = document.createElement('a');
     link.href = custodyUrl(record.incident);
+    link.target = 'sherlock-evidence';
     link.title = `Chain of custody: ${artifact.name}, ${record.incident}`;
 
     if (artifact.integrity === 'missing') {
@@ -90,6 +92,14 @@
 
   /** @param {Incident|undefined} record */
   function renderPhone(record) {
+    const indicator = document.getElementById('phone-indicator');
+    const summary = document.getElementById('phone-summary');
+
+    if (indicator && summary) {
+      indicator.dataset.status = record?.notification.status || 'waiting';
+      summary.textContent = record ? (record.notification.status === 'acknowledged' ? 'Investigating' : 'Alert received') : 'Waiting for an alert';
+    }
+
     if (!phone) return;
     const revision = record ? `${record.incident}:${record.notification.status}` : 'empty';
 
@@ -120,6 +130,7 @@
     phone.append(element('p', `Incident ${record.incident}`));
     const link = document.createElement('a');
     link.href = custodyUrl(record.incident);
+    link.target = 'sherlock-evidence';
     link.textContent = 'View evidence and chain of custody';
     phone.append(link);
     const button = document.createElement('button');
@@ -229,6 +240,7 @@
         for (const record of records.slice(0, pageSize)) {
           const link = document.createElement('a');
           link.href = custodyUrl(record.incident);
+    link.target = 'sherlock-evidence';
           const artifact = record.artifacts.find(item => item.name !== 'face_crop');
 
           if (artifact && artifact.integrity !== 'missing') {
@@ -281,6 +293,21 @@
       if (phoneError) phoneError.textContent = 'Connection unavailable. Displayed incident may be out of date.';
     }
   }
+
+  document.addEventListener('click', event => {
+    const target = event.target;
+
+    if (!(target instanceof Element) || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey || event.button !== 0) return;
+    const link = target.closest('a');
+
+    if (!(link instanceof HTMLAnchorElement) || !['sherlock-phone', 'sherlock-evidence', 'sherlock-flow'].includes(link.target)) return;
+    const tab = window.open(link.href, link.target);
+
+    if (tab) {
+      event.preventDefault();
+      tab.focus();
+    }
+  });
 
   const phoneView = document.getElementById('phone-view');
   const custodyView = document.getElementById('custody-view');

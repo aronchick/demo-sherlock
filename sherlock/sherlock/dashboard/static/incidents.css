@@ -4,11 +4,11 @@
 html, body { height: auto; overflow: visible; }
 .app { height: auto; min-height: 100dvh; grid-template-rows: auto auto auto auto; }
 .board { min-height: 830px; }
-.out { grid-template-rows: auto auto auto auto; gap: 14px; align-content: start; }
-.out > .dest { height: auto; min-height: 105px; }
+.out { grid-template-rows: repeat(3, minmax(0, 1fr)); gap: 14px; }
+.out > .dest { height: auto; min-height: 105px; align-self: center; }
 .phone-shell { border: 3px solid var(--ink); border-radius: 25px; padding: 13px; background: var(--card); color: var(--ink); min-width: 0; overflow-wrap: anywhere; }
 .phone-speaker { width: 48px; height: 5px; background: var(--ink); border-radius: 5px; margin: 0 auto 16px; }
-.phone-label { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 7px; font: 500 10px/1.5 var(--mono); text-transform: uppercase; }
+.phone-label { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 7px; font: 500 11px/1.5 var(--mono); text-transform: uppercase; }
 .phone-label span { color: var(--dim); }
 .phone-shell h2 { font-size: 19px; line-height: 1.2; margin: 14px 0 8px; }
 .phone-shell p { font-size: 12px; margin: 8px 0; }
@@ -71,3 +71,41 @@ html, body { height: auto; overflow: visible; }
 a:focus-visible, button:focus-visible, summary:focus-visible { outline: 2px solid var(--scout); outline-offset: 4px; }
 @media (max-width: 1000px) { .board { min-height: 0; } .out { align-content: stretch; } }
 @media (max-width: 540px) { .artifact-grid { grid-template-columns: minmax(0, 1fr); } .incident-header, #incident-main { padding-inline: 16px; } .phone-compact { max-width: 350px; width: 100%; justify-self: center; } .incident-list > a { gap: 12px; } }
+
+/* The board keeps the handoff small; the named Phone tab owns the full alert. */
+.phone-indicator { display: flex; align-items: center; gap: 12px; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--line); text-decoration: none; color: var(--ink); }
+.phone-indicator strong { display: block; font-size: 13px; }
+.phone-indicator #phone-summary, .phone-indicator small { display: block; font: 11px/1.5 var(--mono); color: var(--dim); }
+.mini-phone { width: 32px; height: 48px; border: 2px solid var(--ink); border-radius: 7px; display: grid; place-items: center; flex: none; }
+#phone-light { width: 12px; height: 16px; border: 1px solid var(--line); border-radius: 2px; }
+.phone-indicator[data-status="delivered"] #phone-light { background: var(--weapon); border-color: var(--weapon); }
+.phone-indicator[data-status="acknowledged"] #phone-light { background: var(--ok); border-color: var(--ok); }
+#phone-error:empty { display: none; }
+/* Recording composition: fit the content into a real 16:9 rectangle. */
+@media (min-width: 1100px) and (min-height: 650px) {
+  .app { width: min(100%, calc(100dvh * 16 / 9)); height: min(100dvh, 56.25vw); min-height: 0; margin-inline: auto; grid-template-rows: auto minmax(0, 1fr) auto auto; gap: 10px; padding: 14px 18px 12px; }
+  .board { min-height: 0; column-gap: 28px; }
+  .models { gap: 12px; grid-template-rows: repeat(3, minmax(0, 1fr)); }
+  .models > .stage { min-height: 0; padding: 10px 12px 10px 16px; }
+  .model-name { font-size: clamp(18px, 1.3vw, 25px); }
+  .model-preview-image { height: clamp(54px, 7vh, 80px); }
+  .model-preview figcaption { font-size: 11px; }
+  .out { gap: 12px; }
+  .out > .dest { min-height: 95px; padding: 12px 14px 12px 16px; }
+  #st-bucket { min-height: 150px; }
+  footer { flex-wrap: wrap; gap: 8px 14px; white-space: normal; font-size: 11px; }
+  footer .expanso { flex-basis: 100%; order: 1; font-size: 11px; }
+  .record .lede, .record .lede small, .cell .k, .cell .m { font-size: 11px; }
+  .cell { height: 64px; padding-top: 8px; }
+  .cell .m { position: static; display: block; }
+  .cell .v { -webkit-line-clamp: 1; }
+  .zone > .zhead, .zone > .zhead small, .frame .fh, .frame .fh small, .stage .kind, .dest .kind, .ratio span, .eyebrow, .badge, .stage .ms { font-size: 11px; }
+  #phone-view { display: grid; grid-template-columns: minmax(0, 1fr) 360px; gap: 0 48px; align-items: center; }
+  #phone-view[hidden] { display: none; }
+  #phone-view .page-intro { grid-row: 1 / 3; }
+  #phone-view .phone-full { margin: 0; width: 100%; min-height: 0; padding: 16px 20px; }
+  #phone-view .phone-full p { margin: 6px 0; font-size: 13px; }
+  #phone-view .phone-full .phone-image img { height: clamp(110px, 17vh, 185px); }
+  #phone-view .phone-footnote { grid-column: 2; margin: 8px 0 0; }
+  .incident-page:has(#phone-view:not([hidden])) #incident-main { padding-block: 20px; }
+}

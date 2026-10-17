@@ -202,7 +202,7 @@
         <div class="kind">Evidence</div>
         <div class="sub">snapshots/ on this disk</div>
         <div class="slots evidence-links" id="evidence-links" aria-label="Saved evidence"><span>No saved evidence yet</span></div>
-        <a href="/custody" class="custody-link">Browse chain of custody</a>
+        <a href="/custody" target="sherlock-evidence" class="custody-link">Browse chain of custody</a>
         <span class="badge"></span>
       </article>
     </div>
@@ -257,14 +257,13 @@
       </article>
       <article class="dest" id="d-alert" style="--c: var(--weapon)">
         <div class="kind">Alert</div><div class="num" id="n-alerts">0</div><div class="sub">verified weapon</div>
+        <a class="phone-indicator" id="phone-indicator" href="/phone" target="sherlock-phone" aria-label="Open responder phone tab">
+          <span class="mini-phone" aria-hidden="true"><span id="phone-light"></span></span>
+          <span><strong>Phone</strong><span id="phone-summary">Waiting for an alert</span><small>Simulated · open tab</small></span>
+        </a>
+        <span id="phone-error" class="phone-error" role="status"></span>
       </article>
-      <section class="phone-shell phone-compact" aria-label="Simulated responder phone">
-        <div class="phone-speaker" aria-hidden="true"></div>
-        <div class="phone-label">Responder phone <span>SIMULATED</span></div>
-        <div id="phone-content"><p>Waiting for a verified alert.</p></div>
-        <p class="phone-error" id="phone-error" role="status"></p>
-        <a href="/phone" target="_blank" rel="noopener">Open phone in separate tab</a>
-      </section>
+
     </div>
   </section>
 
@@ -285,7 +284,8 @@
     <div class="expanso" id="expanso"><i></i><span id="expansoText"></span></div>
     <a href="/topology">topology</a>
     <a href="/log">event log</a>
-    <a href="/custody">evidence</a>
+    <a href="/phone" target="sherlock-phone">phone</a>
+    <a href="/custody" target="sherlock-evidence">evidence</a>
     <button type="button" onclick="post('/demo/fail/1')">Break next tool call</button>
     <button type="button" id="coverBtn" onclick="toggleCover()">Cover hero lens</button>
   </footer>

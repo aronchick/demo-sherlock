@@ -198,6 +198,8 @@ class Sherlock:
                 report["incident"] = iid
                 report["t"] = time.time()
                 report["evidence"], unsaved = self._save_evidence(iid, self.tools.evidence)
+                report["evidence_provenance"] = {name: {"camera": self.tools.evidence_camera.get(name),
+                    "captured_at": self.tools.evidence_captured_at.get(name)} for name in self.tools.evidence}
                 if unsaved:
                     report["evidence_unsaved"] = unsaved
                 if report["evidence"]:
@@ -240,6 +242,7 @@ class Sherlock:
         tools = self.tools
         face = tools.evidence.pop("face_crop", None)
         tools.evidence_camera.pop("face_crop", None)
+        tools.evidence_captured_at.pop("face_crop", None)
         if face is None:
             return
         if tools.last_crop is face:

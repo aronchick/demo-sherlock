@@ -178,6 +178,7 @@ class ToolBox:
                          "label": getattr(detection, "label", "")}
         self._failed_steps: set[int] = set()  # chain steps that failed; a later success is a recovery
         self.evidence: dict[str, np.ndarray] = {}
+        self.evidence_captured_at: dict[str, float] = {}
         self.evidence_camera: dict[str, str] = {}  # which camera captured each crop (differs after recovery)
         self.descriptions: dict[str, str] = {}  # Analyst text per crop it saw
         self.masked: dict[str, tuple[int, float]] = {}  # model-bound crop -> (faces masked, ms)
@@ -336,6 +337,7 @@ class ToolBox:
             raise ValueError(f"refused: {camera} is not aimed at the weapon, and a head view never goes to "
                              "a model. look_at the weapon bbox first, or use subject='face' for evidence")
         img = cam.snapshot()
+        captured_at = time.time()
         aim = self.aim.get(camera)
         if aim is not None:
             box = cam.view_box(aim, (img.shape[1], img.shape[0]))
@@ -361,6 +363,7 @@ class ToolBox:
         self.last_crop = img
         self.evidence[eid] = img
         self.evidence_camera[eid] = camera
+        self.evidence_captured_at[eid] = captured_at
         self._shots += 1
         self._versions[eid] = self._shots  # a new crop invalidates any verdict on the old one
         if subject == "face":

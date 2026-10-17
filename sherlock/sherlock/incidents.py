@@ -44,15 +44,19 @@ class IncidentStore:
         with self.lock:
             record = {**report, "custody": list(custody), "models": models, "artifacts": [],
                       "custody_scope": "Local application history; not independently attested or immutable"}
+            record["custody"].append({"stage": "decision", "t": report["t"],
+                "detail": f"{report['action']}: {report.get('claim', '')}"})
             for name in report["evidence"]:
                 path = self.path(report["incident"], f"{name}.jpg")
                 digest = hashlib.sha256(path.read_bytes()).hexdigest()
                 record["artifacts"].append({"name": name, "sha256": digest,
-                    "url": f"/evidence/{report['incident']}/{name}.jpg", "integrity": "verified"})
+                    "url": f"/evidence/{report['incident']}/{name}.jpg", "integrity": "verified",
+                    **report.get("evidence_provenance", {}).get(name, {"camera": None, "captured_at": None})})
                 record["custody"].append({"stage": "evidence", "t": time.time(),
                     "detail": f"Saved {name}.jpg locally; SHA-256 {digest}"})
-            record["custody"].append({"stage": "decision", "t": report["t"],
-                "detail": f"{report['action']}: {report.get('claim', '')}"})
+            for name in report.get("evidence_unsaved", []):
+                record["custody"].append({"stage": "evidence", "t": time.time(),
+                    "detail": f"{name}.jpg was NOT saved; no stored artifact available"})
             record["notification"] = {"simulated": True, "status": "not_sent",
                                       "delivered_at": None, "acknowledged_at": None}
             if report["action"] == "alert" and report.get("verified"):

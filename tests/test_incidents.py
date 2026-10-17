@@ -81,3 +81,17 @@ def test_filtered_pagination(tmp_path):
     assert store.list(1, evidence_only=True)[0]["incident"] == IID
     assert store.list(1, offset=2)[0]["incident"].endswith("005")
     assert store.list(2, offset=7) == []
+
+
+def test_provenance_and_missing_evidence_are_explicit(tmp_path):
+    store = IncidentStore(tmp_path)
+    record = save(store)
+    record["evidence_provenance"] = {"weapon_crop": {"camera": "fallback", "captured_at": 5}}
+    record["evidence_unsaved"] = ["face_crop"]
+    saved = store.save(record, [{"stage": "scout", "t": 1, "detail": "detected"}], {})
+    assert saved["artifacts"][0]["camera"] == "fallback"
+    assert saved["artifacts"][0]["captured_at"] == 5
+    assert [a["name"] for a in saved["artifacts"]] == ["weapon_crop"]
+    assert any("NOT saved" in event["detail"] for event in saved["custody"])
+    times = [event["t"] for event in saved["custody"]]
+    assert times == sorted(times)

@@ -262,6 +262,9 @@ or Alert (benign objects are archived with their picture) while an incident reco
 `/topology` is the simpler page for explaining what runs where: the laptop (cameras, YOLO Scout, orchestrator,
 evidence) and the Brev GPU box (vLLM serving the Director and the shared Analyst/Verifier), with the configured
 model names; set `BREV_HOST=<name>` when the endpoints are reached over an SSH tunnel so the page names the box.
+Every page names the serving program (vLLM, Ollama, mlx-vlm) only from what each endpoint answers, and shows the
+host when it cannot tell; `MODEL_SERVER` (or `DIRECTOR_`, `ANALYST_`, `VERIFIER_MODEL_SERVER`) declares it instead.
+When every endpoint is on the laptop, the topology page greys out the Brev box.
 The Sherlock board (the cascade, the chain and the incident card) lives at `/log`. It only reads the existing `/events` and `/stream`
 endpoints and loads no network resources (its fonts are vendored under `dashboard/static/fonts/`, SIL OFL).
 The footer notes that Expanso Edge processes this data and Expanso Cloud deploys and monitors it, and says

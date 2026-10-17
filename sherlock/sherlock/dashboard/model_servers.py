@@ -1,4 +1,6 @@
-"""Which program serves each model endpoint, asked of the server itself.
+"""Which program serves each model endpoint, asked of the server itself. This is the
+one source the board (/mode), the data-flow page and the topology page name a
+runtime from.
 
 The pages must not name a runtime from a port or a plan: the local fallback runs
 mlx-vlm on :8002, the port vLLM uses on Brev. Each server is identified by
@@ -8,12 +10,17 @@ something only it answers:
   Ollama   GET /api/version
   mlx-vlm  GET /openapi.json titled "MLX-VLM Inference API" (its FastAPI app)
 
-Anything else is reported as reachable but unidentified, never as vLLM. Mock runs
-are not probed at all."""
+<ROLE>_MODEL_SERVER (DIRECTOR_, ANALYST_, VERIFIER_) or MODEL_SERVER declares the
+program instead of asking. An endpoint that is neither detected nor declared is
+labelled by its host, never as vLLM. Mock runs are not probed at all.
+
+Detection is lazy with a short cache rather than once at startup, so a model
+server that comes up after Sherlock is named within TTL_S."""
 from __future__ import annotations
 
 import http.client
 import json
+import os
 import threading
 import time
 import urllib.error
@@ -23,11 +30,21 @@ from urllib.parse import urlsplit
 from ..config import Config, Endpoint
 
 TIMEOUT_S = 1.0
-TTL_S = 15.0  # a model server that comes up mid-session is named within this long
+TTL_S = 15.0
 MLX_VLM_TITLE = "MLX-VLM Inference API"
+_LOCAL_HOSTS = {"localhost", "127.0.0.1", "::1", ""}
 
 _cache: dict[str, tuple[float, dict]] = {}
 _lock = threading.Lock()
+
+
+def where(base_url: str) -> str:
+    """Where an endpoint lives, for the pages: "laptop" or a remote host. An SSH
+    tunnel to Brev also looks local, so BREV_HOST names the box when one is in use."""
+    host = urlsplit(base_url).hostname or ""
+    if host not in _LOCAL_HOSTS:
+        return host
+    return os.environ.get("BREV_HOST", "").strip() or "laptop"
 
 
 def _get(url: str, api_key: str | None = None) -> tuple[bool, dict | None]:
@@ -72,7 +89,8 @@ def _probe(ep: Endpoint) -> dict:
 
 
 def identify(ep: Endpoint) -> dict:
-    """{"name": "vLLM" | "Ollama" | "mlx-vlm" | None, "version": str | None, "reachable": bool}."""
+    """What the server at ep says it is:
+    {"name": "vLLM" | "Ollama" | "mlx-vlm" | None, "version": str | None, "reachable": bool}."""
     now = time.monotonic()
     with _lock:
         hit = _cache.get(ep.base_url)
@@ -84,17 +102,31 @@ def identify(ep: Endpoint) -> dict:
     return info
 
 
+def server(role: str, ep: Endpoint) -> dict:
+    """One role's entry: detected or declared program, its host, and the label to show."""
+    host = where(ep.base_url)
+    declared = (os.environ.get(f"{role.upper()}_MODEL_SERVER") or os.environ.get("MODEL_SERVER") or "").strip()
+    if declared:
+        info = {"name": declared, "version": None, "reachable": None, "source": "declared"}
+    else:
+        info = {**identify(ep), "source": "detected"}
+    if info["name"]:
+        label = info["name"]
+    else:
+        label = host if info["reachable"] else f"{host} (not answering)"
+    return {**info, "host": host, "label": label}
+
+
 def describe(cfg: Config) -> dict | None:
-    """What serves the Director and the VLM in a live run; None in a mock run."""
+    """What serves the Director, Analyst and Verifier in a live run; None in a mock run."""
     if cfg.mock:
         return None
-    return {
-        "director": identify(cfg.director),
-        "analyst": identify(cfg.analyst),
-        "verifier": identify(cfg.verifier),
-        "endpoints": len({cfg.director.base_url, cfg.analyst.base_url, cfg.verifier.base_url}),
-        "vlm_shared": cfg.analyst.base_url == cfg.verifier.base_url and cfg.analyst.model == cfg.verifier.model,
-    }
+    roles = {"director": cfg.director, "analyst": cfg.analyst, "verifier": cfg.verifier}
+    out: dict = {role: server(role, ep) for role, ep in roles.items()}
+    out["endpoints"] = len({ep.base_url for ep in roles.values()})
+    out["vlm_shared"] = cfg.analyst.base_url == cfg.verifier.base_url and cfg.analyst.model == cfg.verifier.model
+    out["local"] = all(out[role]["host"] == "laptop" for role in roles)
+    return out
 
 
 def clear_cache() -> None:

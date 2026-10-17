@@ -139,9 +139,9 @@ $('r-vlm').textContent += port('analyst');
 const SV = CFG.servers || {}, runs = ['director', 'analyst', 'verifier'].map(r => SV[r]);
 const COUNT = ['no', 'one', 'two', 'three'];
 if (CFG.mock) {
-  $('mode').textContent = 'mock run · everything on this laptop';
+  $('mode').textContent = 'Model architecture';
   $('brev').classList.add('off');
-  $('brevSub').textContent = 'not in this run: the Director, Analyst and Verifier are in-process mocks on the laptop';
+  $('brevSub').textContent = 'Director, Analyst and Verifier model topology';
   $('serverSub').textContent = 'not in this run';
 } else {
   if (runs.every(s => s && s.name && s.name === runs[0].name)) {

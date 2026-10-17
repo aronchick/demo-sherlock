@@ -93,3 +93,18 @@ footer a { border-bottom: 0; text-decoration: underline; text-underline-offset: 
   .incident-expanded { padding: 16px 8px 28px; }
   .bar h1 { font-size: 19px; }
 }
+
+/* Bounded nodes keep the model topology readable in the recording view. */
+.models > .stage, #st-scout {
+  border: 1px solid #9daab8;
+  background: var(--card);
+  border-radius: 4px;
+}
+.models > .stage.hot, #st-scout.hot {
+  border-color: var(--ink);
+  outline: 1px solid var(--ink);
+}
+#modelsHead { align-items: center; top: 0; min-height: 36px; gap: 9px; }
+#modelsHead .brev-logo { width: 30px; height: 30px; object-fit: contain; }
+#modelsHead .brev-name { font: 600 19px var(--sans); letter-spacing: -.02em; text-transform: none; }
+#modelsHead small { margin-left: auto; }

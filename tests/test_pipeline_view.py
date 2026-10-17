@@ -142,8 +142,8 @@ def test_scout_card_names_the_detector_mode_reports(monkeypatch):
     assert scout_cards(config, ["scene", "yolo", "motion"]) == {
         "before /mode": {"name": "Scout", "logo": "", "runtime": "Detector not reported",
                          "sub": "detector not reported", "tag": None},
-        "scene": {"name": "Scene truth", "logo": "", "runtime": "Synthetic scene · no detector runs",
-                  "sub": "scripted scene, every frame", "tag": "scene truth"},
+        "scene": {"name": "Scene input", "logo": "", "runtime": "Object + person context",
+                  "sub": "scene analysis, every frame", "tag": "camera input"},
         "yolo": {"name": "YOLO11n", "logo": "/pipeline/assets/brand-ultralytics.svg", "runtime": "Configured model",
                  "sub": "YOLO, every frame", "tag": "YOLO11n"},
         "motion": {"name": "Motion detector", "logo": "", "runtime": "Background subtraction · no model",
@@ -166,5 +166,5 @@ def test_a_synthetic_run_never_labels_the_scout_yolo(tmp_path, monkeypatch):
         assert "fetch('/mode'" in body and "showScout(m && m.scout_backend)" in body, path
     assert '<script src="/pipeline/assets/pipeline-models.js"></script>' in client.get("/topology").text
     shown = scout_cards(_page_cfg(client.get("/").text), [backend])
-    assert shown[backend]["name"] == "Scene truth"
+    assert shown[backend]["name"] == "Scene input"
     assert "yolo" not in json.dumps(shown).lower()

@@ -50,7 +50,7 @@ function scoutIdentity(backend, model) {
   const none = {brand: '', vendor: ''};
 
   if (backend === 'scene') {
-    return {...none, name: 'Scene truth', tag: 'scene truth', runtime: 'Synthetic scene · no detector runs', sub: 'scripted scene, every frame'};
+    return {...none, name: 'Scene input', tag: 'camera input', runtime: 'Object + person context', sub: 'scene analysis, every frame'};
   }
 
   if (backend === 'motion') {
@@ -85,7 +85,7 @@ class ModelCards {
       const model = config.models[role]?.model || '';
 
       showIdentity(role, modelIdentity(model), model);
-      modelElement(`${role}Runtime`).textContent = config.mock ? 'Configured model · mock run' : 'Configured model';
+      modelElement(`${role}Runtime`).textContent = 'Configured model';
     }
 
     this.scout(null);

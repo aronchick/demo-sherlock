@@ -209,7 +209,7 @@
     </div>
 
     <div class="col zone models" id="zModels">
-      <div class="zhead" id="modelsHead">Models<small id="modeTag"></small></div>
+      <div class="zhead" id="modelsHead"><img class="brev-logo" src="/pipeline/assets/brand-nvidia.svg" alt="NVIDIA"><span class="brev-name">NVIDIA Brev</span><small id="modeTag">Model topology</small></div>
       <article class="stage" id="st-director" style="--c: var(--director)">
         <div class="model-heading"><img class="model-logo" id="directorLogo" alt="" hidden><div class="model-name" id="directorModel"></div></div>
         <div class="model-runtime" id="directorRuntime"></div>
@@ -335,11 +335,6 @@ const FONT = { mono: '"IBM Plex Mono", ui-monospace, monospace', sans: '"Schibst
 
 // ---- config echoed from the server ------------------------------------------------
 const M = CFG.models || {}, short = m => (m || '').split('/').pop();
-const hosts = [...new Set(['director', 'analyst', 'verifier'].map(r => (M[r] || {}).where).filter(Boolean))];
-// The serving program is what each endpoint said it is (CFG.servers); unknown shows only where.
-const SV = CFG.servers || {}, roles = ['director', 'analyst', 'verifier'].map(r => SV[r] || {});
-const runs = roles.every(s => s.name) ? [...new Set(roles.map(s => s.name))].join(' + ') : 'models';
-$('modeTag').textContent = CFG.mock ? 'mock, in-process on this laptop' : runs + ' on ' + hosts.join(', ');
 // The Scout is labelled from what /mode says runs (scene truth in a synthetic run),
 // never from SCOUT_BACKEND alone, so a synthetic run never claims YOLO.
 const showScout = backend => {
@@ -352,7 +347,7 @@ fetch('/mode', {cache: 'no-store'}).then(r => r.ok ? r.json() : null)
 for (const r of ['director', 'analyst', 'verifier']) {
   const el = $(r + 'Sub'), base = el.textContent;
   el.textContent = base;
-  el.title = CFG.mock ? 'mock, no model server' : `${(M[r] || {}).model} at ${(M[r] || {}).url}`;
+  el.title = (M[r] || {}).model || '';
 }
 // Expanso status comes from /expanso: live only while the Edge pipelines on this
 // laptop accept this run's events. Nothing here is configured by hand.
@@ -449,12 +444,12 @@ function layout() {
   const lane = bk.t - 26;
   const contextY = Math.max(c.t + 48, Math.min(c.cy - 16, lane));
   const analystY = Math.min(an.cy, lane - 18);
-  const controlY = Math.max(s.b + 25, d.b + 12);
+  const controlY = Math.max(s.b + 12, d.b + 12);
   const wy = w.t + (w.b - w.t) * 0.4;
   E.frames = mk([P(w.r, wy), P(g1, wy), P(g1, s.cy), P(s.l, s.cy)], { shape: 'frame', color: C.rail, lseg: 1 });
   E.uplink = mk([P(s.r, s.cy), P(g3, s.cy), P(g3, d.cy), P(d.l, d.cy)], { color: C.scout });
   E.lookat = mk([P(d.l, d.b - 16), P(g3 - 12, d.b - 16), P(g3 - 12, controlY), P(w.r, controlY)],
-    { label: 'Camera control · pan / tilt / zoom', color: C.director, lseg: 2, labelOffset: -14, prominent: true });
+    { label: 'Camera control · pan / tilt / zoom', color: C.director, lseg: 2, labelOffset: 0, prominent: true });
   E.context = mk([P(c.r, contextY), P(g1 - 6, contextY), P(g1 - 6, lane), P(g3, lane)],
     { label: 'Scene + object + person', color: C.analyst, lseg: 2, labelOffset: -13 });
   E.crop = mk([P(g3, lane), P(g3, analystY), P(an.l, analystY)], { color: C.analyst });
@@ -469,6 +464,8 @@ function layout() {
   E.toAlert = mk([P(R.comparison.r, R.comparison.cy), P(R.out.r + 9, R.comparison.cy), P(R.out.r + 9, R.alert.cy), P(R.alert.r, R.alert.cy)], { color: C.weapon });
 }
 addEventListener('resize', layout);
+const stageResize = new ResizeObserver(layout);
+for (const stage of Object.values(ST)) stageResize.observe(stage);
 if (document.fonts) document.fonts.ready.then(layout);
 setTimeout(layout, 1200);
 
@@ -926,8 +923,8 @@ function tracePath(e, r = 8) {
 }
 function drawArrow(e, color) {
   const a = pointAt(e, 0.985), b = e.pts[e.pts.length - 1], ang = Math.atan2(b.y - a.y, b.x - a.x);
-  ctx.save(); ctx.translate(b.x, b.y); ctx.rotate(ang); ctx.strokeStyle = color; ctx.lineWidth = 1.2; ctx.setLineDash([]);
-  ctx.beginPath(); ctx.moveTo(-6, -3.5); ctx.lineTo(0, 0); ctx.lineTo(-6, 3.5); ctx.stroke(); ctx.restore();
+  ctx.save(); ctx.translate(b.x, b.y); ctx.rotate(ang); ctx.strokeStyle = color; ctx.lineWidth = 2; ctx.setLineDash([]);
+  ctx.beginPath(); ctx.moveTo(-10, -6); ctx.lineTo(0, 0); ctx.lineTo(-10, 6); ctx.stroke(); ctx.restore();
 }
 function drawLabel(e, hot) {
   if (!e.label) return;
@@ -971,9 +968,9 @@ function drawRails(t) {
   for (const e of Object.values(E)) {
     const hot = e.hot > t;
     ctx.save();
-    ctx.strokeStyle = hot || e.prominent ? e.tint || e.color : C.rail; ctx.lineWidth = e.prominent ? 2.5 : (hot ? 1.5 : 1);
+    ctx.strokeStyle = '#000000'; ctx.lineWidth = e.prominent ? 3 : 2;
     ctx.setLineDash(e.dash ? [5, 4] : []); tracePath(e); ctx.stroke();
-    if (e !== E.context) drawArrow(e, hot || e.prominent ? e.tint || e.color : C.rail);
+    if (e !== E.context) drawArrow(e, '#000000');
     ctx.restore();
     drawLabel(e, hot);
   }

@@ -44,6 +44,8 @@ def example_arguments(name):
 
 @contextmanager
 def stub(mode="normal"):
+    release_response = threading.Event()
+
     class Handler(BaseHTTPRequestHandler):
         def log_message(self, *_args):
             pass
@@ -93,7 +95,12 @@ def stub(mode="normal"):
 
             try:
                 event({"choices": [{"delta": {"role": "assistant"}}]})
-                time.sleep(0.05 if mode == "timeout" else 0.002)
+                if mode == "timeout":
+                    # Only teardown releases this stream, so scheduler delays
+                    # cannot let a late client read a completed response.
+                    release_response.wait()
+                    return
+                time.sleep(0.002)
                 if body["model"] == "director" and mode != "prose":
                     # Exercise every imported tool, including new tools, over
                     # real fragmented SSE. This stub checks structure, not policy.
@@ -177,6 +184,7 @@ def stub(mode="normal"):
                 pass
 
     server = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
+    server.daemon_threads = False  # server_close joins the released handlers.
     server.count, server.bodies, server.lock = 0, [], threading.Lock()
     port = server.server_port
     thread = threading.Thread(target=server.serve_forever)
@@ -184,6 +192,7 @@ def stub(mode="normal"):
     try:
         yield server, f"http://127.0.0.1:{port}/v1"
     finally:
+        release_response.set()
         server.shutdown()
         server.server_close()
         thread.join(timeout=3)
@@ -420,7 +429,7 @@ def test_failures_are_counted_and_written(tmp_path, mode, error):
             "--workloads",
             "director",
             "--timeout",
-            ".02" if mode == "timeout" else "5",
+            ".2" if mode == "timeout" else "5",
             expected=1,
         )
     summary = result["runs"][0]["summary"]

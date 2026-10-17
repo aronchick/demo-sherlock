@@ -1,12 +1,12 @@
-"""Run Sherlock.  `python run.py` (real cameras+models per .env)
-                 `python run.py --mock --synthetic` (no hardware, no models)"""
+"""Run Sherlock.  `uv run --extra yolo python run.py` (real cameras+models per .env; `just live`)
+                 `uv run python run.py --mock --synthetic` (no hardware, no models; `just up`)"""
 import argparse
 import os
 import sys
 
 import uvicorn
 
-# The package lives at sherlock/sherlock; make `python run.py` work from the repo root.
+# The package lives at sherlock/sherlock; make `uv run python run.py` work from the repo root.
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "sherlock"))
 
 

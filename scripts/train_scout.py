@@ -1,14 +1,14 @@
 """Fine-tune the Scout on data/scout/scout.yaml, on whatever this machine has.
 
-    python scripts/train_scout.py            # picks cuda > mps > cpu, with defaults sized for each
-    python scripts/train_scout.py --smoke    # CPU sanity check: 1 epoch at 160 px, a minute or two
-    python scripts/train_scout.py --epochs 20   # any default can be overridden
+    uv run --extra yolo scripts/train_scout.py               # picks cuda > mps > cpu, with defaults sized for each
+    uv run --extra yolo scripts/train_scout.py --smoke       # CPU sanity check: 1 epoch at 160 px, a minute or two
+    uv run --extra yolo scripts/train_scout.py --epochs 20   # any default can be overridden
 
 The base stays YOLOv8n so the runtime Scout keeps its ~10 ms per frame. Then:
 
     uv run scripts/eval_scout.py --measured \\
         --after runs/scout/weights/best.pt
-    YOLO_MODEL=runs/scout/weights/best.pt python run.py
+    YOLO_MODEL=runs/scout/weights/best.pt just live
 
 After --smoke training, evaluate with --smoke instead of --measured. Smoke
 weights default to runs/scout_smoke/weights/best.pt, leaving runs/scout intact.

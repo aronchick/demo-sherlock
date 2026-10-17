@@ -1,8 +1,8 @@
 """Fix the stock-YOLO draft labels on the in-room photos, one keypress per photo.
 
-    python scripts/review_labels.py --split test     # the held-out photos first: they grade the eval
-    python scripts/review_labels.py                  # then everything not yet reviewed
-    python scripts/review_labels.py --status         # counts only, no window
+    uv run scripts/review_labels.py --split test     # the held-out photos first: they grade the eval
+    uv run scripts/review_labels.py                  # then everything not yet reviewed
+    uv run scripts/review_labels.py --status         # counts only, no window
 
 Mouse: drag = new box in the current class, right-click = delete the box under
 the pointer. Keys: 1-4 pick the class (1 person, 2 weapon, 3 badge, 4 bottle),

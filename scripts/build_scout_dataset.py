@@ -1,10 +1,10 @@
 """Build the Scout fine-tune dataset: an open COCO subset plus in-room photos,
 mapped onto the Scout classes (person, weapon, badge, bottle).
 
-    python scripts/build_scout_dataset.py coco              # open data, CC-BY-compatible images only
-    python scripts/build_scout_dataset.py prelabel          # stock YOLOv8 drafts labels for data/props
-    python scripts/review_labels.py --split test            # fix labels by hand (test split first)
-    python scripts/build_scout_dataset.py build             # -> data/scout/scout.yaml
+    uv run scripts/build_scout_dataset.py coco                   # open data, CC-BY-compatible images only
+    uv run --extra yolo scripts/build_scout_dataset.py prelabel  # stock YOLOv8 drafts labels for data/props
+    uv run scripts/review_labels.py --split test                 # fix labels by hand (test split first)
+    uv run scripts/build_scout_dataset.py build                  # -> data/scout/scout.yaml
 
 coco: reads COCO 2017 instance annotations, keeps images that contain a knife,
 scissors, baseball bat or bottle under a licence that allows CC-BY redistribution,
@@ -179,7 +179,7 @@ def cmd_prelabel(a: argparse.Namespace) -> None:
             dets = [(int(b.cls), float(b.conf), tuple(b.xyxy[0].tolist())) for b in res.boxes]
             h, w = res.orig_shape
             write_labels(path.with_suffix(".txt"), draft_labels(res.names, dets, prop_of(path)), w, h)
-    print("drafts written; next: python scripts/review_labels.py --split test   (then the rest)")
+    print("drafts written; next: uv run scripts/review_labels.py --split test   (then the rest)")
 
 
 # --- build ----------------------------------------------------------------------------
@@ -214,7 +214,7 @@ def cmd_build(a: argparse.Namespace) -> None:
     if unreviewed_test and not a.allow_unreviewed_test:
         raise SystemExit(f"{len(unreviewed_test)} in-room test photos still carry unreviewed stock-YOLO drafts; "
                          "the before/after eval would grade the stock model against its own guesses.\n"
-                         "Run: python scripts/review_labels.py --split test   (or pass --allow-unreviewed-test)")
+                         "Run: uv run scripts/review_labels.py --split test   (or pass --allow-unreviewed-test)")
     for p in photos:
         rel = p.relative_to(a.props)
         name = f"room_{rel.parts[0]}_{rel.parts[1]}_{p.stem}{p.suffix.lower()}"

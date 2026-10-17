@@ -6,3 +6,4 @@ snapshots/
 .venv/
 data/
 runs/
+.runtime/

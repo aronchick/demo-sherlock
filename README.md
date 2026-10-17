@@ -6,7 +6,7 @@ Tracks: Multi-Agent (primary), Tool-Calling, Nemotron + vLLM bounties.
 ```
 Scout (YOLOv8n detector, every frame, ~10 ms)
   └─ new object? ──► Director (Nemotron 3.5 Lightning 30B-A3B + camera tools)
-                        ├─ look_at / move  → PTZ camera (OBSBOT or software crop)
+                        ├─ look_at / move  → PTZ camera (Insta360 Link 2 or software crop)
                         ├─ snapshot        → Analyst (SmolVLM 2.2B on the zoomed crop only)
                         └─ report          → Verifier (same SmolVLM 2.2B instance: does the crop support the claim?)
 ```
@@ -56,6 +56,34 @@ cp .env.example .env              # CAMERAS=hero:fake:0 uses the laptop webcam w
 python run.py
 ```
 If the endpoint is unreachable mid-pitch, the Director automatically drops to the rule-based fallback (`RuleDirector`).
+
+## Hardware: Insta360 Link 2 hero camera
+The hero is an **Insta360 Link 2, the gimbal model** (USB `2e1a:4c04`), not the gimbal-less Link 2C. The scout is the Mac's built-in webcam on the software-crop backend.
+
+1. Plug the Link 2 **straight into a Mac port, not the hub**. It is a USB 2.0 device; sharing a hub with other cameras starves the stream.
+2. Quit the **Insta360 Link Controller** app, or at least turn AI Tracking off in it. Firmware tracking fights `look_at`. The app is not needed for control.
+3. `uv run scripts/ptz_probe.py`: reports whether the camera is on USB and behind a hub, whether USB-direct PTZ answers, the pan/tilt/zoom ranges it reports, the AI mode, and each OpenCV index with its camera name. Run it from a terminal that has macOS camera permission.
+4. `uv run scripts/ptz_probe.py --wiggle --index <n>`: moves the gimbal and writes `snapshots/probe_*.jpg`. +pan must move the view right and +tilt up; otherwise set `INSTA360_PAN_SIGN=-1` / `INSTA360_TILT_SIGN=-1`.
+5. Select cameras **by name**, not index:
+   ```bash
+   CAMERAS="hero:insta360:name:Insta360 Link 2,scout1:fake:name:MacBook Pro Camera"
+   ```
+   OpenCV numbers cameras by sorted AVFoundation unique ID, so indexes reshuffle whenever a device (Link 2, iPhone Continuity Camera, OBS Virtual Camera) appears or disappears, and two cameras can silently swap mid-demo. `name:` matches the names `ptz_probe.py` prints (exact, case-insensitive, or a unique substring); a missing or ambiguous name fails loudly at startup. Numeric indexes still work.
+
+Control path on macOS: standard UVC pan/tilt/zoom control transfers sent straight over USB with [link-ctl](https://pypi.org/project/link-ctl/)'s IOKit module (no sudo, no app). On Linux the Link 2 cannot be aimed: its stock driver reads pan/tilt but rejects setting it, and the only workaround (detaching `uvcvideo` for a raw USB transfer) drops the video stream ([link-ctl notes](https://github.com/csmarshall/link-ctl/blob/main/docs/LINK2_LINUX.md)). The v4l2 path checks this when it opens, so on Linux the hero comes up offline and the Director uses the next camera. The Link Controller WebSocket API is not used because it cannot set an absolute pan/tilt. If the gimbal does not answer within `INSTA360_CMD_TIMEOUT_S`, `look_at`/`move` return a tool error and the Director moves to the next camera.
+
+Tuning (env, defaults in `sherlock/camera/insta360.py`):
+
+| Variable | Default | What it does |
+| :--- | :--- | :--- |
+| `INSTA360_FILL` | `0.6` | Share of the frame the target fills after `look_at` |
+| `INSTA360_MAX_ZOOM` | `4.0` | Zoom cap (Link 2 zoom is 4x digital; lower it if crops get soft) |
+| `INSTA360_HFOV_DEG` | `67` | Horizontal FOV at 1x, from the Insta360 spec sheet |
+| `INSTA360_SETTLE_S` / `INSTA360_SLEW_DEG_S` / `INSTA360_ZOOM_SETTLE_S` | `0.35` / `120` / `0.1` | Wait before a snapshot: fixed + travel/speed + per-1x zoom change |
+| `INSTA360_HOME_AFTER_S` | `6` | Return to the wide home pose after this many idle seconds (`0` = never) |
+| `INSTA360_PAN_SIGN` / `INSTA360_TILT_SIGN` / `INSTA360_UNITS_PER_DEG` | `1` / `1` / `3600` | Direction and units of the raw UVC values (arc-seconds per spec) |
+
+The OBSBOT adapter (`hero:obsbot:<n>`) is kept as an alternate backend.
 
 ## Fine-tune the Scout (about 20 minutes on this Mac)
 Stock YOLOv8n knows COCO's 80 classes. It has no badge class and it was never shown our room.
@@ -111,11 +139,6 @@ files; it uploads nothing without `--publish` (and then only to private repos un
 dataset card is CC-BY-4.0. The weights card defaults to AGPL-3.0 because they are fine-tuned from
 Ultralytics YOLOv8n (AGPL-3.0); `--model-license` overrides that. In-room photos show real people, so they
 stay out of the upload unless `--include-room-photos`, and that needs everyone pictured to agree.
-
-## When the OBSBOT arrives
-1. `python scripts/ptz_probe.py` — checks whether the camera answers standard UVC pan/tilt/zoom.
-2. If yes: `CAMERAS=hero:obsbot:0,scout1:fake:1`. Nothing else changes.
-3. If no: Plan B is OSC via OBSBOT Center; implement `ObsbotCamera.move` against it.
 
 ## vLLM
 
@@ -339,7 +362,7 @@ invalid tool calls and counter resets. No Brev endpoint is needed.
 
 ## Layout
 ```
-sherlock/camera/     Camera interface, FakePTZ (crop/zoom), ObsbotCamera (UVC), SyntheticSource
+sherlock/camera/     Camera interface, FakePTZ (crop/zoom), Insta360Camera (Link 2 gimbal), ObsbotCamera (UVC), SyntheticSource
 sherlock/agents/     scout.py (YOLO + motion fallback + dedupe/dwell), director.py (tool loop + RuleDirector), vision.py (Analyst, Verifier, mocks)
 sherlock/tools.py    Tool schemas + dispatcher + failure injection
 sherlock/orchestrator.py   Scout → investigate → verify loop, per-incident evidence, stats

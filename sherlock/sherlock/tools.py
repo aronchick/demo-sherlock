@@ -6,7 +6,7 @@ import time
 
 import numpy as np
 
-from .camera import Camera, CameraError, FakePTZCamera
+from .camera import Camera, CameraError
 from .events import BUS
 
 SUBJECTS = ("weapon", "object", "face")
@@ -167,9 +167,7 @@ class ToolBox:
         cam = self._cam(camera)
         self.aim.pop(camera, None)  # a move that fails halfway leaves the pose unknown
         box = tuple(int(v) for v in bbox)
-        h, w = cam.wide_frame().shape[:2]
-        pose = FakePTZCamera.bbox_to_pose(box, (w, h))
-        cam.move(pose.pan, pose.tilt, pose.zoom)
+        cam.look_at(box)  # each backend maps the box to its own optics
         self.aim[camera] = box
         return {"ok": True, **cam.describe()}
 

@@ -130,7 +130,7 @@ class ScriptedScene:
         """Ground truth for the most recent frame: [(label, bbox)]."""
         return list(self._objects)
 
-    def read(self) -> np.ndarray:
+    def read(self, newer_than: float = 0.0) -> np.ndarray:  # generated frames are always fresh
         t = self.clock()
         f = _ROOM.copy()
         objects: list[tuple[str, BBox]] = []

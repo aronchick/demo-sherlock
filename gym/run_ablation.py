@@ -18,29 +18,33 @@ import time
 from pathlib import Path
 from typing import Any
 
-import nemo_gym.server_utils as ng_server_utils
-import uvicorn
-from nemo_gym.config_types import BaseServerConfig
-from nemo_gym.server_utils import (
-    GlobalAIOHTTPAsyncClientConfig,
-    ServerClient,
-    global_aiohttp_client_exit,
-    is_global_aiohttp_client_setup,
-    set_global_aiohttp_client,
-)
-from omegaconf import OmegaConf
-from responses_api_models.vllm_model.app import VLLMModel, VLLMModelConfig
-
-from gym import ensure_nemo_gym_usage_compat
-from gym.resources_servers.sherlock.app import (
-    SherlockResourcesServer,
-    SherlockResourcesServerConfig,
-)
-from gym.responses_api_agents.sherlock_agent.app import (
-    SherlockAgent,
-    SherlockAgentConfig,
-)
+from gym import ensure_nemo_gym_usage_compat, raise_missing_nemo_gym
 from gym.stub_model_server import create_stub_app
+
+try:
+    import nemo_gym.server_utils as ng_server_utils
+    import uvicorn
+    from nemo_gym.config_types import BaseServerConfig
+    from nemo_gym.server_utils import (
+        GlobalAIOHTTPAsyncClientConfig,
+        ServerClient,
+        global_aiohttp_client_exit,
+        is_global_aiohttp_client_setup,
+        set_global_aiohttp_client,
+    )
+    from omegaconf import OmegaConf
+    from responses_api_models.vllm_model.app import VLLMModel, VLLMModelConfig
+
+    from gym.resources_servers.sherlock.app import (
+        SherlockResourcesServer,
+        SherlockResourcesServerConfig,
+    )
+    from gym.responses_api_agents.sherlock_agent.app import (
+        SherlockAgent,
+        SherlockAgentConfig,
+    )
+except ModuleNotFoundError as _ng_exc:
+    raise_missing_nemo_gym(_ng_exc, cli=(__name__ == "__main__"))
 
 ensure_nemo_gym_usage_compat()
 

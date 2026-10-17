@@ -1,6 +1,36 @@
 """NeMo Gym ablation environment, agent servers, and configs for Sherlock."""
 from __future__ import annotations
 
+import sys
+from typing import NoReturn
+
+MIN_GYM_PYTHON = (3, 13, 14)
+
+
+def format_missing_nemo_gym_error(version_info: tuple[int, int, int] | None = None) -> str:
+    """Return a clear installation hint when nemo_gym is missing or Python < 3.13.14."""
+    ver = version_info if version_info is not None else sys.version_info[:3]
+    py_ver = f"{ver[0]}.{ver[1]}.{ver[2]}"
+    if ver < MIN_GYM_PYTHON:
+        return (
+            f"NeMo Gym requires Python >= 3.13.14 (current Python is {py_ver}); "
+            "install the gym extra on Python >= 3.13.14: "
+            "uv run --python 3.13.14 --extra gym python -m gym.run_ablation --all --stub"
+        )
+    return (
+        f"nemo-gym is not installed in the active environment (Python {py_ver}); "
+        "install the gym extra on Python >= 3.13.14: "
+        "uv sync --extra gym (or run with `uv run --extra gym python -m gym.run_ablation ...`)."
+    )
+
+
+def raise_missing_nemo_gym(exc: ModuleNotFoundError, *, cli: bool = False) -> NoReturn:
+    """Raise a clear error when nemo_gym is unavailable."""
+    msg = format_missing_nemo_gym_error()
+    if cli:
+        raise SystemExit(msg) from exc
+    raise ModuleNotFoundError(msg, name="nemo_gym") from exc
+
 
 def ensure_nemo_gym_usage_compat() -> None:
     """Ensure NeMo Gym token-details models accept optional SDK fields (e.g. cache_write_tokens).
@@ -46,3 +76,4 @@ def ensure_nemo_gym_usage_compat() -> None:
 
 
 ensure_nemo_gym_usage_compat()
+

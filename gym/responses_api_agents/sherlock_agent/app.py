@@ -11,28 +11,34 @@ from pathlib import Path
 from typing import Any
 
 from fastapi import Body, FastAPI, Request, Response
-from nemo_gym.base_resources_server import BaseSeedSessionResponse
-from nemo_gym.base_responses_api_agent import (
-    BaseResponsesAPIAgentConfig,
-    SimpleResponsesAPIAgent,
-)
-from nemo_gym.config_types import ModelServerRef, ResourcesServerRef
-from nemo_gym.openai_utils import (
-    NeMoGymEasyInputMessage,
-    NeMoGymFunctionCallOutput,
-    NeMoGymResponse,
-    NeMoGymResponseCreateParamsNonStreaming,
-)
-from omegaconf import OmegaConf
 from pydantic import PrivateAttr
 
-from gym.resources_servers.sherlock.app import (
-    SherlockRunRequest,
-    SherlockSeedSessionRequest,
-    SherlockVerifyRequest,
-    SherlockVerifyResponse,
-)
+from gym import raise_missing_nemo_gym
 from gym.resources_servers.sherlock.scenes import get_tool_schemas
+
+try:
+    from nemo_gym.base_resources_server import BaseSeedSessionResponse
+    from nemo_gym.base_responses_api_agent import (
+        BaseResponsesAPIAgentConfig,
+        SimpleResponsesAPIAgent,
+    )
+    from nemo_gym.config_types import ModelServerRef, ResourcesServerRef
+    from nemo_gym.openai_utils import (
+        NeMoGymEasyInputMessage,
+        NeMoGymFunctionCallOutput,
+        NeMoGymResponse,
+        NeMoGymResponseCreateParamsNonStreaming,
+    )
+    from omegaconf import OmegaConf
+
+    from gym.resources_servers.sherlock.app import (
+        SherlockRunRequest,
+        SherlockSeedSessionRequest,
+        SherlockVerifyRequest,
+        SherlockVerifyResponse,
+    )
+except ModuleNotFoundError as _ng_exc:
+    raise_missing_nemo_gym(_ng_exc, cli=(__name__ == "__main__"))
 
 _DEFAULT_RESPONSES_BODY = Body()
 

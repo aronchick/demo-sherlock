@@ -10,7 +10,7 @@ import time
 import cv2
 import numpy as np
 
-from .agents.director import Director, RuleDirector
+from .agents.director import Director, RuleDirector, names_claim
 from .agents.scout import Detection, Scout, classify
 from .agents.vision import Analyst, MockAnalyst, MockVerifier, Verifier
 from .camera import Camera, CameraError, build_camera
@@ -171,7 +171,13 @@ class Sherlock:
                 report["action"] = "log"
                 report["downgraded"] = "alert without a verified weapon claim"
             if eid is not None:
-                report["description"] = self.tools.descriptions.get(eid, "")
+                said = self.tools.descriptions.get(eid, "")
+                if report.get("verified") and said and not names_claim(said, claim):
+                    # A confirmed knife described as 'Cake.' reads as a broken system. The
+                    # claim stands on the Verifier's own yes; the Analyst's words stay on file.
+                    report["description"], report["analyst_mismatch"] = "", said
+                else:
+                    report["description"] = said
             if not report.get("verified"):
                 self._drop_face_crop(report)
             report["incident"] = iid

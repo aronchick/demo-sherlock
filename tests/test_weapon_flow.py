@@ -7,7 +7,8 @@ from types import SimpleNamespace
 import httpx
 import numpy as np
 import openai
-from sherlock.agents.director import Director, RuleDirector
+import pytest
+from sherlock.agents.director import Director, RuleDirector, names_claim
 from sherlock.agents.scout import Detection, Scout, head_region
 from sherlock.agents.vision import Analyst, MockAnalyst, MockVerifier, Verifier
 from sherlock.camera import CameraError, FakePTZCamera
@@ -444,6 +445,50 @@ def test_weapon_tag_on_a_benign_object_does_not_alert():
     tools.begin_incident(det, "x")
     out = RuleDirector(tools).investigate(det)
     assert claims == ["a knife"] and out["action"] == "log"
+
+
+@pytest.mark.parametrize(("said", "claim", "same"), [
+    # SmolVLM-500M's answers on COCO crops whose weapon the Verifier confirmed
+    ("Cake.", "a knife", False), ("Plate with cake.", "a knife", False), ("Broccoli.", "a knife", False),
+    ("Tape.", "a pair of scissors", False), ("Baseball cleats.", "a baseball bat", False),
+    ("Man.", "a baseball bat", False),
+    ("Knife.", "a knife", True), ("Knife and spoon.", "a knife", True), ("Knives.", "a knife", True),
+    ("Scissors.", "a pair of scissors", True), ("Baseball bats.", "a baseball bat", True),
+    ("A kitchen knife with a bright steel blade and a dark handle. No readable text.", "a knife", True),
+    # the fine-tuned Scout's catch-all class, and an LLM Director's free-text claims
+    ("Rifle.", "a weapon", True), ("Plate.", "a weapon", False),
+    ("A long blade.", "a kitchen knife on the counter", True),
+    ("A blue can reading ACME COLA.", "a cola can", True), ("A red mug.", "a cola can", False),
+    ("", "a knife", False),
+])
+def test_names_claim(said, claim, same):
+    assert names_claim(said, claim) is same
+
+
+def _said(text: str, supported: bool, tmp_path) -> dict:
+    """One incident through the orchestrator with a stubbed Analyst and Verifier."""
+    s = _frozen_sherlock(tmp_path)
+    s.tools.analyst = SimpleNamespace(describe=lambda img, q: {"description": text})
+    s.tools.verifier = SimpleNamespace(check=lambda img, c: {"supported": supported, "reason": "stub"})
+    q = BUS.subscribe()
+    s._investigate(_knife_det())
+    report = next(e.data for e in drain(q) if e.stage == "system" and e.msg.startswith("REPORT"))
+    r = s.log[-1]
+    assert (report["description"], report.get("analyst_mismatch")) == (r["description"], r.get("analyst_mismatch"))
+    return r
+
+
+def test_a_confirmed_weapon_never_carries_a_description_of_something_else(tmp_path):
+    """The 500M read a confirmed COCO knife as 'Cake.'. The alert stands on the Verifier's
+    yes; the board must not print 'Cake.' under it, and the words stay on file."""
+    r = _said("Cake.", True, tmp_path)
+    assert r["action"] == "alert" and r["verified"] is True
+    assert r["description"] == "" and r["analyst_mismatch"] == "Cake."
+    r = _said("Knife.", True, tmp_path)
+    assert r["description"] == "Knife." and "analyst_mismatch" not in r
+    r = _said("A white ceramic mug. No text.", False, tmp_path)  # dissent that agrees with the verdict
+    assert r["action"] == "log" and r["description"] == "A white ceramic mug. No text."
+    assert "analyst_mismatch" not in r
 
 
 def test_evidence_write_failures_keep_the_report_and_the_loop(tmp_path, monkeypatch):

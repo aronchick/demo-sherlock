@@ -161,6 +161,31 @@ def test_mac_usb_transport_wire_format(monkeypatch):
                     (0x21, SET_CUR, 0x0B00, 0x0100, struct.pack("<H", 250))]
 
 
+def test_mac_usb_reopens_after_a_close_that_raises(monkeypatch):
+    opened: list[object] = []
+
+    class DeadHandle:
+        def close(self):
+            raise OSError("IOServiceClose: device gone")
+
+    def open_vc_interface(vid, pid, iface_num):
+        h = DeadHandle()
+        opened.append(h)
+        return h
+
+    fake = types.ModuleType("link_usb_macos")
+    fake.open_vc_interface = open_vc_interface
+    fake.control_request = lambda *a, **k: (True, b"")
+    monkeypatch.setitem(sys.modules, "link_usb_macos", fake)
+
+    tr = MacUSBTransport()
+    tr.open()
+    with pytest.raises(OSError):
+        tr.close()
+    tr.open()  # must reconnect, not keep the dead handle
+    assert len(opened) == 2 and tr._h is opened[1]
+
+
 def test_v4l2_ctrl_listing_parses_ranges():
     text = """
                    pan_absolute 0x009a0908 (int)    : min=-522000 max=522000 step=3600 default=0 value=0

@@ -257,9 +257,11 @@ class MacUSBTransport(PTZTransport):
         self._set(CT_ZOOM_ABSOLUTE, struct.pack("<H", zoom))
 
     def close(self) -> None:
-        if self._h is not None:
-            self._h.close()
-        self._h = None
+        # Forget the handle before closing it: if close() raises (device already
+        # gone), open() must still reconnect instead of reusing the dead handle.
+        h, self._h = self._h, None
+        if h is not None:
+            h.close()
 
 
 _V4L2_CTRL = re.compile(r"^\s*(\w+)\s+0x[0-9a-f]+\s+\(\w+\)\s*:\s*(.*)$")

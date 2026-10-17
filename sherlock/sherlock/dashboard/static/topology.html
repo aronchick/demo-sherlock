@@ -92,9 +92,9 @@
       <div class="top"><div class="logo nvidia"><span class="mark"></span>Brev</div><div class="site-sub" id="brevSub">1x GPU box · models behind OpenAI-compatible URLs</div></div>
       <div class="body">
         <div class="group">
-          <div class="ghead"><div class="glogo">vLLM</div><small id="vllmSub">v0.28.0 · two servers</small></div>
-          <div class="unit" id="u-director" style="--c: var(--director)"><div class="role">Decide · Director · :8001</div><div class="name">Nemotron 3.5 Lightning</div><div class="model" id="m-director"></div><div class="what">reads the Scout's ticket, picks the next camera tool</div><span class="ms"></span></div>
-          <div class="unit" id="u-vlm" style="--c: var(--analyst)"><div class="role">Read + Check · Analyst and Verifier · :8002</div><div class="name">SmolVLM, shared</div><div class="model" id="m-analyst"></div><div class="what">describes the zoomed crop, then a second pass checks the claim</div><span class="ms"></span></div>
+          <div class="ghead"><div class="glogo" id="serverName">model servers</div><small id="serverSub"></small></div>
+          <div class="unit" id="u-director" style="--c: var(--director)"><div class="role" id="r-director">Decide · Director</div><div class="name">Nemotron 3.5 Lightning</div><div class="model" id="m-director"></div><div class="what">reads the Scout's ticket, picks the next camera tool</div><span class="ms"></span></div>
+          <div class="unit" id="u-vlm" style="--c: var(--analyst)"><div class="role" id="r-vlm">Read + Check · Analyst and Verifier</div><div class="name">SmolVLM, shared</div><div class="model" id="m-analyst"></div><div class="what">describes the zoomed crop, then a second pass checks the claim</div><span class="ms"></span></div>
         </div>
       </div>
     </div>
@@ -123,12 +123,27 @@ $('m-director').textContent = (M.director || {}).model || '';
 $('m-analyst').textContent = (M.analyst || {}).model || '';
 if (M.verifier && M.analyst && M.verifier.model !== M.analyst.model) $('m-analyst').textContent += ' / ' + M.verifier.model;
 const hosts = [...new Set(['director', 'analyst', 'verifier'].map(r => (M[r] || {}).where).filter(Boolean))];
+// Ports and the serving program come from config and from asking each server, never from the plan.
+const port = r => { try { const p = new URL((M[r] || {}).url).port; return p ? ' · :' + p : ''; } catch { return ''; } };
+$('r-director').textContent += port('director');
+$('r-vlm').textContent += port('analyst');
+const SV = CFG.servers || {}, runs = ['director', 'analyst', 'verifier'].map(r => SV[r]);
+const named = s => s && s.name ? s.name : s && s.reachable ? 'unidentified' : 'unreachable';
+const COUNT = ['no', 'one', 'two', 'three'];
 if (CFG.mock) {
   $('mode').textContent = 'mock run · everything on this laptop';
   $('brev').classList.add('off');
   $('brevSub').textContent = 'not in this run: the Director, Analyst and Verifier are in-process mocks on the laptop';
-  $('vllmSub').textContent = 'what the live run uses';
+  $('serverSub').textContent = 'not in this run';
 } else {
+  if (runs.every(s => s && s.name && s.name === runs[0].name)) {
+    $('serverName').textContent = runs[0].name;
+    const versions = [...new Set(runs.map(s => s.version).filter(Boolean))].map(v => 'v' + v);
+    $('serverSub').textContent = [...versions, (COUNT[SV.endpoints] || SV.endpoints) + (SV.endpoints === 1 ? ' server' : ' servers')].join(' · ');
+  } else {
+    const vlm = named(SV.analyst) === named(SV.verifier) ? named(SV.analyst) : named(SV.analyst) + ' / ' + named(SV.verifier);
+    $('serverSub').textContent = 'Director: ' + named(SV.director) + ' · VLM: ' + vlm;
+  }
   $('mode').textContent = 'live · models on ' + hosts.join(', ');
   $('brevSub').textContent = hosts.join(', ') + ' · models behind OpenAI-compatible URLs';
 }

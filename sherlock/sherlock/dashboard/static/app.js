@@ -14,7 +14,7 @@ const CAMS = ["hero", "scout1"];
 
 const LABELS = {
   mock: {
-    badge: "<b>MOCK</b> · synthetic scene · rule director · canned VLM",
+    badge: ["MOCK", "synthetic scene · rule director · canned VLM"],
     scout: ["scene truth", "synthetic scene · no detector runs"],
     director: ["Rule director", "deterministic policy · no LLM"],
     vlm: ["Canned analyst + verifier", "recorded answers · no model"],
@@ -22,16 +22,45 @@ const LABELS = {
     cover: "Simulate: cover hero lens",
   },
   live: {
-    badge: "<b>LIVE</b> · vLLM · two model servers",
+    badge: ["LIVE", "model servers not identified"],
     scout: ["YOLO + motion", "measured per frame · beside the cameras"],
     director: ["Nemotron 3.5 Lightning", "30B total · 3B active · tool loop"],
-    vlm: ["SmolVLM 2.2B", "analyst + verifier · one shared instance"],
+    vlm: ["SmolVLM 500M", "analyst + verifier · one shared instance"],
     fail: "Break the next tool call",
     cover: "Cover hero lens",
   },
 };
 
 let MODE = "mock", L = LABELS.mock;
+
+const COUNT = ["no", "one", "two", "three"];
+
+// The runtime named on the badge is whatever /mode found answering at each
+// endpoint, never the plan: a runtime is named only when its own server says so.
+function serverName(s) {
+  if (s && s.name) return s.name;
+
+  return s && s.reachable ? "an unidentified server" : "an unreachable server";
+}
+
+function liveBadge(servers) {
+  if (!servers) return LABELS.live.badge[1];
+
+  const d = servers.director, a = servers.analyst, v = servers.verifier, n = servers.endpoints;
+
+  if (d && d.name && [a, v].every(s => s && s.name === d.name)) return `${d.name} · ${COUNT[n] || n} model server${n === 1 ? "" : "s"}`;
+
+  const vlm = serverName(a) === serverName(v) ? serverName(a) : `${serverName(a)} + ${serverName(v)}`;
+
+  return `Director on ${serverName(d)} · VLM on ${vlm}`;
+}
+
+function setBadge([tag, text]) {
+  const b = document.createElement("b");
+
+  b.textContent = tag;
+  $("mode").replaceChildren(b, ` · ${text}`);
+}
 
 function applyMode(m) {
   MODE = m && m.mock === false ? "live" : "mock";
@@ -43,11 +72,15 @@ function applyMode(m) {
 
     if (m.director_model && !/Nemotron-3\.5-Lightning/i.test(m.director_model)) L.director = [base(m.director_model), "tool loop"];
 
-    if (m.vlm_model && base(m.vlm_model) !== "SmolVLM-Instruct") L.vlm = [base(m.vlm_model), L.vlm[1]];
+    if (m.vlm_model && base(m.vlm_model) !== "SmolVLM-500M-Instruct") L.vlm = [base(m.vlm_model), L.vlm[1]];
+
+    if (m.servers && !m.servers.vlm_shared) L.vlm = [L.vlm[0], "analyst + verifier · separate instances"];
+
+    L.badge = [L.badge[0], liveBadge(m.servers)];
   }
 
   document.body.dataset.mode = MODE;
-  $("mode").innerHTML = L.badge;
+  setBadge(L.badge);
 
   for (const [k, n, meta] of [["scout", "scout-name", "scout-meta"], ["director", "director-name", "director-meta"], ["vlm", "vlm-name", "vlm-meta"]]) {
     $(n).textContent = L[k][0];
@@ -800,6 +833,7 @@ function onStats(s) {
     showStreams();
     setPill("clear", `MONITORING · ${watching()}`);
     setState("scout-state", `watching ${watching().toLowerCase()}`);
+    refreshMode();
   }
 }
 
@@ -845,12 +879,17 @@ function connect() {
   };
 }
 
-async function boot() {
+// Model servers can come up after the page loads, so this runs again on every (re)connect.
+async function refreshMode() {
   try {
     applyMode(await getJson("/mode"));
   } catch {
-    // Standalone (no runtime): the mock labels stay.
+    // Standalone (no runtime): the labels already shown stay.
   }
+}
+
+async function boot() {
+  await refreshMode();
 
   try {
     const cams = await getJson("/cameras");

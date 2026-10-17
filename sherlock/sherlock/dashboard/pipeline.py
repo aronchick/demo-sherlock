@@ -1,15 +1,17 @@
-"""Data-flow view: a second judge-facing page that shows each investigation as it
-moves from the camera through the Scout, the models and out to a decision. It only
-consumes the existing /events SSE stream and /stream MJPEG feeds; nothing here
-touches the agents, the orchestrator or the main dashboard."""
+"""Data-flow view (the default page) and the topology page. Both only consume the
+existing /events SSE stream and /stream MJPEG feeds; nothing here touches the
+agents, the orchestrator or the event log page."""
 from __future__ import annotations
 
 import json
 import os
 import pathlib
+from urllib.parse import urlsplit
 
 from fastapi import APIRouter, FastAPI, HTTPException
 from fastapi.responses import FileResponse, HTMLResponse
+
+from ..config import Config
 
 STATIC = pathlib.Path(__file__).parent / "static"
 FONTS = STATIC / "fonts"
@@ -17,22 +19,62 @@ FONTS = STATIC / "fonts"
 router = APIRouter()
 
 
-def page_config() -> dict[str, bool]:
-    """What the page may claim, read from the environment on every request.
+def _where(base_url: str) -> str:
+    """Where an OpenAI-compatible endpoint lives, for the page: this laptop or a remote host."""
+    host = urlsplit(base_url).hostname or ""
+    return "laptop" if host in {"localhost", "127.0.0.1", "::1", ""} else host
+
+
+def page_config() -> dict:
+    """What the pages may claim, read from the environment on every request.
 
     mock: the models are in-process mocks, so nothing leaves the laptop.
     expanso: SHERLOCK_EXPANSO=connected, set only once an Expanso Edge pipeline is
     really processing this data. The footer shows "not connected" until then.
+    models: the configured model per role and where its endpoint points. A
+    localhost endpoint is reported as the laptop (an SSH tunnel to Brev also looks
+    like that, so BREV_HOST names the box when a tunnel is in use).
     """
+    cfg = Config()
+    brev = os.environ.get("BREV_HOST", "").strip()
+    endpoints = {
+        "director": cfg.director,
+        "analyst": cfg.analyst,
+        "verifier": cfg.verifier,
+    }
+    models = {
+        "scout": {"model": cfg.yolo_model if cfg.scout_backend == "yolo" else cfg.scout_backend, "where": "laptop"},
+    }
+    for role, ep in endpoints.items():
+        where = _where(ep.base_url)
+        if where == "laptop" and brev:
+            where = brev  # tunnelled
+        models[role] = {"model": ep.model, "where": where, "url": ep.base_url}
     return {
-        "mock": os.environ.get("SHERLOCK_MOCK") == "1",
+        "mock": cfg.mock,
         "expanso": os.environ.get("SHERLOCK_EXPANSO") == "connected",
+        "cameras": [{"name": c.name, "backend": c.backend} for c in cfg.cameras],
+        "models": models,
     }
 
 
+def _render(name: str) -> str:
+    return (STATIC / name).read_text().replace("__CFG_JSON__", json.dumps(page_config()))
+
+
+@router.get("/", response_class=HTMLResponse)
+def flow_page() -> str:
+    return _render("pipeline.html")
+
+
 @router.get("/pipeline", response_class=HTMLResponse)
-def pipeline_page() -> str:
-    return (STATIC / "pipeline.html").read_text().replace("__CFG_JSON__", json.dumps(page_config()))
+def pipeline_page() -> str:  # kept so older links and bookmarks still work
+    return _render("pipeline.html")
+
+
+@router.get("/topology", response_class=HTMLResponse)
+def topology_page() -> str:
+    return _render("topology.html")
 
 
 @router.get("/pipeline/fonts/{name}")
@@ -44,6 +86,6 @@ def pipeline_font(name: str) -> FileResponse:
 
 
 def mount_pipeline(app: FastAPI) -> FastAPI:
-    """Attach the pipeline page to an app built by make_app()."""
+    """Attach the flow and topology pages to an app built by make_app()."""
     app.include_router(router)
     return app

@@ -26,7 +26,7 @@ _EVIDENCE_NAMES = {"weapon_crop", "face_crop", "object_crop"}
 def make_app(sherlock: Sherlock) -> FastAPI:
     app = FastAPI(title="Sherlock")
 
-    @app.get("/", response_class=HTMLResponse)
+    @app.get("/log", response_class=HTMLResponse)  # the data-flow page (pipeline.py) is mounted at /
     def index():
         return (STATIC / "index.html").read_text()
 

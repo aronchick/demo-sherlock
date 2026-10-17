@@ -29,6 +29,33 @@ def test_pipeline_page_mounts_and_uses_existing_streams():
     assert "__CFG_JSON__" not in body
 
 
+def test_flow_page_is_the_default_and_topology_is_served():
+    client = TestClient(mount_pipeline(FastAPI()))
+    assert "Incident record" in client.get("/").text
+    body = client.get("/topology").text
+    assert "__CFG_JSON__" not in body and "What runs where" in body
+    for needle in ("/events", 'href="/"', 'href="/log"'):
+        assert needle in body, needle
+
+
+def test_page_config_names_models_and_where_they_run(monkeypatch):
+    for key in ("SHERLOCK_MOCK", "BREV_HOST"):
+        monkeypatch.delenv(key, raising=False)
+    monkeypatch.setenv("DIRECTOR_BASE_URL", "https://gpu.brev.example/v1")
+    monkeypatch.setenv("DIRECTOR_MODEL", "nvidia/NVIDIA-Nemotron-3.5-Lightning-30B-A3B-NVFP4")
+    monkeypatch.setenv("ANALYST_BASE_URL", "http://localhost:8002/v1")
+    monkeypatch.setenv("CAMERAS", "hero:insta360:name:Link,scout1:fake:1")
+    cfg = _page_cfg(TestClient(mount_pipeline(FastAPI())).get("/topology").text)
+    assert cfg["models"]["scout"]["where"] == "laptop"
+    assert cfg["models"]["director"] == {"model": "nvidia/NVIDIA-Nemotron-3.5-Lightning-30B-A3B-NVFP4",
+                                         "where": "gpu.brev.example", "url": "https://gpu.brev.example/v1"}
+    assert cfg["models"]["analyst"]["where"] == "laptop"          # localhost, no tunnel declared
+    assert [c["backend"] for c in cfg["cameras"]] == ["insta360", "fake"]
+    monkeypatch.setenv("BREV_HOST", "brev-box")                  # a tunnel: localhost is really the box
+    cfg = _page_cfg(TestClient(mount_pipeline(FastAPI())).get("/topology").text)
+    assert cfg["models"]["analyst"]["where"] == "brev-box"
+
+
 def test_fonts_are_vendored_so_the_page_works_offline():
     client = TestClient(mount_pipeline(FastAPI()))
     body = client.get("/pipeline").text
@@ -60,4 +87,5 @@ def test_page_only_claims_what_is_running(monkeypatch, env, expected):
     for key, value in env.items():
         monkeypatch.setenv(key, value)
     r = TestClient(mount_pipeline(FastAPI())).get("/pipeline")
-    assert _page_cfg(r.text) == expected
+    cfg = _page_cfg(r.text)
+    assert {k: cfg[k] for k in expected} == expected

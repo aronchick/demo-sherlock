@@ -1,0 +1,904 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sherlock · data flow</title>
+<style>
+  /* Vendored (SIL OFL, see static/fonts/): the page looks the same with no network. */
+  @font-face { font-family: "IBM Plex Mono"; font-weight: 400; font-display: swap; src: url(/pipeline/fonts/plex-mono-400.woff2) format("woff2"); }
+  @font-face { font-family: "IBM Plex Mono"; font-weight: 500; font-display: swap; src: url(/pipeline/fonts/plex-mono-500.woff2) format("woff2"); }
+  @font-face { font-family: "Schibsted Grotesk"; font-weight: 400 700; font-display: swap; src: url(/pipeline/fonts/schibsted-grotesk.woff2) format("woff2"); }
+  :root {
+    --paper: #ebe7de; --card: #f5f2ea; --card-hi: #fbf9f4; --line: #cdc7b8; --rail: #b9b2a0;
+    --ink: #1b1e22; --dim: #6f695d; --faint: #a39d8d;
+    --scout: #2d5f90; --director: #b4690e; --analyst: #2a7a78; --verifier: #94456a;
+    --weapon: #d1391c; --benign: #8c8678; --ok: #2f7d4f; --bad: #b3342c;
+    --sans: "Schibsted Grotesk", "Helvetica Neue", sans-serif;
+    --mono: "IBM Plex Mono", ui-monospace, monospace;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; overflow: hidden; background: var(--paper); color: var(--ink);
+    font: 14px/1.4 var(--sans); }
+  .app { position: relative; height: 100dvh; display: grid; grid-template-rows: auto minmax(0,1fr) auto auto;
+    gap: clamp(8px, 1.5vh, 14px); padding: clamp(10px, 1.8vh, 18px) clamp(14px, 1.6vw, 24px) clamp(8px, 1.4vh, 14px); }
+
+  /* ---- header ---------------------------------------------------------- */
+  .bar { display: flex; align-items: flex-end; gap: 20px; min-width: 0; }
+  .eyebrow { font: 500 10.5px var(--mono); letter-spacing: .16em; text-transform: uppercase; color: var(--dim); }
+  .bar h1 { margin: 2px 0 0; font: 500 clamp(16px, 2.1vw, 22px)/1.15 var(--sans); letter-spacing: -.005em;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .bar .head { min-width: 0; }
+  .ratio { margin-left: auto; text-align: right; white-space: nowrap; }
+  .ratio b { display: block; font: 500 clamp(26px, 3.6vw, 40px)/1 var(--mono); font-variant-numeric: tabular-nums; }
+  .ratio span { font: 500 10.5px var(--mono); letter-spacing: .12em; text-transform: uppercase; color: var(--dim); }
+
+  /* ---- board ------------------------------------------------------------ */
+  .board { position: relative; display: grid; min-height: 0; padding-top: 24px;
+    grid-template-columns: 27fr 17fr 22fr 19fr; column-gap: clamp(30px, 3.4vw, 58px); }
+  .col { display: grid; min-height: 0; }
+  .cam { grid-template-rows: minmax(0,1fr) minmax(0,1fr); gap: clamp(10px, 1.6vh, 16px); }
+  .zone { position: relative; border: 1px solid var(--line); border-radius: 10px; background: rgba(255,255,255,.3);
+    padding: 30px 12px 12px; }
+  .zone > .zhead { position: absolute; left: 12px; top: 9px; right: 12px; display: flex; align-items: baseline; gap: 8px;
+    font: 500 10.5px var(--mono); letter-spacing: .14em; text-transform: uppercase; color: var(--ink); white-space: nowrap; }
+  .zone > .zhead small { font-size: 10px; letter-spacing: .04em; text-transform: none; color: var(--dim);
+    overflow: hidden; text-overflow: ellipsis; }
+  .laptop { grid-template-rows: auto minmax(0,1fr) auto; }
+  .models { grid-template-rows: repeat(3, minmax(0,1fr)); gap: clamp(22px, 4.6vh, 44px); }
+  .out { grid-template-rows: repeat(3, minmax(0,1fr)); padding-top: 0; }
+  .models > .stage { align-self: center; height: clamp(84px, 16vh, 128px); }
+  .out > .dest { align-self: center; height: clamp(90px, 18vh, 140px); }
+
+  /* ---- feeds -------------------------------------------------------------- */
+  .frame { position: relative; display: grid; grid-template-rows: auto minmax(0,1fr); min-height: 0; background: var(--card);
+    border: 1px solid var(--line); border-radius: 8px; overflow: hidden; transition: border-color .3s, box-shadow .3s; }
+  .frame .fh { display: flex; align-items: center; gap: 8px; padding: 6px 10px; font: 500 10.5px var(--mono);
+    letter-spacing: .14em; text-transform: uppercase; color: var(--ink); }
+  .frame .fh small { margin-left: auto; font-size: 10px; letter-spacing: .04em; text-transform: none; color: var(--dim); }
+  .frame .fh i { width: 7px; height: 7px; border-radius: 50%; background: var(--scout); animation: blink 1.8s infinite; }
+  @keyframes blink { 50% { opacity: .25; } }
+  .view { position: relative; min-height: 0; background: #16181b; }
+  .view img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; display: block; }
+  .frame.alert { border-color: var(--weapon); box-shadow: 0 0 0 1px var(--weapon), 0 0 26px rgba(209,57,28,.28); animation: alertpulse 1.2s ease-in-out 3; }
+  @keyframes alertpulse { 50% { box-shadow: 0 0 0 1px var(--weapon), 0 0 44px rgba(209,57,28,.5); } }
+  .cover { position: absolute; inset: 0; background: rgba(22,24,27,.9); display: none; align-items: center; justify-content: center;
+    color: #cfc9ba; font: 500 11px var(--mono); letter-spacing: .14em; text-transform: uppercase; }
+  .frame.covered .cover { display: flex; }
+  #cropFrame .view img { transition: transform .55s cubic-bezier(.2,.8,.2,1), filter .55s; transform-origin: center; }
+  #cropFrame.iris .view img { transform: scale(1.5); filter: blur(5px); transition: none; }
+  #cropFrame.sealed .view img { filter: blur(14px) saturate(.4); }
+  .frame.flash .view::after { content: ""; position: absolute; inset: 0; background: #fff; animation: flash .45s ease-out forwards; pointer-events: none; }
+  @keyframes flash { from { opacity: .55; } to { opacity: 0; } }
+  .caption { position: absolute; left: 0; right: 0; bottom: 0; padding: 14px 10px 7px; font-size: 12.5px; color: #f3efe4;
+    background: linear-gradient(transparent, rgba(22,24,27,.9)); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    opacity: 0; transition: opacity .3s; }
+  .caption.on { opacity: 1; }
+  .stamp { position: absolute; right: 10px; top: 10px; padding: 3px 9px; border: 2px solid; border-radius: 4px; background: rgba(245,242,234,.92);
+    font: 500 11px var(--mono); letter-spacing: .16em; text-transform: uppercase;
+    opacity: 0; transform: rotate(-7deg) scale(1.6); transition: opacity .25s, transform .25s cubic-bezier(.2,1.4,.4,1); }
+  .stamp.on { opacity: 1; transform: rotate(-7deg) scale(1); }
+  .stamp.ok { color: var(--ok); border-color: var(--ok); } .stamp.bad { color: var(--bad); border-color: var(--bad); }
+  .stamp.alert { color: var(--weapon); border-color: var(--weapon); font-size: 13px; }
+  .stamp.quiet { color: var(--dim); border-color: var(--dim); }
+  #wideFrame .stamp { top: auto; bottom: 10px; }
+
+  /* ---- stages --------------------------------------------------------------- */
+  .stage { position: relative; display: flex; flex-direction: column; justify-content: center; min-height: 0;
+    background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 8px 12px 8px 16px;
+    transition: border-color .25s, box-shadow .25s, background .25s; }
+  .stage::before { content: ""; position: absolute; left: 0; top: 10px; bottom: 10px; width: 3px; border-radius: 0 3px 3px 0; background: var(--c); }
+  .stage.hot { border-color: var(--tint, var(--c)); background: var(--card-hi);
+    box-shadow: 0 0 0 1px var(--tint, var(--c)), 0 8px 18px -16px var(--tint, var(--c)); }
+  .stage .kind { font: 500 10px var(--mono); letter-spacing: .14em; text-transform: uppercase; color: var(--dim); }
+  .stage .name { font: 700 clamp(15px, 1.5vw, 18px)/1.2 var(--sans); }
+  .stage .sub { font-size: 12px; color: var(--dim); }
+  .stage .ms { position: absolute; right: 10px; bottom: 7px; font: 500 10.5px var(--mono); color: var(--c); opacity: 0; transition: opacity .5s; }
+  .stage .ms.on { opacity: 1; }
+  .badge { position: absolute; right: 10px; top: -9px; padding: 1px 7px; background: var(--paper); border: 1px solid var(--c);
+    border-radius: 9px; color: var(--c); font: 500 9.5px var(--mono); letter-spacing: .1em; text-transform: uppercase;
+    opacity: 0; transition: opacity .3s; pointer-events: none; z-index: 2; }
+  .badge.on { opacity: 1; }
+  #b-camera { top: 5px; right: 96px; }     /* the feed card clips overflow, so this badge sits inside its header */
+  #st-scout { flex-direction: row; align-items: center; gap: 10px; }
+  #st-scout .txt { min-width: 0; flex: 1; }
+  #st-scout .spec { width: clamp(44px, 4.4vw, 58px); aspect-ratio: 1; flex: none; border: 1px dashed var(--rail); border-radius: 4px; }
+  #st-scout .count { font: 500 11px var(--mono); color: var(--dim); font-variant-numeric: tabular-nums; }
+  #st-scout .count b { color: var(--ink); font-weight: 500; }
+  #st-bucket { justify-content: flex-start; gap: 4px; padding-bottom: 10px; min-height: clamp(96px, 20vh, 150px); }
+  #st-bucket .slots { flex: 1; min-height: 0; margin-top: 6px; }
+  .dest { position: relative; display: flex; flex-direction: column; justify-content: center; min-height: 0;
+    background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 8px 14px 8px 16px; transition: border-color .3s, box-shadow .3s, background .3s; }
+  .dest::before { content: ""; position: absolute; left: 0; top: 10px; bottom: 10px; width: 3px; border-radius: 0 3px 3px 0; background: var(--c); }
+  .dest .kind { font: 500 10px var(--mono); letter-spacing: .14em; text-transform: uppercase; color: var(--dim); }
+  .dest .num { font: 500 clamp(26px, 3.2vw, 38px)/1.05 var(--mono); font-variant-numeric: tabular-nums; }
+  .dest .sub { font-size: 12px; color: var(--dim); }
+  .dest.ping { border-color: var(--c); background: var(--card-hi); box-shadow: 0 0 0 1px var(--c), 0 10px 22px -14px var(--c); }
+  #d-alert.ping { animation: alertpulse 1.2s ease-in-out 2; }
+
+  /* ---- incident record: the signature -------------------------------------------- */
+  .record { display: grid; grid-template-columns: clamp(92px, 9vw, 120px) repeat(5, minmax(0,1fr)); gap: 8px; align-items: stretch; min-width: 0; }
+  .record .lede { align-self: center; font: 500 10.5px var(--mono); letter-spacing: .14em; text-transform: uppercase; color: var(--ink); }
+  .record .lede small { display: block; margin-top: 2px; font-size: 10px; letter-spacing: .02em; text-transform: none; color: var(--dim); }
+  .cell { position: relative; min-width: 0; height: clamp(58px, 9.5vh, 84px); padding: 7px 10px 6px 13px; border: 1px dashed var(--rail);
+    border-radius: 7px; overflow: hidden; }
+  .cell::before { content: ""; position: absolute; left: 0; top: 8px; bottom: 8px; width: 3px; border-radius: 0 3px 3px 0; background: var(--rail); }
+  .cell .k { font: 500 9.5px var(--mono); letter-spacing: .14em; text-transform: uppercase; color: var(--faint); }
+  .cell .v { margin-top: 2px; font-size: 13px; line-height: 1.3; color: var(--faint); display: -webkit-box; -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2; overflow: hidden; }
+  .cell .m { position: absolute; right: 9px; top: 6px; font: 500 9.5px var(--mono); color: var(--c, var(--dim)); }
+  .cell.on { border: 1px solid var(--line); background: var(--card); animation: cellin .35s ease-out; }
+  .cell.on::before { background: var(--c); }
+  .cell.on .k { color: var(--c); } .cell.on .v { color: var(--ink); }
+  @keyframes cellin { from { opacity: 0; transform: translateY(5px); } }
+
+  /* ---- footer ------------------------------------------------------------------------ */
+  footer { display: flex; align-items: center; gap: 14px; min-width: 0; font: 400 11.5px var(--mono); color: var(--dim); white-space: nowrap; }
+  footer .stat b { color: var(--ink); font-weight: 500; }
+  footer .expanso { display: flex; align-items: center; gap: 7px; min-width: 0; flex: 1; overflow: hidden; text-overflow: ellipsis; color: var(--faint);
+    font-size: 10.5px; border-left: 1px solid var(--line); padding-left: 14px; }
+  footer .expanso i { flex: none; width: 7px; height: 7px; border-radius: 50%; border: 1.5px solid var(--faint); }
+  footer .expanso.live i { background: var(--ok); border-color: var(--ok); }
+  footer .expanso span { overflow: hidden; text-overflow: ellipsis; }
+  footer a { color: var(--dim); text-decoration: none; border-bottom: 1px solid var(--line); }
+  footer a:hover, footer a:focus-visible { color: var(--ink); border-color: var(--ink); outline: none; }
+  button { background: transparent; color: var(--dim); border: 1px solid var(--line); border-radius: 6px; padding: 5px 10px; font: 500 11px var(--mono); cursor: pointer; }
+  button:hover { border-color: var(--ink); color: var(--ink); }
+  button:focus-visible, a:focus-visible { outline: 2px solid var(--scout); outline-offset: 2px; }
+  #fx { position: fixed; inset: 0; pointer-events: none; }
+  @media (prefers-reduced-motion: reduce) { .frame.alert, #d-alert.ping, .cell.on, .frame .fh i { animation: none; } }
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="bar">
+    <div class="head">
+      <div class="eyebrow">Sherlock / data flow</div>
+      <h1>One 10 ms detector watches every frame. A model only ever gets a crop.</h1>
+    </div>
+    <div class="ratio"><b id="avoided">0</b><span>VLM calls avoided</span></div>
+  </header>
+
+  <section class="board" id="board">
+    <div class="col cam" id="cCam">
+      <article class="frame" id="wideFrame">
+        <div class="fh"><i></i>Hero camera<small>every frame</small></div>
+        <div class="view">
+          <img id="wide" src="/stream/wide" alt="Live wide view">
+          <div class="stamp" id="wideStamp">alert</div>
+          <div class="cover">lens covered</div>
+        </div>
+        <span class="badge" id="b-camera" style="--c: var(--benign)"></span>
+      </article>
+      <article class="frame" id="cropFrame">
+        <div class="fh">Close-up<small id="cropTag">waiting for a look</small></div>
+        <div class="view">
+          <img id="crop" src="/stream/crop" alt="Zoomed crop">
+          <div class="stamp" id="stamp">confirmed</div>
+          <div class="caption" id="caption"></div>
+        </div>
+      </article>
+    </div>
+
+    <div class="col zone laptop" id="zLaptop">
+      <div class="zhead">The laptop<small>local</small></div>
+      <article class="stage" id="st-scout" style="--c: var(--scout)">
+        <div class="txt">
+          <div class="kind">Detect</div>
+          <div class="name">Scout</div>
+          <div class="sub">YOLO nano, every frame</div>
+          <div class="count">seen <b id="frames">0</b></div>
+        </div>
+        <div class="spec" aria-hidden="true"></div>
+        <span class="ms"></span><span class="badge"></span>
+      </article>
+      <div></div>
+      <article class="stage" id="st-bucket" style="--c: var(--benign)">
+        <div class="kind">Evidence</div>
+        <div class="sub">snapshots/ on this disk</div>
+        <div class="slots" aria-hidden="true"></div>
+        <span class="badge"></span>
+      </article>
+    </div>
+
+    <div class="col zone models" id="zModels">
+      <div class="zhead">Models<small id="modeTag">vLLM endpoints</small></div>
+      <article class="stage" id="st-director" style="--c: var(--director)">
+        <div class="kind">Decide</div><div class="name">Director</div><div class="sub">Nemotron picks the next tool</div>
+        <span class="ms"></span><span class="badge"></span>
+      </article>
+      <article class="stage" id="st-analyst" style="--c: var(--analyst)">
+        <div class="kind">Read</div><div class="name">Analyst</div><div class="sub">VLM describes the crop</div>
+        <span class="ms"></span><span class="badge"></span>
+      </article>
+      <article class="stage" id="st-verifier" style="--c: var(--verifier)">
+        <div class="kind">Check</div><div class="name">Verifier</div><div class="sub">second look at the same crop</div>
+        <span class="ms"></span><span class="badge"></span>
+      </article>
+    </div>
+
+    <div class="col out" id="cOut">
+      <article class="dest" id="d-ignored" style="--c: var(--benign)">
+        <div class="kind">Ignored</div><div class="num" id="n-ignored">0</div><div class="sub">benign, no VLM call</div>
+      </article>
+      <article class="dest" id="d-logged" style="--c: var(--analyst)">
+        <div class="kind">Logged</div><div class="num" id="n-logged">0</div><div class="sub">looked at, kept as evidence</div>
+      </article>
+      <article class="dest" id="d-alert" style="--c: var(--weapon)">
+        <div class="kind">Alert</div><div class="num" id="n-alerts">0</div><div class="sub">verified weapon</div>
+      </article>
+    </div>
+  </section>
+
+  <section class="record" id="record" aria-label="Incident record">
+    <div class="lede">Incident record<small>filled in by each stage</small></div>
+    <div class="cell" id="c-scout" style="--c: var(--scout)"><div class="k">Scout</div><div class="v">waiting</div><span class="m"></span></div>
+    <div class="cell" id="c-director" style="--c: var(--director)"><div class="k">Director</div><div class="v">waiting</div><span class="m"></span></div>
+    <div class="cell" id="c-analyst" style="--c: var(--analyst)"><div class="k">Analyst</div><div class="v">waiting</div><span class="m"></span></div>
+    <div class="cell" id="c-verifier" style="--c: var(--verifier)"><div class="k">Verifier</div><div class="v">waiting</div><span class="m"></span></div>
+    <div class="cell" id="c-decision" style="--c: var(--ink)"><div class="k">Decision</div><div class="v">waiting</div><span class="m"></span></div>
+  </section>
+
+  <footer>
+    <span class="stat">investigations <b id="investigations">0</b></span>
+    <span class="stat">VLM calls <b id="vlm_calls">0</b></span>
+    <span class="stat">recovered <b id="recoveries">0</b></span>
+    <span class="stat">verified <b id="confirmed">0</b> / <b id="rejected">0</b></span>
+    <div class="expanso" id="expanso"><i></i><span id="expansoText"></span></div>
+    <a href="/">event log</a>
+    <button type="button" onclick="post('/demo/fail/1')">Break next tool call</button>
+    <button type="button" id="coverBtn" onclick="toggleCover()">Cover hero lens</button>
+  </footer>
+</div>
+<canvas id="fx"></canvas>
+
+<script>
+'use strict';
+// ---------------------------------------------------------------------------
+// Driven entirely by the existing SSE stream. Events arrive in bursts (mock
+// tools answer in a few ms), so each one becomes a "beat" played back at a pace
+// a human can follow. Nothing here hardcodes the tool chain: each tool event is
+// read for what it is (data.tool, data.result, the bbox in the message), so a
+// benign ignore, a weapon chain with a face crop, or an unknown object all play
+// out from the stream. Stages and outcomes are DOM; the canvas only draws the
+// rails, the packets riding them, and the feed overlays. Pixels for the moving
+// cards come from the MJPEG <img> elements via drawImage, so what travels is
+// the real crop. The face crop is stored evidence: never analyzed, never labelled.
+// ---------------------------------------------------------------------------
+const CFG = __CFG_JSON__;
+const $ = id => document.getElementById(id);
+const fx = $('fx'), ctx = fx.getContext('2d');
+const wideImg = $('wide'), cropImg = $('crop');
+const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const C = { scout: css('--scout'), director: css('--director'), analyst: css('--analyst'), verifier: css('--verifier'),
+  weapon: css('--weapon'), benign: css('--benign'), ok: css('--ok'), bad: css('--bad'), dim: css('--dim'), ink: css('--ink'),
+  rail: css('--rail'), paper: css('--paper'), card: css('--card') };
+const threatColor = t => t === 'weapon' ? C.weapon : t === 'benign' ? C.benign : C.scout;
+const REDUCED = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const FONT = { mono: '"IBM Plex Mono", ui-monospace, monospace', sans: '"Schibsted Grotesk", "Helvetica Neue", sans-serif' };
+
+// ---- config echoed from the server ------------------------------------------------
+$('modeTag').textContent = CFG.mock ? 'mock, runs on this laptop' : 'vLLM endpoints';
+$('expanso').classList.toggle('live', CFG.expanso);
+const EXPANSO_DETAIL = 'Expanso Edge processes this data; Expanso Cloud deploys and monitors it, no image data';
+$('expansoText').textContent = (CFG.expanso ? 'connected · ' : 'not connected in this run · ') + EXPANSO_DETAIL;
+$('expanso').title = $('expansoText').textContent;
+
+// ---- stages (DOM) -------------------------------------------------------------------
+const ST = { camera: $('wideFrame'), scout: $('st-scout'), director: $('st-director'), analyst: $('st-analyst'),
+  verifier: $('st-verifier'), bucket: $('st-bucket'), ignored: $('d-ignored'), logged: $('d-logged'), alert: $('d-alert') };
+const badgeEl = id => id === 'camera' ? $('b-camera') : ST[id].querySelector('.badge');
+const timers = new WeakMap();
+function later(el, key, fn, ms) {
+  const t = timers.get(el) || {}; clearTimeout(t[key]); t[key] = setTimeout(fn, ms); timers.set(el, t);
+}
+function glow(id, amount = 1, tint) {
+  const el = ST[id]; if (!el) return;
+  el.style.setProperty('--tint', tint || ''); el.classList.add('hot');
+  later(el, 'glow', () => { el.classList.remove('hot'); el.style.removeProperty('--tint'); }, 700 + 500 * amount);
+}
+function badge(id, text, color, ms = 2600) {
+  const el = badgeEl(id); if (!el) return;
+  el.textContent = text; el.style.setProperty('--c', color); el.classList.add('on');
+  later(el, 'badge', () => el.classList.remove('on'), ms);
+}
+const fmtMs = ms => (ms < 1 ? '<1' : Math.round(ms)) + ' ms';
+function latency(id, ms) {
+  const el = ST[id] && ST[id].querySelector('.ms'); if (!el || !ms) return;
+  el.textContent = fmtMs(ms); el.classList.add('on');
+  later(el, 'ms', () => el.classList.remove('on'), 3800);
+}
+function ping(id, color) {
+  const el = ST[id]; el.classList.add('ping');
+  later(el, 'ping', () => el.classList.remove('ping'), 1400);
+}
+
+// ---- incident record ------------------------------------------------------------------
+const CELLS = ['scout', 'director', 'analyst', 'verifier', 'decision'];
+function cellSet(key, text, meta) {
+  const el = $('c-' + key); el.classList.add('on');
+  el.querySelector('.v').textContent = text;
+  el.querySelector('.m').textContent = meta || '';
+  el.style.animation = 'none'; void el.offsetWidth; el.style.animation = '';
+}
+function cellsReset() {
+  for (const k of CELLS) {
+    const el = $('c-' + k); el.classList.remove('on');
+    el.querySelector('.v').textContent = 'waiting'; el.querySelector('.m').textContent = '';
+  }
+  chain.length = 0;
+}
+const chain = [];
+function chainAdd(step) { chain.push(step); cellSet('director', chain.join(' → ')); }
+
+// ---- geometry: rails between the stage elements ---------------------------------------
+const R = {}, E = {};
+const L = { board: null, g3: 0 };
+function rectOf(el) { const r = el.getBoundingClientRect(); return { l: r.left, r: r.right, t: r.top, b: r.bottom, cx: (r.left + r.right) / 2, cy: (r.top + r.bottom) / 2, w: r.width, h: r.height }; }
+function mk(pts, o) {
+  let total = 0; const lens = [];
+  for (let i = 1; i < pts.length; i++) { const d = Math.hypot(pts[i].x - pts[i - 1].x, pts[i].y - pts[i - 1].y); lens.push(d); total += d; }
+  return { pts, lens, total: total || 1, hot: 0, tint: null, color: C.rail, dash: false, label: '', ...o };
+}
+const P = (x, y) => ({ x, y });
+function layout() {
+  const dpr = window.devicePixelRatio || 1;
+  fx.width = innerWidth * dpr; fx.height = innerHeight * dpr;
+  fx.style.width = innerWidth + 'px'; fx.style.height = innerHeight + 'px';
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  for (const k in ST) R[k] = rectOf(ST[k]);
+  R.wide = R.camera; R.crop = rectOf($('cropFrame'));
+  R.cam = rectOf($('cCam')); R.zl = rectOf($('zLaptop')); R.zm = rectOf($('zModels')); R.out = rectOf($('cOut')); R.board = rectOf($('board'));
+  R.spec = rectOf(ST.scout.querySelector('.spec')); R.slots = rectOf(ST.bucket.querySelector('.slots'));
+  const g1 = (R.cam.r + R.zl.l) / 2, g3 = (R.zl.r + R.zm.l) / 2, g5 = (R.zm.r + R.out.l) / 2;
+  L.g3 = g3;
+  const w = R.wide, c = R.crop, s = R.scout, bk = R.bucket, d = R.director, an = R.analyst, v = R.verifier;
+  const lane = (s.b + bk.t) / 2, railY = R.board.t + 9;
+  const wy = w.t + (w.b - w.t) * 0.4;
+  E.frames = mk([P(w.r, wy), P(g1, wy), P(g1, s.cy), P(s.l, s.cy)], { label: 'frame', shape: 'frame', color: C.rail, lseg: 1 });
+  E.uplink = mk([P(s.r, s.cy), P(g3, s.cy), P(g3, d.cy), P(d.l, d.cy)], { label: 'ticket', color: C.scout });
+  E.lookat = mk([P(d.cx, d.t), P(d.cx, railY), P(w.cx, railY), P(w.cx, w.t)], { label: 'look_at: pan, tilt, zoom', dash: true, color: C.director });
+  E.crop = mk([P(c.r, c.cy - 7), P(g1 - 6, c.cy - 7), P(g1 - 6, lane), P(g3 - 7, lane), P(g3 - 7, an.cy), P(an.l, an.cy)],
+    { label: 'zoomed crop', color: C.analyst, lseg: 2 });
+  E.seal = mk([P(c.r, c.cy + 7), P(g1 + 6, c.cy + 7), P(g1 + 6, bk.cy), P(bk.l, bk.cy)], { label: 'sealed', color: C.benign, lseg: 1 });
+  E.judge = mk([P(an.cx, an.b), P(an.cx, v.t)], { label: 'crop + claim', color: C.verifier });
+  E.store = mk([P(v.l, v.cy + 6), P(g3 + 7, v.cy + 6), P(g3 + 7, bk.cy + 14), P(bk.r, bk.cy + 14)], { label: 'verdict', dash: true, color: C.benign, lseg: 0 });
+  E.toIgnore = mk([P(d.r, d.cy), P(g5, d.cy), P(g5, R.ignored.cy), P(R.ignored.l, R.ignored.cy)], { color: C.benign });
+  E.toLog = mk([P(v.r, v.cy - 6), P(g5 - 6, v.cy - 6), P(g5 - 6, R.logged.cy), P(R.logged.l, R.logged.cy)], { color: C.analyst });
+  E.toAlert = mk([P(v.r, v.cy + 6), P(g5 + 6, v.cy + 6), P(g5 + 6, R.alert.cy), P(R.alert.l, R.alert.cy)], { color: C.weapon });
+}
+addEventListener('resize', layout);
+if (document.fonts) document.fonts.ready.then(layout);
+setTimeout(layout, 1200);
+
+function pointAt(e, u) {
+  let d = Math.max(0, Math.min(1, u)) * e.total;
+  for (let i = 0; i < e.lens.length; i++) {
+    if (d <= e.lens[i] || i === e.lens.length - 1) {
+      const k = e.lens[i] ? Math.min(1, d / e.lens[i]) : 0, a = e.pts[i], b = e.pts[i + 1];
+      return { x: a.x + (b.x - a.x) * k, y: a.y + (b.y - a.y) * k };
+    }
+    d -= e.lens[i];
+  }
+  return e.pts[e.pts.length - 1];
+}
+function samples(e, n = 40, tail) {
+  const out = []; for (let i = 0; i <= n; i++) out.push(pointAt(e, i / n));
+  if (tail) out.push(tail); return out;
+}
+
+// ---- video geometry ------------------------------------------------------------------------
+function imgMap(img) {
+  const r = img.getBoundingClientRect();
+  const nw = img.naturalWidth || 1280, nh = img.naturalHeight || 720;
+  const s = Math.min(r.width / nw, r.height / nh);
+  return { s, ox: r.left + (r.width - nw * s) / 2, oy: r.top + (r.height - nh * s) / 2, nw, nh, r };
+}
+function bboxToPage(img, bb) {
+  const m = imgMap(img);
+  return { x: m.ox + bb[0] * m.s, y: m.oy + bb[1] * m.s, w: (bb[2] - bb[0]) * m.s, h: (bb[3] - bb[1]) * m.s };
+}
+// Same zoom rule as FakePTZCamera.bbox_to_pose: the crop is the frame shrunk by the zoom factor.
+function zoomWindow(bb, nw, nh) {
+  const bw = Math.max(bb[2] - bb[0], 1), bh = Math.max(bb[3] - bb[1], 1);
+  const z = Math.max(1, Math.min(4, 0.8 * Math.min(nw / bw, nh / bh)));
+  const cw = nw / z, ch = nh / z, cx = (bb[0] + bb[2]) / 2, cy = (bb[1] + bb[3]) / 2;
+  const x0 = Math.min(Math.max(cx - cw / 2, 0), nw - cw), y0 = Math.min(Math.max(cy - ch / 2, 0), nh - ch);
+  return [x0, y0, x0 + cw, y0 + ch];
+}
+function grab(img, bb, size = 160) {
+  const nw = img.naturalWidth, nh = img.naturalHeight;
+  if (!nw || !nh) return null;
+  let [x1, y1, x2, y2] = bb || [0, 0, nw, nh];
+  const padx = (x2 - x1) * 0.15, pady = (y2 - y1) * 0.15;
+  x1 = Math.max(0, x1 - padx); y1 = Math.max(0, y1 - pady); x2 = Math.min(nw, x2 + padx); y2 = Math.min(nh, y2 + pady);
+  const w = x2 - x1, h = y2 - y1, k = size / Math.max(w, h);
+  const c = document.createElement('canvas'); c.width = Math.max(2, Math.round(w * k)); c.height = Math.max(2, Math.round(h * k));
+  try { c.getContext('2d').drawImage(img, x1, y1, w, h, 0, 0, c.width, c.height); } catch (e) { return null; }
+  return c;
+}
+
+// ---- animated state ----------------------------------------------------------------------------
+const S = {
+  particles: [], cards: [], bursts: [], shelf: [],
+  boxes: [],        // [{ bb, color, alpha, dash, label }] on the wide feed
+  zoom: null, docked: null, frames: 0, ambient: 0.6,
+};
+const now = () => performance.now();
+const ease = t => t < .5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+const easeOut = t => 1 - Math.pow(1 - t, 3);
+const wait = ms => new Promise(r => setTimeout(r, ms));
+
+function flow(edge, ms, color) {
+  const e = E[edge];
+  e.hot = Math.max(e.hot, now() + ms);
+  e.tint = color || null;
+  if (!REDUCED) for (let i = 0; i < 6; i++) spawnParticle(e, Math.random() * 0.15);
+}
+function spawnParticle(e, t0 = 0) {
+  S.particles.push({ e, t: t0, v: 0.004 + Math.random() * 0.004, j: (Math.random() - .5) * 4, size: 1.3 + Math.random() * 1.5 });
+}
+function burst(x, y, color, n = 26) {
+  if (REDUCED) n = Math.min(n, 6);
+  for (let i = 0; i < n; i++) {
+    const ang = Math.random() * Math.PI * 2, sp = 1.5 + Math.random() * 3;
+    S.bursts.push({ x, y, vx: Math.cos(ang) * sp, vy: Math.sin(ang) * sp, a: 1, color, size: 1.5 + Math.random() * 2 });
+  }
+}
+function sendCard(bmp, points, ms, o = {}) {
+  return new Promise(res => S.cards.push({ bmp, pts: points, t0: now(), ms, w: o.w || 56, done: res,
+    text: o.text || null, color: o.color || C.ink, blur: !!o.blur, stamp: o.stamp === undefined ? null : o.stamp }));
+}
+const ride = (edge, ms, o, tail) => sendCard(o.bmp, samples(E[edge], 40, tail), ms, o);
+function flash(el) { el.classList.remove('flash'); void el.offsetWidth; el.classList.add('flash'); }
+function setStamp(el, text, cls) { el.textContent = text; el.className = 'stamp' + (cls ? ' on ' + cls : ''); }
+function caption(text) { const c = $('caption'); c.textContent = text; c.classList.toggle('on', !!text); }
+function centerOf(el) { const r = el.getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; }
+function shelfSlot(i) {
+  const s = R.slots, cols = 4, cw = s.w / cols, ch = s.h / 2, col = i % cols, row = Math.floor(i / cols);
+  return { x: s.l + cw * col + cw / 2, y: s.t + ch * row + ch / 2, w: cw - 5, h: ch - 5 };
+}
+function shelve(item) { S.shelf.push(item); if (S.shelf.length > 8) S.shelf.shift(); }
+// Stored evidence, when the server exposes it, replaces the client grab (progressive; 404 is fine).
+function loadEvidence(item, incident, name) {
+  if (!incident || !name) return;
+  const img = new Image();
+  img.onload = () => { item.bmp = img; };
+  img.src = `/evidence/${encodeURIComponent(incident)}/${name}.jpg`;
+}
+
+// ---- beats: the choreography queue ------------------------------------------------------------------
+const Q = []; let playing = false;
+function beat(fn) { Q.push(fn); if (!playing) drain(); }
+async function drain() {
+  playing = true;
+  while (Q.length) { try { await Q.shift()(); } catch (e) { console.error(e); } }
+  playing = false;
+}
+
+// Per-incident memory, filled from events only.
+let cur = { bb: null, head: null, threat: 'unknown', label: '', color: C.scout, card: null, crop: null, face: null, verdict: null, looks: 0 };
+
+function toolName(ev) { return (ev.data && ev.data.tool) || ((ev.msg || '').match(/^([a-z_]+)/) || [])[1] || ''; }
+function bboxIn(ev) {
+  const d = ev.data || {};
+  if (Array.isArray(d.bbox) && d.bbox.length === 4) return d.bbox;
+  const m = (ev.msg || '').match(/bbox=\[([^\]]+)\]/);
+  return m ? m[1].split(',').map(Number) : null;
+}
+const same = (a, b) => a && b && a.every((v, i) => Math.abs(v - b[i]) < 2);
+
+// The second camera reports the same object a few ms later and the orchestrator
+// drops it as a duplicate, so a detection is held briefly before it plays. Every
+// event that arrives meanwhile waits behind it (`after`): the Director answers
+// within milliseconds, and without this its first look_at would play before the
+// Scout beat and be wiped by that beat's reset.
+let pendingScout = null;
+function flushScout() {
+  const p = pendingScout; if (!p) return;
+  pendingScout = null; clearTimeout(p.timer);
+  playScout(p.ev);
+  for (const fn of p.after) fn();
+}
+function afterScout(fn) { if (pendingScout) pendingScout.after.push(fn); else fn(); }
+function onScout(ev) {
+  const d = ev.data || {};
+  if (!d.bbox) return;
+  flushScout();                                                       // a new detection flushes the last
+  pendingScout = { ev, after: [], key: `${d.label} on ${d.camera}`, timer: setTimeout(flushScout, 150) };
+}
+function playScout(ev) {
+  const d = ev.data || {};
+  const bb = d.bbox;
+  const threat = d.threat || 'unknown', color = threatColor(threat);
+  beat(async () => {
+    cur = { bb, head: d.head || null, person: d.person || null, threat, label: d.label || '', color,
+      card: grab(wideImg, bb), crop: null, face: null, verdict: null, looks: 0, incident: null };
+    S.boxes = [{ bb, color, alpha: 1, label: (d.label || '').toUpperCase(), weight: threat === 'weapon' ? 2.5 : 2 }];
+    if (d.person) S.boxes.push({ bb: d.person, color: 'rgba(255,255,255,.6)', alpha: 1, weight: 1 });
+    if (d.head) S.boxes.push({ bb: d.head, color: C.director, alpha: 1, dash: true, weight: 1 });
+    S.zoom = null; S.docked = null;
+    cellsReset();
+    cellSet('scout', `${d.label || 'object'} · ${threat}${d.person ? ' · person nearby' : ''}`, ev.latency_ms ? fmtMs(ev.latency_ms) : '');
+    flash($('wideFrame')); $('wideFrame').classList.remove('alert');
+    setStamp($('stamp'), '', ''); setStamp($('wideStamp'), '', ''); caption('');
+    $('cropFrame').classList.remove('sealed'); $('cropTag').textContent = 'waiting for a look';
+    glow('scout', 1, color); latency('scout', ev.latency_ms);
+    const p = bboxToPage(wideImg, bb);
+    const dock = { x: R.spec.cx, y: R.spec.cy };
+    await sendCard(cur.card, [{ x: p.x + p.w / 2, y: p.y + p.h / 2 }, dock], 650, { w: 56, color });
+    S.docked = { bmp: cur.card, ...dock, alpha: 1, color };            // the pixels stay on the laptop
+    burst(dock.x, dock.y, color, 12);
+  });
+  beat(async () => {                                                    // only a ticket crosses the line
+    flow('uplink', 850, color);
+    glow('director', 0.6);
+    await ride('uplink', 900, { text: `${cur.label || 'object'} · ${threat}`, color });
+    glow('director', 1);
+  });
+}
+function onDirector(ev) {
+  const m = ev.msg || '';
+  beat(async () => {
+    glow('director', 1); latency('director', ev.latency_ms);
+    if (/benign/i.test(m) && /ignore/i.test(m)) { badge('director', 'ignore', C.benign); chainAdd('ignore'); }
+    if (/recovering|failed|unreachable|budget/i.test(m)) { burst(R.director.cx, R.director.cy, C.bad, 20); cellSet('director', m); }
+    await wait(/->|look_at|snapshot/i.test(m) ? 350 : 500);
+  });
+}
+function onTool(ev) {
+  const m = ev.msg || '', name = toolName(ev), d = ev.data || {};
+  if (/refused/i.test(m)) {                                             // benign: the snapshot is refused, no VLM call
+    beat(async () => { badge('camera', 'no VLM call', C.benign); glow('camera', .6, C.benign); chainAdd('snapshot refused'); await wait(500); });
+    return;
+  }
+  if (/FAILED|error|corrupted/i.test(m)) {
+    beat(async () => {
+      const where = name === 'snapshot' ? 'analyst' : name === 'verify' ? 'verifier' : 'camera';
+      const e = name === 'snapshot' ? E.crop : E.lookat;
+      const p = pointAt(e, 0.55);
+      burst(p.x, p.y, /corrupted/i.test(m) ? C.director : C.bad, 40);
+      glow(where, 1, C.bad); badge(where, /corrupted/i.test(m) ? 'bad args' : 'failed', C.bad, 1800);
+      chainAdd(`${name || 'tool'} failed`);
+      for (const b of S.boxes) b.flashColor = C.bad;
+      await wait(800);
+      for (const b of S.boxes) b.flashColor = null;
+    });
+    return;
+  }
+  if (name === 'look_at') {
+    const bb = bboxIn(ev) || (cur.looks === 0 ? cur.bb : cur.head);
+    beat(async () => {
+      const isHead = cur.head && same(bb, cur.head);
+      cur.looks++;
+      chainAdd(isHead ? 'look_at head' : 'look_at');
+      flow('lookat', 800, C.director); latency('camera', ev.latency_ms);
+      await wait(380);
+      glow('camera', 1, C.director);
+      const mm = imgMap(wideImg);
+      if (bb) S.zoom = { from: S.zoom ? S.zoom.to : [0, 0, mm.nw, mm.nh], to: zoomWindow(bb, mm.nw, mm.nh), t0: now(), ms: 700, color: isHead ? C.director : cur.color };
+      $('cropTag').textContent = isHead ? 'zoom: face' : 'zoom';
+      $('cropFrame').classList.toggle('sealed', !!isHead);
+      const cf = $('cropFrame'); cf.classList.add('iris'); void cf.offsetWidth; cf.classList.remove('iris');
+      await wait(600);
+    });
+    return;
+  }
+  if (name === 'snapshot') {
+    latency('camera', ev.latency_ms);
+    const eid = d.result && d.result.evidence_id;
+    if (eid === 'face_crop' || /subject=.?face/.test(m)) {              // evidence only: sealed, never analyzed
+      beat(async () => {
+        chainAdd('face, sealed');
+        cur.face = grab(cropImg, null, 200);
+        flash($('cropFrame'));
+        caption('face crop · stored as evidence · not analyzed');
+        const slot = shelfSlot(Math.min(S.shelf.length, 7));
+        flow('seal', 1100, C.benign);
+        await ride('seal', 1150, { bmp: cur.face, w: 44, blur: true, color: C.benign }, { x: slot.x, y: slot.y });
+        const item = { bmp: cur.face, kind: 'face', color: C.benign };
+        shelve(item); cur.faceItem = item;
+        burst(slot.x, slot.y, C.benign, 10);
+        await wait(300);
+      });
+    } else {
+      beat(async () => { chainAdd('snapshot'); });
+    }
+    return;
+  }
+  if (name === 'verify') { latency('verifier', ev.latency_ms); beat(async () => { chainAdd('verify'); }); }
+}
+function onAnalyst(ev) {
+  beat(async () => {                                                    // the zoomed crop is what leaves the laptop
+    cur.crop = grab(cropImg, null, 200) || cur.card;
+    flash($('cropFrame'));
+    flow('crop', 900, cur.color);
+    glow('analyst', 0.6);
+    await ride('crop', 950, { bmp: cur.crop, w: 50, color: cur.color }, null);
+    glow('analyst', 1); latency('analyst', ev.latency_ms);
+    cellSet('analyst', ev.msg, ev.latency_ms ? fmtMs(ev.latency_ms) : '');
+    caption(ev.msg);
+    await wait(650);
+  });
+}
+function onVerifier(ev) {
+  const ok = /^CONFIRMED/.test(ev.msg || '');
+  beat(async () => {
+    flow('judge', 700, C.verifier);
+    await ride('judge', 700, { bmp: cur.crop || cur.card, w: 40, color: cur.color });
+    cur.verdict = ok;
+    glow('verifier', 1, ok ? C.ok : C.bad); latency('verifier', ev.latency_ms);
+    burst(R.verifier.cx, R.verifier.cy, ok ? C.ok : C.bad, ok ? 18 : 34);
+    setStamp($('stamp'), ok ? 'confirmed' : 'rejected', ok ? 'ok' : 'bad');
+    cellSet('verifier', ev.msg, ev.latency_ms ? fmtMs(ev.latency_ms) : '');
+    await wait(700);
+  });
+}
+function onReport(ev) {
+  const d = ev.data || {}, action = d.action || 'log';
+  beat(async () => {
+    const calls = d.vlm_calls !== undefined ? `${d.vlm_calls} VLM call${d.vlm_calls === 1 ? '' : 's'}` : '';
+    const secs = ev.latency_ms ? ` · ${(ev.latency_ms / 1000).toFixed(1)} s` : '';
+    if (action === 'ignore') {                                          // nothing stored, nothing analyzed
+      flow('toIgnore', 700, C.benign); glow('scout', .8, C.benign);
+      await ride('toIgnore', 800, { text: `${d.label || cur.label || 'object'} · ignored`, color: C.benign });
+      ping('ignored', C.benign);
+      setStamp($('wideStamp'), 'ignored', 'quiet');
+      caption(`${d.label || cur.label || 'object'} · benign · ignored${calls ? ' · ' + calls : ''}`);
+      cellSet('decision', 'ignored', calls + secs);
+      if (S.docked) S.docked.fade = true;
+      for (const b of S.boxes) b.alpha = 0.99;
+      await wait(900);
+      return;
+    }
+    const bmp = cur.crop || cur.card;
+    const color = action === 'alert' ? C.weapon : C.analyst;
+    flow('store', 700, C.benign);
+    const slot = shelfSlot(Math.min(S.shelf.length, 7));
+    await ride('store', 800, { bmp, w: 44, stamp: cur.verdict, color: C.benign }, { x: slot.x, y: slot.y });
+    const item = { bmp, kind: action, color, ok: cur.verdict };
+    shelve(item);
+    const names = Array.isArray(d.evidence) ? d.evidence : [];
+    loadEvidence(item, d.incident, names.find(n => n !== 'face_crop'));
+    if (cur.faceItem) loadEvidence(cur.faceItem, d.incident, names.find(n => n === 'face_crop'));
+    burst(slot.x, slot.y, C.benign, 10);
+    const dest = action === 'alert' ? 'toAlert' : 'toLog';
+    flow(dest, 800, color);
+    await ride(dest, 850, { text: action === 'alert' ? 'ALERT' : 'logged', color });
+    ping(action === 'alert' ? 'alert' : 'logged', color);
+    if (action === 'alert') {
+      $('wideFrame').classList.add('alert');
+      setStamp($('wideStamp'), 'alert', 'alert');
+      badge('bucket', 'alert', C.weapon, 4000);
+    } else {
+      setStamp($('wideStamp'), 'logged', 'quiet');
+    }
+    const verdict = d.verified === true ? ' · verified' : d.verified === false ? ' · not verified' : '';
+    caption(`${d.claim || ''}${verdict}${calls ? ' · ' + calls : ''}`);
+    cellSet('decision', action === 'alert' ? 'ALERT, evidence kept' : 'logged, evidence kept', calls + secs);
+    if (S.docked) S.docked.fade = true;
+    await wait(500);
+    for (const b of S.boxes) b.alpha = 0.99;
+    S.zoom = null;
+  });
+}
+
+// ---- SSE ------------------------------------------------------------------------------------------------
+const es = new EventSource('/events');
+es.onmessage = e => {
+  const ev = JSON.parse(e.data), m = ev.msg || '';
+  switch (ev.stage) {
+    case 'scout': return onScout(ev);
+    case 'director': return afterScout(() => onDirector(ev));
+    case 'tool': return afterScout(() => onTool(ev));
+    case 'analyst': return afterScout(() => onAnalyst(ev));
+    case 'verifier': return afterScout(() => onVerifier(ev));
+    case 'system':
+      if (m.startsWith('REPORT')) return afterScout(() => onReport(ev));
+      if (/covered$/.test(m) && /^hero /.test(m)) $('wideFrame').classList.toggle('covered', !/uncovered/.test(m));
+      if (/will fail|corrupted arguments/.test(m)) { glow('camera', 1, C.bad); badge('camera', /fail/.test(m) ? 'armed: fail' : 'armed: garbage', C.bad, 1500); }
+      if (/already handled/.test(m)) {
+        if (pendingScout && m.startsWith(pendingScout.key + ' ')) {     // dropped: never plays; what queued behind it still does
+          const p = pendingScout; pendingScout = null; clearTimeout(p.timer);
+          for (const fn of p.after) fn();
+        }
+        badge('scout', 'duplicate', C.benign, 1500);
+      }
+      return;
+  }
+};
+let lastFrames = 0;
+es.addEventListener('stats', e => {
+  const s = JSON.parse(e.data);
+  for (const k in s) { const el = $(k); if (el) el.textContent = s[k]; }
+  $('avoided').textContent = s.vlm_calls_avoided;
+  $('n-ignored').textContent = s.ignored; $('n-logged').textContent = s.logged; $('n-alerts').textContent = s.alerts;
+  const d = s.frames - lastFrames; lastFrames = s.frames;
+  S.ambient = Math.min(1.4, 0.2 + d / 20);
+  S.frames = s.frames;
+});
+const post = url => fetch(url, { method: 'POST' });
+let covered = false;
+async function toggleCover() {
+  covered = !covered;
+  await post(`/demo/cover/hero/${covered ? 'on' : 'off'}`);
+  $('coverBtn').textContent = covered ? 'Uncover hero lens' : 'Cover hero lens';
+}
+
+// ---- render loop -------------------------------------------------------------------------------------------
+function hexA(hex, a) {
+  if (hex.startsWith('rgba')) return hex;
+  const n = parseInt(hex.slice(1), 16);
+  return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${a})`;
+}
+function roundRect(x, y, w, h, r) {
+  ctx.beginPath(); ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath();
+}
+function tracePath(e, r = 8) {
+  const p = e.pts; ctx.beginPath(); ctx.moveTo(p[0].x, p[0].y);
+  for (let i = 1; i < p.length - 1; i++) ctx.arcTo(p[i].x, p[i].y, p[i + 1].x, p[i + 1].y, Math.min(r, e.lens[i - 1] / 2, e.lens[i] / 2));
+  ctx.lineTo(p[p.length - 1].x, p[p.length - 1].y);
+}
+function drawArrow(e, color) {
+  const a = pointAt(e, 0.985), b = e.pts[e.pts.length - 1], ang = Math.atan2(b.y - a.y, b.x - a.x);
+  ctx.save(); ctx.translate(b.x, b.y); ctx.rotate(ang); ctx.strokeStyle = color; ctx.lineWidth = 1.2; ctx.setLineDash([]);
+  ctx.beginPath(); ctx.moveTo(-6, -3.5); ctx.lineTo(0, 0); ctx.lineTo(-6, 3.5); ctx.stroke(); ctx.restore();
+}
+function drawLabel(e, hot) {
+  if (!e.label) return;
+  let i = e.lseg;
+  if (i === undefined) { i = 0; for (let k = 1; k < e.lens.length; k++) if (e.lens[k] > e.lens[i]) i = k; }
+  const a = e.pts[i], b = e.pts[i + 1], x = (a.x + b.x) / 2, y = (a.y + b.y) / 2;
+  ctx.font = `500 9.5px ${FONT.mono}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  const tw = ctx.measureText(e.label).width + 10;
+  ctx.fillStyle = C.paper; ctx.fillRect(x - tw / 2, y - 7, tw, 14);
+  ctx.fillStyle = hot ? (e.tint || e.color) : '#8d8777'; ctx.fillText(e.label, x, y + 0.5);
+}
+function drawCard(c, cx, cy, w, alpha = 1) {
+  if (c.text) {                                                          // a ticket: words, not pixels
+    ctx.save(); ctx.globalAlpha = alpha;
+    ctx.font = `500 10.5px ${FONT.mono}`; const tw = ctx.measureText(c.text).width + 16, th = 19;
+    ctx.shadowColor = 'rgba(40,34,20,.22)'; ctx.shadowBlur = 8; ctx.shadowOffsetY = 2;
+    ctx.fillStyle = C.card; roundRect(cx - tw / 2, cy - th / 2, tw, th, 9.5); ctx.fill();
+    ctx.shadowColor = 'transparent'; ctx.strokeStyle = c.color; ctx.lineWidth = 1.3; ctx.stroke();
+    ctx.fillStyle = c.color; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(c.text, cx, cy + 0.5);
+    ctx.restore(); return th;
+  }
+  const bmp = c.bmp, bw = bmp ? (bmp.naturalWidth || bmp.width) : 4, bh = bmp ? (bmp.naturalHeight || bmp.height) : 3;
+  const k = w / Math.max(bw, bh); w = bw * k; const h = bh * k;      // w bounds the longer side
+  ctx.save(); ctx.globalAlpha = alpha;
+  ctx.shadowColor = 'rgba(40,34,20,.28)'; ctx.shadowBlur = 10; ctx.shadowOffsetY = 3;
+  ctx.fillStyle = '#fbf9f4'; roundRect(cx - w / 2 - 3, cy - h / 2 - 3, w + 6, h + 6, 3); ctx.fill();
+  ctx.shadowColor = 'transparent';
+  if (bmp) {
+    if (c.blur) { ctx.save(); roundRect(cx - w / 2, cy - h / 2, w, h, 2); ctx.clip(); ctx.filter = 'blur(3px) saturate(.5)'; ctx.drawImage(bmp, cx - w / 2 - 3, cy - h / 2 - 3, w + 6, h + 6); ctx.restore(); }
+    else ctx.drawImage(bmp, cx - w / 2, cy - h / 2, w, h);
+  }
+  ctx.strokeStyle = c.color; ctx.lineWidth = 1.2;
+  if (c.blur) ctx.setLineDash([3, 3]);
+  roundRect(cx - w / 2 - 3, cy - h / 2 - 3, w + 6, h + 6, 3); ctx.stroke(); ctx.setLineDash([]);
+  if (c.stamp !== null && c.stamp !== undefined) { ctx.strokeStyle = c.stamp ? C.ok : C.bad; ctx.lineWidth = 2; ctx.strokeRect(cx - w / 2, cy - h / 2, w, h); }
+  ctx.restore();
+  return h;
+}
+function drawBoundary() {
+  const x = L.g3, y0 = R.board.t + 24, y1 = R.board.b;
+  ctx.save(); ctx.setLineDash([3, 6]); ctx.strokeStyle = 'rgba(27,30,34,.3)'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(x, y0); ctx.lineTo(x, y1); ctx.stroke(); ctx.setLineDash([]);
+  ctx.save(); ctx.translate(x, (y0 + y1) / 2); ctx.rotate(-Math.PI / 2);
+  ctx.font = `500 9.5px ${FONT.mono}`; ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
+  const t = 'crops only · never the frame', tw = ctx.measureText(t).width + 12;
+  ctx.fillStyle = C.paper; ctx.fillRect(-tw / 2, -12, tw, 13);
+  ctx.fillStyle = '#6f695d'; ctx.fillText(t, 0, -2); ctx.restore(); ctx.restore();
+}
+function drawRails(t) {
+  for (const e of Object.values(E)) {
+    const hot = e.hot > t;
+    ctx.save();
+    ctx.strokeStyle = hot ? e.tint || e.color : C.rail; ctx.lineWidth = hot ? 1.7 : 1;
+    ctx.setLineDash(e.dash ? [5, 4] : []); tracePath(e); ctx.stroke();
+    drawArrow(e, hot ? e.tint || e.color : C.rail);
+    ctx.restore();
+    drawLabel(e, hot);
+  }
+  for (const p of S.particles) {
+    const q = pointAt(p.e, p.t), q2 = pointAt(p.e, Math.min(1, p.t + 0.02));
+    const ang = Math.atan2(q2.y - q.y, q2.x - q.x), nx = -Math.sin(ang), ny = Math.cos(ang);
+    const x = q.x + nx * p.j * Math.sin(p.t * 6), y = q.y + ny * p.j * Math.sin(p.t * 6);
+    ctx.globalAlpha = 1 - Math.abs(p.t - 0.5) * 0.5;
+    ctx.fillStyle = p.e.tint || p.e.color;
+    if (p.e.shape === 'frame') { ctx.save(); ctx.translate(x, y); ctx.rotate(ang); ctx.globalAlpha *= 0.7; ctx.fillRect(-2.5, -1.8, 5, 3.6); ctx.restore(); }
+    else { ctx.beginPath(); ctx.arc(x, y, p.size, 0, Math.PI * 2); ctx.fill(); }
+  }
+  ctx.globalAlpha = 1;
+}
+function drawStageArt(t) {
+  if (S.docked) {                                                        // the specimen the Scout is holding
+    drawCard({ bmp: S.docked.bmp, color: S.docked.color }, S.docked.x, S.docked.y, Math.min(R.spec.w, R.spec.h) - 8, S.docked.alpha);
+    if (S.docked.fade) { S.docked.alpha *= 0.93; if (S.docked.alpha < 0.03) S.docked = null; }
+  }
+  const sc = R.scout, a = (t / 900) % (Math.PI * 2);                      // scan hand: the Scout never stops
+  ctx.strokeStyle = C.scout; ctx.lineWidth = 2; ctx.globalAlpha = 0.85;
+  ctx.beginPath(); ctx.arc(sc.r - 16, sc.t + 14, 5, a, a + 1.1); ctx.stroke(); ctx.globalAlpha = 1;
+  for (let i = 0; i < 8; i++) {                                           // evidence shelf
+    const s = shelfSlot(i), item = S.shelf[i];
+    if (item && item.bmp) drawCard({ bmp: item.bmp, color: item.color, blur: item.kind === 'face' }, s.x, s.y, Math.min(s.w, s.h) - 4, 1);
+    else { ctx.strokeStyle = 'rgba(27,30,34,.16)'; ctx.setLineDash([2, 3]); ctx.strokeRect(s.x - s.w / 2, s.y - s.h / 2, s.w, s.h); ctx.setLineDash([]); }
+  }
+}
+function drawFeed(t) {
+  const view = wideImg.parentElement.getBoundingClientRect(), m = imgMap(wideImg), Rr = m.r;
+  if (!Rr.width) return;
+  ctx.save(); ctx.beginPath(); ctx.rect(view.left, view.top, view.width, view.height); ctx.clip();
+  if (!REDUCED) {
+    const sy = Rr.top + ((t / 2800) % 1) * (Rr.height + 80) - 40;
+    const g = ctx.createLinearGradient(0, sy - 40, 0, sy + 40);
+    g.addColorStop(0, 'rgba(120,180,235,0)'); g.addColorStop(0.5, 'rgba(120,180,235,.14)'); g.addColorStop(1, 'rgba(120,180,235,0)');
+    ctx.fillStyle = g; ctx.fillRect(Rr.left, sy - 40, Rr.width, 80);
+  }
+  ctx.strokeStyle = 'rgba(255,255,255,.45)'; ctx.lineWidth = 1.5; const c = 12, pad = 8;
+  for (const [x, y, sx, sy2] of [[Rr.left + pad, Rr.top + pad, 1, 1], [Rr.right - pad, Rr.top + pad, -1, 1], [Rr.left + pad, Rr.bottom - pad, 1, -1], [Rr.right - pad, Rr.bottom - pad, -1, -1]]) {
+    ctx.beginPath(); ctx.moveTo(x, y + sy2 * c); ctx.lineTo(x, y); ctx.lineTo(x + sx * c, y); ctx.stroke();
+  }
+  if (S.zoom) {
+    const k = easeOut(Math.min(1, (t - S.zoom.t0) / S.zoom.ms));
+    const bb = S.zoom.from.map((v, i) => v + (S.zoom.to[i] - v) * k);
+    const p = bboxToPage(wideImg, bb);
+    ctx.setLineDash([6, 5]); ctx.strokeStyle = S.zoom.color || C.director; ctx.lineWidth = 1.5; ctx.strokeRect(p.x, p.y, p.w, p.h); ctx.setLineDash([]);
+    ctx.fillStyle = 'rgba(0,0,0,.4)';
+    ctx.fillRect(Rr.left, Rr.top, Rr.width, p.y - Rr.top); ctx.fillRect(Rr.left, p.y + p.h, Rr.width, Rr.bottom - p.y - p.h);
+    ctx.fillRect(Rr.left, p.y, p.x - Rr.left, p.h); ctx.fillRect(p.x + p.w, p.y, Rr.right - p.x - p.w, p.h);
+  }
+  for (const b of S.boxes) {
+    if (b.alpha < 0.02) continue;
+    const p = bboxToPage(wideImg, b.bb), color = b.flashColor || b.color;
+    ctx.globalAlpha = b.alpha; ctx.strokeStyle = color; ctx.lineWidth = b.weight || 2;
+    if (b.dash) ctx.setLineDash([4, 4]);
+    const pulse = b.dash ? 1 : 1 + 0.03 * Math.sin(t / 120);
+    const w = p.w * pulse, h = p.h * pulse, x = p.x + (p.w - w) / 2, y = p.y + (p.h - h) / 2;
+    ctx.strokeRect(x, y, w, h); ctx.setLineDash([]);
+    if (!b.dash && b.label) {
+      ctx.fillStyle = hexA(color, 0.14); ctx.fillRect(x, y, w, h);
+      ctx.font = `500 10px ${FONT.mono}`; const tw = ctx.measureText(b.label).width + 10;
+      ctx.fillStyle = color; ctx.fillRect(x, y - 15, tw, 15);
+      ctx.fillStyle = '#fbf9f4'; ctx.textAlign = 'left'; ctx.textBaseline = 'middle'; ctx.fillText(b.label, x + 5, y - 7);
+    }
+    ctx.globalAlpha = 1;
+    if (b.alpha < 1) b.alpha *= 0.9;
+  }
+  S.boxes = S.boxes.filter(b => b.alpha >= 0.02);
+  ctx.restore();
+}
+function step(t) {
+  ctx.clearRect(0, 0, innerWidth, innerHeight);
+  if (E.frames && !REDUCED && Math.random() < S.ambient * 0.05) spawnParticle(E.frames);
+  for (const e of Object.values(E)) if (e.hot > t && !REDUCED && Math.random() < 0.6) spawnParticle(e);
+  for (const p of S.particles) p.t += p.v;
+  S.particles = S.particles.filter(p => p.t < 1);
+  if (S.particles.length > 400) S.particles.splice(0, S.particles.length - 400);
+  for (const b of S.bursts) { b.x += b.vx; b.y += b.vy; b.vx *= 0.93; b.vy *= 0.93; b.a -= 0.025; }
+  S.bursts = S.bursts.filter(b => b.a > 0);
+
+  if (E.frames) {
+    drawFeed(t); drawBoundary(); drawRails(t); drawStageArt(t);
+    for (const b of S.bursts) { ctx.globalAlpha = b.a; ctx.fillStyle = b.color; ctx.beginPath(); ctx.arc(b.x, b.y, b.size, 0, Math.PI * 2); ctx.fill(); }
+    ctx.globalAlpha = 1;
+    for (const c of S.cards) {
+      const k = ease(Math.min(1, (t - c.t0) / c.ms));
+      const segs = c.pts.length - 1, f = k * segs, i = Math.min(segs - 1, Math.floor(f)), u = f - i;
+      const a = c.pts[i], b = c.pts[i + 1];
+      const x = a.x + (b.x - a.x) * u, y = a.y + (b.y - a.y) * u;
+      const scale = c.text ? 1 : 1 - 0.2 * Math.sin(k * Math.PI);
+      drawCard(c, x, y, c.w * scale);
+      if (k >= 1) { c.finished = true; c.done(); }
+    }
+    S.cards = S.cards.filter(c => !c.finished);
+  }
+  requestAnimationFrame(step);
+}
+layout();
+requestAnimationFrame(step);
+</script>
+</body>
+</html>

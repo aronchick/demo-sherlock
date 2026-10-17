@@ -56,6 +56,13 @@ Press **Break the next tool call**, **Corrupt next tool args** or **Cover hero l
 Evidence lands in `snapshots/<incident>/` (`EVIDENCE_DIR` overrides). The face crop is stored for a human only:
 no model ever sees it, and nothing identifies or describes the person.
 
+**Data flow view.** `http://localhost:8000/pipeline` shows each investigation as it moves: the camera feeds
+into the Scout, only a ticket and then a crop cross to the models, and the decision lands in Ignored, Logged
+or Alert while an incident record fills in stage by stage. It only reads the existing `/events` and `/stream`
+endpoints and loads no network resources (its fonts are vendored under `dashboard/static/fonts/`, SIL OFL).
+The footer notes that Expanso Edge processes this data and Expanso Cloud deploys and monitors it, and says
+"not connected" until you set `SHERLOCK_EXPANSO=connected` for a run where an Edge pipeline really is doing so.
+
 ## vLLM on Brev (Config A default)
 1. On the Brev GPU box (1x H100/A100 80GB), start both vLLM containers:
 ```bash

@@ -7,6 +7,8 @@ from unittest.mock import Mock
 
 import pytest
 import uvicorn
+from fastapi import FastAPI
+from fastapi.testclient import TestClient
 from sherlock.dashboard import server
 
 from sherlock import orchestrator
@@ -26,7 +28,7 @@ def test_dashboard_cli_bind_host(monkeypatch, host, expected):
     monkeypatch.setattr(sys, "path", sys.path.copy())
     sherlock = Mock()
     create_sherlock = Mock(return_value=sherlock)
-    app = object()
+    app = FastAPI()
     make_app = Mock(return_value=app)
     serve = Mock()
     monkeypatch.setattr(orchestrator, "Sherlock", create_sherlock)
@@ -38,3 +40,4 @@ def test_dashboard_cli_bind_host(monkeypatch, host, expected):
     sherlock.start.assert_called_once_with()
     make_app.assert_called_once_with(sherlock)
     serve.assert_called_once_with(app, host=expected, port=8123, log_level="warning")
+    assert TestClient(app).get("/pipeline").status_code == 200  # the data-flow view is on the served app

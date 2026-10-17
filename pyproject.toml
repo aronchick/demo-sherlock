@@ -44,4 +44,4 @@ package-dir = { "" = "sherlock" }
 where = ["sherlock"]
 
 [tool.setuptools.package-data]
-"sherlock.dashboard" = ["static/*"]
+"sherlock.dashboard" = ["static/*", "static/fonts/*"]

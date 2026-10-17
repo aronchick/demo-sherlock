@@ -102,6 +102,7 @@ body[data-mode="live"] .mode b { color: var(--ok); }
 .cam[data-covered="true"] { border-color: var(--warn); }
 .cam[data-unavailable="true"] { border-color: var(--err); }
 .cam[data-unavailable="true"] .empty { color: var(--err); }
+.cam[data-unconfigured="true"] { border-style: dashed; }
 .cam[data-role="zoom"] figcaption .icon { color: var(--face); }
 .cam[data-role="zoom"][data-subject="face"] figcaption { color: var(--face); }
 .cam .reticle { position: absolute; inset: 0; pointer-events: none; opacity: 0; transition: opacity .2s; }

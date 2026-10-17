@@ -192,6 +192,81 @@ def test_mode_names_the_scout_detector_that_runs(tmp_path, monkeypatch):
     assert scout_backend(tmp_path, mock=True, synthetic=False) == "motion"  # mock without a scene
 
 
+# app.js against a stand-in DOM (any unknown property is a callable stub), fed one
+# runtime's /mode, /cameras and /reports and then a first stats event.
+RUN_APP_JS = r"""
+{  // a block: app.js declares its own top-level names in this same global scope
+const {script, routes} = JSON.parse(process.argv[1]);
+const handler = {
+  get(t, k) {
+    if (k === Symbol.toPrimitive) return () => '';
+    if (k === 'then') return undefined;
+    if (!(k in t)) t[k] = stub();
+    return t[k];
+  },
+  apply: () => stub(),
+  construct: () => stub(),
+};
+const stub = (init = {}) => new Proxy(Object.assign(function () {}, init), handler);
+const els = {};
+const el = id => (els[id] ??= stub({id, textContent: '', title: '', hidden: false, src: '', dataset: {}, disabled: false}));
+let stats = null;
+Object.assign(globalThis, {
+  document: stub({getElementById: el, createElement: () => stub({dataset: {}}), body: stub({dataset: {}})}),
+  matchMedia: () => ({matches: false}), requestAnimationFrame: () => 0, setInterval: () => 0,
+  devicePixelRatio: 1, getComputedStyle: () => stub(), ResizeObserver: function () { return stub(); },
+  EventSource: function () { return stub({addEventListener: (type, fn) => { if (type === 'stats') stats = fn; }}); },
+  fetch: async url => {
+    const body = routes[url.split('?')[0]];
+    return {ok: body !== undefined, status: body === undefined ? 404 : 200, json: async () => body};
+  },
+});
+require('vm').runInThisContext(require('fs').readFileSync(script, 'utf8'), {filename: script});
+setTimeout(() => {
+  stats({data: JSON.stringify({frames: 0})});
+  const tile = c => ({mark: el('cam-' + c).dataset.unconfigured ? 'not in this run'
+                        : el('cam-' + c).dataset.unavailable ? 'unavailable' : 'open',
+                      stream: el('img-' + c).src.split('?')[0]});
+  console.log(JSON.stringify({pill: el('pill').textContent, hero: tile('hero'), scout1: tile('scout1')}));
+}, 50);
+}
+"""
+
+
+def board_cameras(tmp_path, *, mock: bool, synthetic: bool, cameras: list[str]) -> dict:
+    """What the board shows once a runtime with these cameras answers and streams."""
+    cfg = Config(mock=mock, cameras=[CameraSpec(name, "fake", "synthetic") for name in cameras])
+    client = TestClient(make_app(Sherlock(cfg, synthetic=synthetic, evidence_dir=str(tmp_path))))
+    routes = {path: client.get(path).json() for path in ("/mode", "/cameras", "/reports")}
+    arg = {"script": str(pathlib.Path(STATIC) / "app.js"), "routes": routes}
+    run = subprocess.run(["node", "-e", RUN_APP_JS, json.dumps(arg)], capture_output=True, text=True,
+                         timeout=30, check=True)
+    return json.loads(run.stdout)
+
+
+@needs_node
+def test_board_counts_only_the_cameras_the_run_opened(tmp_path, monkeypatch):
+    class FakeYolo:  # ultralytics is not installed for mock runs or the test gate
+        def __init__(self, model_path, *, conf=0.35):
+            pass
+
+    monkeypatch.setattr(scout_module, "YoloScout", FakeYolo)
+    monkeypatch.setenv("MODEL_SERVER", "vLLM")  # a live /mode must not probe model servers
+    monkeypatch.delenv("SCOUT_MISLABEL", raising=False)
+    # A one-camera live run: scout1 was never configured, so it is not watched or streamed.
+    assert board_cameras(tmp_path, mock=False, synthetic=False, cameras=["hero"]) == {
+        "pill": "MONITORING · 1 CAMERA",
+        "hero": {"mark": "open", "stream": "/stream/wide/hero"},
+        "scout1": {"mark": "not in this run", "stream": ""},
+    }
+    # The two-camera synthetic run watches both.
+    assert board_cameras(tmp_path, mock=True, synthetic=True, cameras=["hero", "scout1"]) == {
+        "pill": "MONITORING · 2 CAMERAS",
+        "hero": {"mark": "open", "stream": "/stream/wide/hero"},
+        "scout1": {"mark": "open", "stream": "/stream/wide/scout1"},
+    }
+
+
 def test_board_labels_every_scout_detector_by_name():
     app_js = (pathlib.Path(STATIC) / "app.js").read_text()
     table = re.search(r"const SCOUT = \{(.*?)\n\};", app_js, re.DOTALL).group(1)

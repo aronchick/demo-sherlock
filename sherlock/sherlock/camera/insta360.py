@@ -78,9 +78,9 @@ def _env_float(key: str, default: float) -> float:
     return float(os.environ.get(key, default))
 
 
-def _env_pids(key: str) -> tuple[int, ...]:
+def _env_pids(key: str, default: tuple[int, ...] = GIMBAL_PIDS) -> tuple[int, ...]:
     raw = os.environ.get(key, "")
-    return tuple(int(p, 16) for p in raw.split(",") if p.strip()) or GIMBAL_PIDS
+    return tuple(int(p, 16) for p in raw.split(",") if p.strip()) or default
 
 
 @dataclass
@@ -105,25 +105,27 @@ class Tuning:
     cmd_timeout_s: float = 2.0      # INSTA360_CMD_TIMEOUT_S: gimbal silent this long = failed
 
     @classmethod
-    def from_env(cls) -> Tuning:
-        d = cls()
+    def from_env(cls, prefix: str = "INSTA360", base: Tuning | None = None) -> Tuning:
+        """`base` overridden by <prefix>_* variables; another camera family reuses the
+        same knobs under its own prefix and defaults."""
+        d = base or cls()
         return cls(
-            transport=os.environ.get("INSTA360_TRANSPORT", d.transport),
-            pids=_env_pids("INSTA360_PID"),
-            v4l2_device=os.environ.get("INSTA360_V4L2_DEVICE", d.v4l2_device),
-            hfov_deg=_env_float("INSTA360_HFOV_DEG", d.hfov_deg),
-            fill=_env_float("INSTA360_FILL", d.fill),
-            max_zoom=_env_float("INSTA360_MAX_ZOOM", d.max_zoom),
-            units_per_deg=_env_float("INSTA360_UNITS_PER_DEG", d.units_per_deg),
-            pan_sign=_env_float("INSTA360_PAN_SIGN", d.pan_sign),
-            tilt_sign=_env_float("INSTA360_TILT_SIGN", d.tilt_sign),
-            settle_s=_env_float("INSTA360_SETTLE_S", d.settle_s),
-            slew_deg_s=_env_float("INSTA360_SLEW_DEG_S", d.slew_deg_s),
-            zoom_settle_s=_env_float("INSTA360_ZOOM_SETTLE_S", d.zoom_settle_s),
-            home_after_s=_env_float("INSTA360_HOME_AFTER_S", d.home_after_s),
-            home_pan=_env_float("INSTA360_HOME_PAN", d.home_pan),
-            home_tilt=_env_float("INSTA360_HOME_TILT", d.home_tilt),
-            cmd_timeout_s=_env_float("INSTA360_CMD_TIMEOUT_S", d.cmd_timeout_s),
+            transport=os.environ.get(f"{prefix}_TRANSPORT", d.transport),
+            pids=_env_pids(f"{prefix}_PID", d.pids),
+            v4l2_device=os.environ.get(f"{prefix}_V4L2_DEVICE", d.v4l2_device),
+            hfov_deg=_env_float(f"{prefix}_HFOV_DEG", d.hfov_deg),
+            fill=_env_float(f"{prefix}_FILL", d.fill),
+            max_zoom=_env_float(f"{prefix}_MAX_ZOOM", d.max_zoom),
+            units_per_deg=_env_float(f"{prefix}_UNITS_PER_DEG", d.units_per_deg),
+            pan_sign=_env_float(f"{prefix}_PAN_SIGN", d.pan_sign),
+            tilt_sign=_env_float(f"{prefix}_TILT_SIGN", d.tilt_sign),
+            settle_s=_env_float(f"{prefix}_SETTLE_S", d.settle_s),
+            slew_deg_s=_env_float(f"{prefix}_SLEW_DEG_S", d.slew_deg_s),
+            zoom_settle_s=_env_float(f"{prefix}_ZOOM_SETTLE_S", d.zoom_settle_s),
+            home_after_s=_env_float(f"{prefix}_HOME_AFTER_S", d.home_after_s),
+            home_pan=_env_float(f"{prefix}_HOME_PAN", d.home_pan),
+            home_tilt=_env_float(f"{prefix}_HOME_TILT", d.home_tilt),
+            cmd_timeout_s=_env_float(f"{prefix}_CMD_TIMEOUT_S", d.cmd_timeout_s),
         )
 
 
@@ -204,8 +206,9 @@ class MacUSBTransport(PTZTransport):
 
     name = "usb-iokit"
 
-    def __init__(self, pids: tuple[int, ...] = GIMBAL_PIDS, ct_unit: int = CT_UNIT, iface: int = 0):
-        self.pids, self.ct_unit, self.iface = pids, ct_unit, iface
+    def __init__(self, pids: tuple[int, ...] = GIMBAL_PIDS, ct_unit: int = CT_UNIT, iface: int = 0,
+                 vid: int = INSTA360_VID, label: str = "Insta360 gimbal"):
+        self.pids, self.ct_unit, self.iface, self.vid, self.label = pids, ct_unit, iface, vid, label
         self.pid: int | None = None
         self._usb = None
         self._h = None
@@ -218,12 +221,12 @@ class MacUSBTransport(PTZTransport):
         except ImportError as e:
             raise TransportError(f"link-ctl USB backend unavailable ({e}); uv pip install link-ctl") from e
         for pid in self.pids:
-            h = usb.open_vc_interface(vid=INSTA360_VID, pid=pid, iface_num=self.iface)
+            h = usb.open_vc_interface(vid=self.vid, pid=pid, iface_num=self.iface)
             if h is not None:
                 self._usb, self._h, self.pid = usb, h, pid
                 return
-        want = ", ".join(f"{INSTA360_VID:04x}:{p:04x}" for p in self.pids)
-        raise TransportError(f"no Insta360 gimbal on USB (looked for {want})")
+        want = ", ".join(f"{self.vid:04x}:{p:04x}" for p in self.pids)
+        raise TransportError(f"no {self.label} on USB (looked for {want})")
 
     def request(self, req: int, sel: int, length: int, unit: int | None = None) -> bytes:
         """Raw UVC GET_* request; public so the probe can read anything."""
@@ -235,10 +238,11 @@ class MacUSBTransport(PTZTransport):
             raise TransportError(f"UVC request 0x{req:02x} unit {unit} sel 0x{sel:02x} failed")
         return data
 
-    def _set(self, sel: int, payload: bytes) -> None:
+    def _set(self, sel: int, payload: bytes, unit: int | None = None) -> None:
         self.open()
+        unit = self.ct_unit if unit is None else unit
         ok, _ = self._usb.control_request(self._h, _REQ_OUT, SET_CUR, sel << 8,
-                                          (self.ct_unit << 8) | self.iface, data=payload)
+                                          (unit << 8) | self.iface, data=payload)
         if not ok:  # the camera owns close(): it may be reopening this transport
             raise TransportError(f"UVC SET_CUR sel 0x{sel:02x} rejected")
 
@@ -402,18 +406,19 @@ class Insta360Camera(Camera):
     cropping the home view where the pose points (`simulate_optics`)."""
 
     HOME_SNAPSHOT_WAIT = 5  # after a move with no snapshot, home after at most 5x home_after_s
+    backend = "insta360"
 
     def __init__(self, name: str, source: str | None, transport: PTZTransport | None = None,
                  tuning: Tuning | None = None, frames=None, simulate_optics: bool | None = None):
         self.name = name
-        self.tuning = tuning or Tuning.from_env()
+        self.tuning = tuning or self._tuning_from_env()
         synthetic = source in (None, "synthetic")
         if not synthetic and frames is None:
             source = resolve_source(str(source))  # v4l2 transport needs the index too
         self.src = frames or (SyntheticSource() if synthetic else _FrameSource(str(source)))
         self.simulate_optics = synthetic if simulate_optics is None else simulate_optics
         if transport is None:
-            transport = FakeTransport() if synthetic else make_transport(str(source), self.tuning)
+            transport = FakeTransport() if synthetic else self._make_transport(str(source))
         self.transport = transport
         self.ranges = FALLBACK_RANGES
         self.home = Pose(self.tuning.home_pan, self.tuning.home_tilt, 1.0)
@@ -515,8 +520,10 @@ class Insta360Camera(Camera):
 
     def describe(self) -> dict:
         d = super().describe()
-        d.update(backend="insta360",
+        d.update(backend=self.backend,
                  ptz=self.transport.name if self._connected else f"offline: {self.ptz_error}")
+        if not self._connected:  # the board labels the hero tile with this, not "PTZ"
+            d["warning"] = "PTZ OFFLINE"
         return d
 
     def close(self) -> None:
@@ -529,6 +536,12 @@ class Insta360Camera(Camera):
         self.transport.close()
 
     # --- internals -----------------------------------------------------------------
+    def _tuning_from_env(self) -> Tuning:
+        return Tuning.from_env()
+
+    def _make_transport(self, source: str) -> PTZTransport:
+        return make_transport(source, self.tuning)
+
     def _read(self, pose: Pose, newer_than: float = 0.0) -> np.ndarray:
         f = self.src.read(newer_than=newer_than)
         return self._optics(f, pose) if self.simulate_optics else f
@@ -555,12 +568,20 @@ class Insta360Camera(Camera):
             a, b = raw[0] * sign / u, raw[1] * sign / u
             return min(a, b), max(a, b)
 
-        zmax = min(self.tuning.max_zoom, r.zoom[1] / self._zoom_1x())
+        zmax = min(self.tuning.max_zoom, self._zoom_top())
         return deg(r.pan, self.tuning.pan_sign), deg(r.tilt, self.tuning.tilt_sign), zmax
 
     def _zoom_1x(self) -> int:
         """Raw zoom value for 1x: the reported minimum (100 on the Link family)."""
         return self.ranges.zoom[0] if self.ranges.zoom[0] > 0 else 100
+
+    def _zoom_top(self) -> float:
+        """Zoom factor at the reported raw maximum. The Link family's raw value is the
+        factor times 100, so 400 is 4x."""
+        return self.ranges.zoom[1] / self._zoom_1x()
+
+    def _zoom_raw(self, factor: float) -> int:
+        return round(factor * self._zoom_1x())
 
     def _io(self, fn: Callable[[], T]) -> T:
         """Run one transport call, giving up after cmd_timeout_s. A hung USB
@@ -610,7 +631,7 @@ class Insta360Camera(Camera):
                 tilt_raw = round(target.tilt * tn.units_per_deg * tn.tilt_sign)
                 self._io(lambda: self.transport.set_pantilt(pan_raw, tilt_raw))
             if force or target.zoom != self.pose.zoom:
-                zoom_raw = round(target.zoom * self._zoom_1x())
+                zoom_raw = self._zoom_raw(target.zoom)
                 self._io(lambda: self.transport.set_zoom(zoom_raw))
         except (TransportError, OSError) as e:
             self._connected = False

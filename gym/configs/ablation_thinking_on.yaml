@@ -1,5 +1,7 @@
 # Ablation 3 (Thinking Mode Swap): enable_thinking=true vs enable_thinking=false on Nemotron 3.5 Lightning
-# Generative parameter budget: 30.0B (Nemotron-3.5-Lightning-30B-A3B) + 2.25B (SmolVLM-Instruct) = 32.25B <= 33B
+# Generative parameters by model card: 30B (Nemotron-3.5-Lightning-30B-A3B) + 2.25B (SmolVLM-Instruct) = 32.25B <= 33B.
+# By checkpoint tensor count: 31.58B (MTP excluded, never loaded) + 2.25B = 33.82B, over the 33B cap.
+# The budget fields below use the model-card figures (see README "Parameter budget and speculation").
 sherlock:
   resources_servers:
     sherlock:
@@ -47,4 +49,4 @@ sherlock_agent:
       director_model_name: nvidia/NVIDIA-Nemotron-3.5-Lightning-30B-A3B-NVFP4
       director_params_b: 30.0
       vlm_model_name: HuggingFaceTB/SmolVLM-Instruct
-      vlm_params_b: 2.25
+      vlm_params_b: 2.246

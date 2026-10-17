@@ -438,17 +438,20 @@ function layout() {
   const g1 = (R.cam.r + R.zl.l) / 2, g3 = (R.zl.r + R.zm.l) / 2, g5 = (R.zm.r + R.out.l) / 2;
   L.g3 = g3;
   const w = R.wide, c = R.crop, s = R.scout, bk = R.bucket, d = R.director, an = R.analyst, v = R.verifier;
-  const lane = (s.b + bk.t) / 2;
+  const lane = bk.t - 26;
+  const contextY = Math.max(c.t + 48, Math.min(c.cy - 16, lane));
+  const analystY = Math.min(an.cy, lane - 18);
   const controlY = Math.max(s.b + 25, d.b + 12);
   const wy = w.t + (w.b - w.t) * 0.4;
   E.frames = mk([P(w.r, wy), P(g1, wy), P(g1, s.cy), P(s.l, s.cy)], { shape: 'frame', color: C.rail, lseg: 1 });
   E.uplink = mk([P(s.r, s.cy), P(g3, s.cy), P(g3, d.cy), P(d.l, d.cy)], { color: C.scout });
   E.lookat = mk([P(d.l, d.b - 16), P(g3 - 12, d.b - 16), P(g3 - 12, controlY), P(w.r, controlY)],
     { label: 'Camera control · pan / tilt / zoom', color: C.director, lseg: 2, labelOffset: -14, prominent: true });
-  E.crop = mk([P(c.r, c.cy - 7), P(g1 - 6, c.cy - 7), P(g1 - 6, lane), P(g3 - 7, lane), P(g3 - 7, an.cy), P(an.l, an.cy)],
-    { label: 'Scene + object + person', color: C.analyst, lseg: 2, labelOffset: 12 });
+  E.context = mk([P(c.r, contextY), P(g1 - 6, contextY), P(g1 - 6, lane), P(g3, lane)],
+    { label: 'Scene + object + person', color: C.analyst, lseg: 2, labelOffset: -13 });
+  E.crop = mk([P(g3, lane), P(g3, analystY), P(an.l, analystY)], { color: C.analyst });
   E.seal = mk([P(c.r, c.cy + 7), P(g1 + 6, c.cy + 7), P(g1 + 6, bk.cy), P(bk.l, bk.cy)], { color: C.benign, lseg: 1 });
-  E.judge = mk([P(c.r, c.cy), P(g1, c.cy), P(g1, lane + 24), P(g3, lane + 24), P(g3, v.cy), P(v.l, v.cy)], { color: C.verifier });
+  E.judge = mk([P(g3, lane), P(g3, v.cy), P(v.l, v.cy)], { color: C.verifier });
   E.assessA = mk([P(an.r, an.cy), P(g5 - 7, an.cy), P(g5 - 7, R.comparison.cy - 8), P(R.comparison.l, R.comparison.cy - 8)], {color: C.analyst});
   E.assessV = mk([P(v.r, v.cy), P(g5 + 7, v.cy), P(g5 + 7, R.comparison.cy + 8), P(R.comparison.l, R.comparison.cy + 8)], {color: C.verifier});
   E.store = mk([P(c.r, c.cy + 7), P(g1 + 6, c.cy + 7), P(g1 + 6, bk.cy), P(bk.l, bk.cy)], { color: C.benign, lseg: 1 });
@@ -544,6 +547,7 @@ const easeOut = t => 1 - Math.pow(1 - t, 3);
 const wait = ms => new Promise(r => setTimeout(r, ms));
 
 function flow(edge, ms, color) {
+  if (edge === 'crop' || edge === 'judge') flow('context', ms, color);
   const e = E[edge];
   e.hot = Math.max(e.hot, now() + ms);
   e.tint = color || null;
@@ -961,7 +965,7 @@ function drawRails(t) {
     ctx.save();
     ctx.strokeStyle = hot || e.prominent ? e.tint || e.color : C.rail; ctx.lineWidth = e.prominent ? 2.5 : (hot ? 1.5 : 1);
     ctx.setLineDash(e.dash ? [5, 4] : []); tracePath(e); ctx.stroke();
-    drawArrow(e, hot || e.prominent ? e.tint || e.color : C.rail);
+    if (e !== E.context) drawArrow(e, hot || e.prominent ? e.tint || e.color : C.rail);
     ctx.restore();
     drawLabel(e, hot);
   }

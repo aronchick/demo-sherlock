@@ -43,7 +43,7 @@ class Director:
                 r = self.client.chat.completions.create(
                     model=self.model, messages=msgs, tools=TOOL_SCHEMAS,
                     tool_choice="auto", temperature=0.1, max_tokens=300, extra_body=self.extra)
-            except Exception as e:  # endpoint down: degrade, don't die
+            except Exception as e:  # noqa: BLE001 - endpoint down: degrade to RuleDirector, don't die
                 BUS.emit("director", f"LLM unreachable ({e.__class__.__name__}); using rule-based fallback")
                 return RuleDirector(self.tools).investigate(detection)
             m = r.choices[0].message

@@ -52,6 +52,13 @@ sherlock/dashboard/  FastAPI SSE + MJPEG + the judge-facing UI
 tests/               End-to-end mock run incl. tool failure recovery and covered-lens fallback
 ```
 
+## Development
+The lint gate is one command, and it must report zero findings:
+```bash
+uvx ruff@0.17.1 check .
+```
+`ruff.toml` pins this exact version (`required-version`; other versions refuse to run) and spells out its rule set, so every machine gets the same answer.
+
 ## Demo script (3 min)
 
 Use a red fedora with a black band and a black Red Hat / NVIDIA baseball cap.

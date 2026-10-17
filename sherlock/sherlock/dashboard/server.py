@@ -4,7 +4,6 @@ import asyncio
 import json
 import pathlib
 import queue
-import time
 
 from fastapi import FastAPI
 from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse

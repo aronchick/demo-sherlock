@@ -128,7 +128,7 @@ class IncidentStore:
             for name in report.get("evidence_unsaved", []):
                 record["custody"].append({"stage": "evidence", "t": time.time(),
                     "detail": f"{name} was NOT saved; no stored artifact available"})
-            camera = report.get("camera") or next((a.get("camera") for a in record["artifacts"] if a.get("camera")), None)
+            camera = report.get("trigger", {}).get("camera") or report.get("camera") or next((a.get("camera") for a in record["artifacts"] if a.get("camera")), None)
             mock = bool(models.get("mock"))
             areas = {"hero": "North lobby", "scout1": "East corridor", "scout2": "Loading entrance"}
             record["location"] = {"camera": camera, "building": "Building A" if mock else None,

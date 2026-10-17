@@ -347,7 +347,7 @@ async def run_single_ablation(
         detected_name = str(model_server_meta.get("name") or "").strip()
         host_name = str(model_server_meta.get("host") or "laptop").strip()
         if detected_name:
-            prefix = "local" if host_name == "laptop" else host_name
+            prefix = "local" if host_name == "laptop" else "brev"
             runtime_label = f"{prefix}_{detected_name.lower()}"
         else:
             runtime_label = f"{host_name}_endpoint"

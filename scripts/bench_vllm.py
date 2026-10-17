@@ -370,17 +370,33 @@ def metric_values(body: str, model: str) -> dict:
         "vllm:kv_cache_usage_perc",
         "vllm:gpu_cache_usage_perc",
     }
-    for family in text_string_to_metric_families(body):
-        for sample in family.samples:
-            if (
-                sample.name not in names
-                or sample.labels.get("model_name", model) != model
-            ):
-                continue
-            if math.isfinite(sample.value):
-                values.setdefault(sample.name, []).append(sample.value)
+    samples = [
+        sample
+        for family in text_string_to_metric_families(body)
+        for sample in family.samples
+        if sample.name in names and math.isfinite(sample.value)
+    ]
+    labels = {s.labels["model_name"] for s in samples if "model_name" in s.labels}
+    # vLLM labels metrics with the first served model name. Requests can use
+    # another alias (director/vlm). Only infer that alias for a single model.
+    selected = (
+        model if model in labels else next(iter(labels)) if len(labels) == 1 else None
+    )
+    for sample in samples:
+        if "model_name" not in sample.labels or sample.labels["model_name"] == selected:
+            values.setdefault(sample.name, []).append(sample.value)
     # KV utilization is a gauge per engine; preserve the highest engine value.
-    return {name: max(v) if "usage" in name else sum(v) for name, v in values.items()}
+    return {
+        "values": {
+            name: max(v) if "usage" in name else sum(v) for name, v in values.items()
+        },
+        "matched_model_name": selected,
+        "model_match": "exact"
+        if selected == model
+        else "single_model_alias"
+        if selected
+        else "unlabelled_or_unmatched",
+    }
 
 
 async def scrape(client: httpx.AsyncClient, url: str, model: str) -> dict:
@@ -388,11 +404,11 @@ async def scrape(client: httpx.AsyncClient, url: str, model: str) -> dict:
         async with asyncio.timeout(5):
             response = await client.get(url, timeout=5)
         response.raise_for_status()
-        values = metric_values(response.text, model)
+        snapshot = metric_values(response.text, model)
         return {
-            "available": bool(values),
-            "values": values,
-            "error": None if values else "no_matching_metrics",
+            "available": bool(snapshot["values"]),
+            **snapshot,
+            "error": None if snapshot["values"] else "no_matching_metrics",
         }
     except (httpx.HTTPError, ValueError, TimeoutError) as exc:
         return {"available": False, "values": {}, "error": type(exc).__name__}

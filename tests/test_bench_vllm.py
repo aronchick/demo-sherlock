@@ -346,7 +346,9 @@ def test_metrics_filter_models_and_detect_reset():
         'vllm:kv_cache_usage_perc{model_name="director",engine="0"} 0.2\n'
         'vllm:kv_cache_usage_perc{model_name="director",engine="1"} 0.3\n'
     )
-    values = bench.metric_values(raw, "director")
+    snapshot = bench.metric_values(raw, "director")
+    values = snapshot["values"]
+    assert snapshot["model_match"] == "exact"
     assert values["vllm:prefix_cache_queries_total"] == 10
     assert values["vllm:kv_cache_usage_perc"] == 0.3
     before = {"values": values}
@@ -359,6 +361,16 @@ def test_metrics_filter_models_and_detect_reset():
     assert bench.metrics_delta(before, reset)["prefix_cache_hit_rate"] is None
     assert bench.metrics_delta(before, before)["prefix_cache_hit_rate"] is None
     assert bench.metrics_delta({"values": {}}, before)["prefix_cache_hit_rate"] is None
+
+
+def test_metrics_match_single_model_served_under_an_alias():
+    raw = 'vllm:prefix_cache_hits_total{model_name="org/model-repo"} 12\n'
+    snapshot = bench.metric_values(raw, "director")
+    assert snapshot["values"]["vllm:prefix_cache_hits_total"] == 12
+    assert snapshot["matched_model_name"] == "org/model-repo"
+    assert snapshot["model_match"] == "single_model_alias"
+    ambiguous = raw + 'vllm:prefix_cache_hits_total{model_name="another/model"} 50\n'
+    assert bench.metric_values(ambiguous, "director")["values"] == {}
 
 
 def test_summary_denominators_and_ab_guards():

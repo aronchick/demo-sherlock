@@ -6,7 +6,6 @@
 /** @typedef {{incident:string, action:string, state?:string, claim:string, t:number, verified?:boolean, comparison?:{status:string,reason:string,claim:string,analyst_supports:boolean|null,verifier_supports:boolean|null}, evidence_camera?:string, trigger?:{camera:string}, artifacts:Artifact[], custody:CustodyEvent[], models?:{mock?:boolean,scout?:string,director?:string,analyst?:string,verifier?:string}, notification:{simulated:boolean,status:string,delivered_at?:number,acknowledged_at?:number}}} Incident */
 
 (() => {
-  const phone = document.getElementById('phone-content');
   const phoneError = document.getElementById('phone-error');
   const shelf = document.getElementById('evidence-links');
   const cloudShelf = document.getElementById('cloud-evidence-links');
@@ -18,9 +17,7 @@
   const isCustody = location.pathname === '/custody';
   window.name = isPhone ? 'sherlock-phone' : isCustody ? 'sherlock-evidence' : 'sherlock-flow';
   let page = 0;
-  let phoneRevision = '';
   let shelfRevision = '';
-  let acknowledgePending = false;
   const pageSize = 8;
 
   /** @param {string} tag @param {string} [text] @param {string} [className] */
@@ -74,24 +71,6 @@
     return link;
   }
 
-  /** @param {Incident} record */
-  async function acknowledge(record) {
-    if (acknowledgePending) return;
-    acknowledgePending = true;
-
-    try {
-      const updated = await read(`/incidents/${encodeURIComponent(record.incident)}/acknowledge`, { method: 'POST' });
-      phoneRevision = '';
-      renderPhone(updated);
-
-      if (phoneError) phoneError.textContent = '';
-    } catch {
-      if (phoneError) phoneError.textContent = 'Acknowledgment was not saved. Try again.';
-    } finally {
-      acknowledgePending = false;
-    }
-  }
-
   /** @param {Incident|undefined} record */
   function renderPhone(record) {
     const indicator = document.getElementById('phone-indicator');
@@ -101,53 +80,6 @@
       indicator.dataset.status = record?.notification.status || 'waiting';
       summary.textContent = record ? (record.notification.status === 'acknowledged' ? 'Investigating' : 'Alert received') : 'Waiting for an alert';
     }
-
-    if (!phone) return;
-    const revision = record ? `${record.incident}:${record.notification.status}` : 'empty';
-
-    if (revision === phoneRevision) return;
-    phoneRevision = revision;
-    phone.replaceChildren();
-
-    if (!record) {
-      phone.append(element('h2', 'Ready for an alert'), element('p', 'Verified incidents will appear here. Routine detections do not notify the responder.'));
-
-      return;
-    }
-
-    const acknowledged = record.notification.status === 'acknowledged';
-    phone.append(element('p', acknowledged ? 'ACKNOWLEDGED · SIMULATED' : 'DELIVERED · SIMULATED', `phone-status${acknowledged ? ' acknowledged' : ''}`));
-    phone.append(element('h2', record.claim || 'Verified incident'));
-    phone.append(element('p', `Detected on ${record.trigger?.camera || 'unrecorded camera'} · ${timestamp(record.t)}`));
-    const gallery = element('div', '', 'phone-gallery');
-    const original = record.artifacts.find(item => item.name === 'original_frame');
-    const crops = record.artifacts.filter(item => ['weapon_crop', 'object_crop', 'face_crop'].includes(item.name));
-
-    for (const artifact of [...(original ? [original] : []), ...crops]) {
-      const picture = pictureLink(record, artifact);
-      picture.className = artifact.name === 'original_frame' ? 'phone-scene' : 'phone-crop';
-      const image = picture.querySelector('img');
-
-      if (image) image.classList.remove('face-preview');
-      picture.append(element('span', artifact.name === 'original_frame' ? 'Original scene' : artifact.name === 'face_crop' ? 'Face · human review' : 'Object'));
-      gallery.append(picture);
-    }
-
-    phone.append(gallery);
-    phone.append(element('p', `${record.incident} · ${record.models?.mock ? 'Mock' : 'Live'}`, 'phone-id'));
-    const link = document.createElement('a');
-    link.href = custodyUrl(record.incident);
-    link.target = 'sherlock-evidence';
-    link.textContent = 'View evidence and chain of custody';
-    phone.append(link);
-    const button = document.createElement('button');
-    button.type = 'button';
-    button.textContent = acknowledged ? 'Investigating · acknowledgment saved' : 'Acknowledge · Investigating';
-    button.disabled = acknowledged;
-    button.addEventListener('click', () => { void acknowledge(record); });
-    phone.append(button);
-
-    if (acknowledged) phone.append(element('p', `Acknowledged ${timestamp(record.notification.acknowledged_at)}`));
   }
 
   /** @param {Incident[]} records */
@@ -173,13 +105,12 @@
     return paragraph;
   }
 
-  /** @param {Incident} record */
-  function renderCustody(record) {
-    if (!custody) return;
+  /** @param {Incident} record @param {HTMLElement} [custody] */
+  function renderCustody(record, custody = document.createElement('div')) {
     custody.replaceChildren();
     const summary = element('div', '', 'incident-summary');
     summary.append(fact('Incident', record.incident), fact('Trigger camera', record.trigger?.camera || 'Not recorded'), fact('Evidence camera', record.evidence_camera || 'Not recorded'), fact('Analysis', record.models?.mock ? 'Mock run' : 'Live run'), fact('Decision', record.state === 'investigating' ? 'Investigating' : record.action), fact('Recorded', timestamp(record.t)));
-    custody.append(summary, element('h2', record.claim || 'Incident evidence'));
+    custody.append(summary, element('h2', record.claim || 'Incident evidence'), custodyCryptography(record));
 
     if (record.comparison) {
       const comparison = element('section', '', 'comparison-record');
@@ -191,7 +122,7 @@
 
     for (const artifact of record.artifacts) {
       const figure = element('figure', '', `artifact${artifact.name === 'original_frame' ? ' original-scene' : ''}`);
-      figure.id = `artifact-${artifact.name}`;
+      figure.id = `artifact-${record.incident}-${artifact.name}`;
       const img = document.createElement('img');
       img.src = artifact.url;
       img.alt = artifact.name.replaceAll('_', ' ');
@@ -215,7 +146,7 @@
       if (artifact.source_artifact) {
         const association = element('p', `${artifact.relationship === 'subsequent_capture' ? 'Later camera capture, associated with' : 'Source image:'} `);
         const source = document.createElement('a');
-        source.href = `#artifact-${artifact.source_artifact}`;
+        source.href = `#artifact-${record.incident}-${artifact.source_artifact}`;
         source.textContent = artifact.source_artifact.replaceAll('_', ' ');
         association.append(source);
         figure.append(association);
@@ -271,47 +202,49 @@
     if (!custody) return;
 
     try {
-      if (selected) {
-        renderCustody(await read(`/incidents/${encodeURIComponent(selected)}`));
-      } else {
-        /** @type {Incident[]} */
-        const records = await read(`/incidents?limit=${pageSize + 1}&offset=${page * pageSize}`);
-        const list = element('div', '', 'incident-list');
+      /** @type {Incident[]} */
+      const records = selected ? [await read(`/incidents/${encodeURIComponent(selected)}`)] : await read(`/incidents?limit=${pageSize + 1}&offset=${page * pageSize}`);
+      const list = element('div', '', 'incident-rows');
 
-        for (const record of records.slice(0, pageSize)) {
-          const link = document.createElement('a');
-          link.href = custodyUrl(record.incident);
-    link.target = 'sherlock-evidence';
-          const artifact = record.artifacts.find(item => item.name !== 'face_crop');
+      for (const record of records.slice(0, pageSize)) {
+        const row = document.createElement('details');
+        row.className = 'incident-row';
+        const summary = document.createElement('summary');
+        summary.append(element('span', timestamp(record.t), 'row-time'), element('strong', record.claim || record.action), element('span', custodyLocation(record), 'row-location'), element('span', record.state === 'investigating' ? 'Investigating' : record.action, 'row-outcome'), element('span', custodyIntegrity(record), 'row-integrity'));
+        const detail = element('div', '', 'incident-expanded');
+        row.append(summary, detail);
+        let loaded = false;
+        row.addEventListener('toggle', async () => {
+          if (!row.open || loaded) return;
+          loaded = true;
+          detail.textContent = 'Loading full record…';
 
-          if (artifact && artifact.integrity !== 'missing') {
-            const img = document.createElement('img');
-            img.src = artifact.url;
-            img.alt = artifact.name.replaceAll('_', ' ');
-            link.append(img);
+          try {
+            renderCustody(await read(`/incidents/${encodeURIComponent(record.incident)}`), detail);
+          } catch {
+            detail.textContent = 'Record unavailable. Collapse and expand to retry.';
+            loaded = false;
           }
+        });
+        list.append(row);
 
-          const copy = element('div');
-          copy.append(element('h2', record.claim || record.action), element('p', `${record.incident} · ${record.trigger?.camera || 'Camera not recorded'} · ${timestamp(record.t)}`), element('p', `${record.state === 'investigating' ? 'Investigating' : record.action} · ${record.artifacts.length} saved images · View chain of custody`));
-          link.append(copy);
-          list.append(link);
-        }
-
-        if (!records.length) list.append(element('p', 'No incident records yet. New investigations will appear here.'));
-        custody.replaceChildren(list);
-        const navigation = document.getElementById('incident-pagination');
-
-        if (navigation) navigation.hidden = false;
-        const previous = document.getElementById('previous-incidents');
-        const next = document.getElementById('next-incidents');
-
-        if (previous instanceof HTMLButtonElement) previous.disabled = page === 0;
-
-        if (next instanceof HTMLButtonElement) next.disabled = records.length <= pageSize;
-        const label = document.getElementById('incident-page-label');
-
-        if (label) label.textContent = `Page ${page + 1}`;
+        if (selected) row.open = true;
       }
+
+      if (!records.length) list.append(element('p', 'No incident records yet. New investigations will appear here.'));
+      custody.replaceChildren(list);
+      const navigation = document.getElementById('incident-pagination');
+
+      if (navigation) navigation.hidden = Boolean(selected);
+      const previous = document.getElementById('previous-incidents');
+      const next = document.getElementById('next-incidents');
+
+      if (previous instanceof HTMLButtonElement) previous.disabled = page === 0;
+
+      if (next instanceof HTMLButtonElement) next.disabled = records.length <= pageSize;
+      const label = document.getElementById('incident-page-label');
+
+      if (label) label.textContent = `Page ${page + 1}`;
 
       if (custodyError) custodyError.textContent = '';
     } catch {
@@ -325,7 +258,7 @@
       /** @type {Incident[]} */
       const alerts = await read('/incidents?limit=1&action=alert');
 
-      if (!acknowledgePending) renderPhone(alerts.find(record => record.notification.simulated && ['delivered', 'acknowledged'].includes(record.notification.status)));
+      renderPhone(alerts.find(record => record.notification.simulated && ['delivered', 'acknowledged'].includes(record.notification.status)));
 
       if (phoneError) phoneError.textContent = '';
 
@@ -349,6 +282,18 @@
     const link = target.closest('a');
 
     if (!(link instanceof HTMLAnchorElement) || !['sherlock-phone', 'sherlock-evidence', 'sherlock-flow'].includes(link.target)) return;
+
+    if (!isPhone && !isCustody && link.pathname === '/custody') {
+      const incident = new URL(link.href).searchParams.get('incident');
+
+      if (incident && !link.closest('dialog')) {
+        event.preventDefault();
+        void showCustodySummary(incident);
+
+        return;
+      }
+    }
+
     const tab = window.open(link.href, link.target);
 
     if (tab) {
@@ -368,7 +313,7 @@
     document.getElementById('previous-incidents')?.addEventListener('click', () => { page = Math.max(0, page - 1); void loadCustody(); });
     document.getElementById('next-incidents')?.addEventListener('click', () => { page += 1; void loadCustody(); });
     void loadCustody();
-  } else {
+  } else if (!isPhone) {
     void refresh();
     setInterval(() => { void refresh(); }, 2000);
   }

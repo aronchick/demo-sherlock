@@ -108,10 +108,15 @@ def make_app(sherlock: Sherlock) -> FastAPI:
     @app.get("/evidence/{incident}/{name}.png")
     @app.get("/evidence/{incident}/{name}.jpg")
     def evidence(incident: str, name: str):
-        if not _INCIDENT_ID.match(incident) or name not in _EVIDENCE_NAMES:
+        if not _INCIDENT_ID.match(incident) or (name not in _EVIDENCE_NAMES and not re.fullmatch(r"[a-f0-9]{64}", name)):
             raise HTTPException(404)
         try:
-            path = sherlock.evidence_path(incident, name)
+            if re.fullmatch(r"[a-f0-9]{64}", name):
+                path = sherlock.incidents.path(incident, name + ".png")
+                if not path.exists():
+                    path = sherlock.incidents.path(incident, name + ".jpg")
+            else:
+                path = sherlock.evidence_path(incident, name)
         except ValueError:
             raise HTTPException(404) from None
         if not path.is_file():
@@ -201,6 +206,28 @@ def make_app(sherlock: Sherlock) -> FastAPI:
             raise HTTPException(409, "No simulated notification to acknowledge") from None
         except OSError:
             raise HTTPException(503, "Acknowledgment could not be saved") from None
+
+    @app.get("/incidents/{incident}/signed-history")
+    def signed_history(incident: str):
+        try:
+            return JSONResponse(sherlock.incidents.signed_history(incident),
+                                headers={"Cache-Control": "no-store"})
+        except (OSError, ValueError, KeyError, TypeError):
+            raise HTTPException(404, "Signed history unavailable") from None
+
+    @app.post("/incidents/{incident}/respond")
+    async def respond(incident: str, request: Request):
+        try:
+            body = await request.json()
+            if not isinstance(body, dict):
+                raise TypeError("invalid response")
+            return sherlock.incidents.respond(incident, body.get("action"))
+        except FileNotFoundError:
+            raise HTTPException(404, "Incident unavailable") from None
+        except (ValueError, TypeError):
+            raise HTTPException(409, "Response is unavailable for this incident state or integrity") from None
+        except OSError:
+            raise HTTPException(503, "Response could not be saved") from None
 
     @app.get("/reports")
     def reports():

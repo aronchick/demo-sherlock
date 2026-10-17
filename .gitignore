@@ -25,3 +25,6 @@ results/ablation_stub_*.json
 /IMG_*.mov
 # Expanso node identity (scripts/expanso.sh); owner-only, never committed.
 .cloud-state/
+
+# Local evidence signing key; never committed.
+.signing-key

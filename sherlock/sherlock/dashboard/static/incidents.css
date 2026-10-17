@@ -165,3 +165,59 @@ a:focus-visible, button:focus-visible, summary:focus-visible { outline: 2px soli
   .cloud-thumbnails img { height: 28px; }
   .comparison strong { font-size: 13px; margin-block: 3px; }
 }
+
+/* Evidence uses expandable case rows; all extended content follows document flow. */
+.incident-rows { border-top: 1px solid var(--line); }
+.incident-row { border-bottom: 1px solid var(--line); }
+.incident-row > summary { display: grid; grid-template-columns: 150px minmax(130px, 1fr) minmax(120px, 1fr) 76px; gap: 8px 18px; align-items: center; cursor: pointer; padding: 18px 10px; }
+.incident-row > summary::before { content: '+'; font: 18px var(--mono); grid-column: 4; grid-row: 2; text-align: right; }
+.incident-row[open] > summary::before { content: '−'; }
+.incident-row > summary:hover { background: var(--card); }
+.incident-row > summary:focus-visible { outline: 2px solid var(--scout); outline-offset: 2px; }
+.row-time, .row-outcome, .row-integrity { font: 11px/1.5 var(--mono); }
+.row-time, .row-location { color: var(--dim); }
+.row-location { font-size: 13px; }
+.row-integrity { grid-column: 2 / 4; color: var(--dim); }
+.row-outcome { text-transform: uppercase; }
+.incident-expanded { padding: 12px 20px 32px; min-width: 0; border-top: 1px solid var(--line); }
+.cryptography-record { padding-block: 20px; border-block: 1px solid var(--line); margin: 24px 0; }
+.cryptography-record h2 { margin-top: 0; }
+.integrity-status { font: 600 13px/1.5 var(--mono); color: var(--ink); }
+.integrity-scope { color: var(--dim); font-size: 13px; max-width: 80ch; }
+.cryptography-record dl { display: grid; grid-template-columns: 210px minmax(0, 1fr); gap: 10px 20px; }
+.cryptography-record dt { font-size: 13px; color: var(--dim); }
+.cryptography-record dd { margin: 0; font: 12px/1.6 var(--mono); overflow-wrap: anywhere; }
+.record-disclosure { margin-top: 18px; border-top: 1px solid var(--line); padding-top: 14px; }
+.record-disclosure > summary { cursor: pointer; font-weight: 600; }
+.json-viewer { min-width: 0; }
+.json-viewer pre { white-space: pre-wrap; overflow-wrap: anywhere; word-break: break-word; font: 12px/1.7 var(--mono); background: var(--card); border: 1px solid var(--line); padding: 18px; margin-top: 14px; }
+.json-navigation { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; font: 11px/1.5 var(--mono); }
+.json-navigation button, .modal-close { background: var(--card); color: var(--ink); border: 1px solid var(--line); padding: 8px 12px; font: 12px/1.4 var(--sans); cursor: pointer; }
+.json-navigation button:disabled { opacity: .5; cursor: default; }
+.json-key { color: #255b83; }
+.json-string { color: #316347; }
+.json-number { color: #924619; }
+.json-literal { color: #813866; }
+.custody-modal { width: min(600px, calc(100vw - 32px)); max-height: none; padding: 24px; border: 1px solid var(--line); background: var(--card); color: var(--ink); font: 14px/1.5 var(--sans); border-radius: 8px; }
+.custody-modal::backdrop { background: rgb(8 12 16 / 72%); }
+.custody-modal h2 { font-size: 24px; line-height: 1.2; margin: 0 64px 14px 0; }
+.modal-close { float: right; }
+.custody-modal-content > img { display: block; width: 100%; height: min(190px, 27vh); object-fit: contain; background: var(--paper); }
+.modal-meta { color: var(--dim); font-size: 12px; margin: 10px 0; }
+.modal-decision { font-weight: 600; margin-bottom: 5px; }
+.custody-modal a { color: var(--scout); display: inline-block; margin-top: 12px; font-size: 13px; }
+@media (max-width: 600px) {
+  .incident-row > summary { grid-template-columns: minmax(0, 1fr) 76px; gap: 8px; }
+  .incident-row > summary strong, .row-location, .row-integrity { grid-column: 1; }
+  .incident-row > summary::before { grid-column: 2; grid-row: 2; }
+  .row-outcome { grid-column: 2; grid-row: 1; text-align: right; }
+  .incident-expanded { padding-inline: 0; }
+  .cryptography-record dl { grid-template-columns: minmax(0, 1fr); gap: 4px; }
+  .cryptography-record dd { margin-bottom: 12px; }
+  .custody-modal { padding: 16px; }
+  .custody-modal h2 { font-size: 20px; }
+}
+@media (max-height: 580px) {
+  .custody-modal-content > img { display: none; }
+  .custody-modal { padding-block: 12px; }
+}

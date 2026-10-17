@@ -192,7 +192,7 @@
         <div class="txt">
           <div class="kind">Detect</div>
           <div class="name">Scout</div>
-          <div class="sub" id="scoutSub">YOLO nano, every frame</div>
+          <div class="sub" id="scoutSub">detector not reported</div>
           <div class="count">seen <b id="frames">0</b></div>
         </div>
         <div class="spec" aria-hidden="true"></div>
@@ -340,7 +340,15 @@ const hosts = [...new Set(['director', 'analyst', 'verifier'].map(r => (M[r] || 
 const SV = CFG.servers || {}, roles = ['director', 'analyst', 'verifier'].map(r => SV[r] || {});
 const runs = roles.every(s => s.name) ? [...new Set(roles.map(s => s.name))].join(' + ') : 'models';
 $('modeTag').textContent = CFG.mock ? 'mock, in-process on this laptop' : runs + ' on ' + hosts.join(', ');
-$('laptopTag').textContent = 'scout ' + short((M.scout || {}).model);
+// The Scout is labelled from what /mode says runs (scene truth in a synthetic run),
+// never from SCOUT_BACKEND alone, so a synthetic run never claims YOLO.
+const showScout = backend => {
+  const scout = modelCards.scout(backend);
+  $('laptopTag').textContent = scout.tag ? 'scout ' + scout.tag : '';
+};
+showScout(null);
+fetch('/mode', {cache: 'no-store'}).then(r => r.ok ? r.json() : null)
+  .then(m => showScout(m && m.scout_backend)).catch(() => {});
 for (const r of ['director', 'analyst', 'verifier']) {
   const el = $(r + 'Sub'), base = el.textContent;
   el.textContent = base;

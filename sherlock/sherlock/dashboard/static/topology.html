@@ -77,7 +77,7 @@
       <div class="top"><div class="logo"><span class="mark"></span>Laptop</div><div class="site-sub" id="laptopSub">the camera is here; every frame stays here</div></div>
       <div class="body" id="laptopBody">
         <div class="unit" id="u-cameras" style="--c: var(--scout)"><div class="role">Cameras</div><div class="name" id="camNames"></div><div class="what">hero PTZ gimbal + scout webcam, every frame</div></div>
-        <div class="unit" id="u-scout" style="--c: var(--scout)"><div class="role">Detect · Scout</div><div class="name">YOLO nano</div><div class="model" id="m-scout"></div><div class="what">watches every frame in ~10 ms, decides when a model is worth calling</div><span class="ms"></span></div>
+        <div class="unit" id="u-scout" style="--c: var(--scout)"><div class="role">Detect · Scout</div><div class="name" id="n-scout">Scout</div><div class="model" id="m-scout"></div><div class="what">watches every frame in ~10 ms, decides when a model is worth calling</div><span class="ms"></span></div>
         <div class="unit" id="u-orch" style="--c: var(--ink)"><div class="role">Orchestrator + evidence</div><div class="name">Sherlock</div><div class="what">tool loop, camera control, snapshots/ on this disk, this dashboard</div></div>
       </div>
     </div>
@@ -107,6 +107,7 @@
   </footer>
 </div>
 
+<script src="/pipeline/assets/pipeline-models.js"></script>
 <script>
 'use strict';
 const CFG = __CFG_JSON__;
@@ -118,7 +119,15 @@ fetch('/cameras').then(r => r.json()).then(({ unavailable = [] }) => {  // confi
 
   if (out.size) $('camNames').textContent = (CFG.cameras || []).map(c => `${c.name} (${out.has(c.name) ? 'unavailable' : c.backend})`).join(' · ');
 }).catch(() => {});
-$('m-scout').textContent = (M.scout || {}).model || '';
+// The Scout is labelled from what /mode says runs, never from config alone.
+const showScout = backend => {
+  const scout = scoutIdentity(backend, (M.scout || {}).model || '');
+  $('n-scout').textContent = scout.name;
+  $('m-scout').textContent = backend === 'yolo' ? (M.scout || {}).model || '' : scout.runtime;
+};
+showScout(null);
+fetch('/mode', {cache: 'no-store'}).then(r => r.ok ? r.json() : null)
+  .then(m => showScout(m && m.scout_backend)).catch(() => {});
 $('m-director').textContent = (M.director || {}).model || '';
 $('m-analyst').textContent = (M.analyst || {}).model || '';
 if (M.verifier && M.analyst && M.verifier.model !== M.analyst.model) $('m-analyst').textContent += ' / ' + M.verifier.model;

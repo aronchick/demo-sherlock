@@ -14,15 +14,17 @@ One tiny model gates the expensive ones. The dashboard counts "VLM calls avoided
 
 ## Model lineup
 
-### Configuration A (default, ~32.25B generative parameters)
+### Configuration A (default: 32.25B generative parameters by model card, 33.82B by checkpoint tensor count)
 Every generative model runs on vLLM (`vllm/vllm-openai:v0.28.0`), covering both the NVIDIA Nemotron Lightning bounty and the Red Hat vLLM bounty. Speculative-decoding draft models (DSpark, DFlash, MTP) are disabled because draft weights count toward the parameter budget.
 
 | Role | Hugging Face Repo ID | Verified Parameters | Serving Details |
 | :--- | :--- | :--- | :--- |
-| **Director** | `nvidia/NVIDIA-Nemotron-3.5-Lightning-30B-A3B-NVFP4` | **30B total / 3B active** on model card (the BF16 safetensors metadata reports `31,577,937,344` including 270 embedded `mtp.layers.*` speculative draft tensors that vLLM does not load when speculative decoding is off) | vLLM on `:8001`, `--enable-auto-tool-choice --tool-call-parser qwen3_coder --reasoning-parser nemotron_v3`, thinking OFF by default (`DIRECTOR_THINKING=0` passes `chat_template_kwargs: {"enable_thinking": false}`) |
+| **Director** | `nvidia/NVIDIA-Nemotron-3.5-Lightning-30B-A3B-NVFP4` | **30B total / 3B active** on model card. The BF16 checkpoint's safetensors headers hold **31.58B** (`31,577,940,288`) without MTP and **32.91B** (`32,913,266,240`) with its 270 embedded `mtp.*` speculative draft tensors (`1,335,325,952`), which vLLM does not load when speculative decoding is off ([evidence](#parameter-budget-and-speculation)) | vLLM on `:8001`, `--enable-auto-tool-choice --tool-call-parser qwen3_coder --reasoning-parser nemotron_v3`, thinking OFF by default (`DIRECTOR_THINKING=0` passes `chat_template_kwargs: {"enable_thinking": false}`) |
 | **Analyst + Verifier** | `HuggingFaceTB/SmolVLM-Instruct` | **2.25B** (`2,246,272,880` safetensors parameters; `Idefics3ForConditionalGeneration` in vLLM v0.28.0) | Single shared vLLM instance on `:8002` (counted once). `HuggingFaceTB/SmolVLM2-2.2B-Instruct` (`2,246,784,880` params, `SmolVLMForConditionalGeneration`) is also supported |
 | **Scout** | `yolov8n.pt` (Ultralytics YOLOv8n) | **3.2M** (excluded) | Non-generative detector; excluded from the generative parameter total |
-| **Total (generative)** | | **32.25B** (30B + 2.25B, under the 33B hard cap) | Zero draft models |
+| **Total (generative)** | | **32.25B** by model card (30B + 2.25B, under the 33B hard cap); **33.82B** by tensor count without MTP (31.58B + 2.25B, **0.82B over the cap**); 35.16B counting the never-loaded MTP tensors | Zero draft models |
+
+A judge who counts checkpoint tensors puts Configuration A over the 33B cap. Under that count, the shared VLM must be at most **1.42B** (33B − 31.58B).
 
 *Why SmolVLM 2.2B instead of Moondream 2 (1.9B):* `vikhyatk/moondream2` (`1,927,237,104` parameters, `HfMoondream` / `moondream1`) is not in vLLM v0.28.0's supported models list (`vllm` v0.28.0 only implements `Moondream3ForCausalLM` for the 9B MoE `moondream/moondream3-preview`). `HuggingFaceTB/SmolVLM-Instruct` runs natively in vLLM v0.28.0 via `Idefics3ForConditionalGeneration`.
 
@@ -31,7 +33,7 @@ Configuration B swaps the Director and shared VLM via `.env` (see the commented-
 - **Director**: `nvidia/NVIDIA-Nemotron-Nano-9B-v2` (**8.89B**, `8,888,227,328` safetensors parameters) or `nvidia/NVIDIA-Nemotron-Nano-12B-v2` (**12.31B**, `12,310,001,152` safetensors parameters).
 - **Analyst + Verifier (shared)**: `nvidia/Llama-3.1-Nemotron-Nano-VL-8B-V1` (**8.72B**, `8,721,768,454` safetensors parameters; Llama-3.1-8B-Instruct + C-RADIOv2-H vision encoder, supported in vLLM v0.28.0 via `Llama_Nemotron_Nano_VL`).
 - **Total generative parameters**: **17.61B** (with Nano 9B v2) or **21.03B** (with Nano 12B v2).
-- **Tradeoff**: Trades the Nemotron 3.5 Lightning bounty for a larger 8.72B VLM on zoomed crops while staying well under budget. Do not combine Nemotron 3.5 Lightning (30B) with a 7–8B VLM (~38.7B total, over budget).
+- **Tradeoff**: Trades the Nemotron 3.5 Lightning bounty for a larger 8.72B VLM on zoomed crops while staying well under budget. Do not combine Nemotron 3.5 Lightning (30B) with a 7–8B VLM (38.72B by model card, 40.30B by tensor count; over budget either way).
 
 ## Run with nothing (sandbox, airplane, dead wifi)
 ```bash
@@ -169,6 +171,25 @@ not be submitted as vLLM performance evidence.
 
 Configuration A's model-card budget is approximately **32.25B** generative
 parameters: the 30B Director plus the shared 2.25B VLM, counted once.
+The checkpoint tensor count is higher. Summing tensor shapes in the 14
+safetensors shard headers of
+`nvidia/NVIDIA-Nemotron-3.5-Lightning-30B-A3B-BF16` gives:
+
+| Count | Director | + `SmolVLM-Instruct` (`2,246,272,880`) |
+|---|---:|---:|
+| Model card | 30B | 32.25B, under the cap |
+| Tensors without MTP | `31,577,940,288` (31.58B) | **33.82B, 0.82B over the cap** |
+| Tensors with 270 `mtp.*` (`1,335,325,952`) | `32,913,266,240` (32.91B) | 35.16B |
+
+Hugging Face's model page rounds the BF16 repository to about 31.6B. Its
+API total (`31,577,937,344`) also leaves out MTP and sits 2,944 below the
+header count, exactly the base model's 23 FP32 router-bias tensors of 128
+values each. The NVFP4 repository that `serve.sh` runs packs two FP4
+weights per `U8` byte, so its raw element count (19.71B) is not a parameter
+count; the BF16 checkpoint of the same model is the reference. Under the
+tensor count, the shared VLM must be at most 1.42B (33B − 31.58B) to stay
+under the cap.
+
 Speculative draft weights count toward the 33B cap. `brev/serve.sh` passes
 no `--speculative-config` / `-sc`, `--spec-method`, `--spec-model`,
 `--spec-tokens`, or other MTP/draft settings.
@@ -181,11 +202,12 @@ only overrides this when the checkpoint has `speculators_config`. The
 [Lightning NVFP4 configuration](https://huggingface.co/nvidia/NVIDIA-Nemotron-3.5-Lightning-30B-A3B-NVFP4/raw/main/config.json)
 inspected for this build has no such key and selects `NemotronHForCausalLM`.
 
-Lightning includes embedded MTP tensors, but the
+Lightning includes 270 embedded MTP tensors (1.34B parameters), but the
 [v0.28.0 NemotronH base-model loader](https://github.com/vllm-project/vllm/blob/v0.28.0/vllm/model_executor/models/nemotron_h.py)
 uses `AutoWeightsLoader(self, skip_prefixes=["mtp"])`. Those weights are
 skipped when loading the base model; their presence in the checkpoint does
-not enable MTP speculation. This is configuration and source-code evidence.
+not enable MTP speculation. The Director therefore loads the 31.58B count,
+not 32.91B. This is configuration and source-code evidence.
 Live container startup and its effective model configuration still need
 verification on the H100.
 
@@ -390,7 +412,7 @@ Sherlock includes a native [NeMo Gym](https://github.com/NVIDIA-NeMo/Gym) (`nemo
 3. **Reasoning mode (`thinking_on` vs `nemotron_lightning`)**: `enable_thinking: true` vs `enable_thinking: false` on `nvidia/NVIDIA-Nemotron-3.5-Lightning-30B-A3B-NVFP4`.
 4. **Director model (`qwen_director` vs `nemotron_lightning`)**: `Qwen/Qwen2.5-7B-Instruct` (7.6B) vs `nvidia/NVIDIA-Nemotron-3.5-Lightning-30B-A3B-NVFP4` (30B total / 3B active).
 
-Every configuration pairs the Director with `HuggingFaceTB/SmolVLM-Instruct` (2.25B) for the Analyst/Verifier VLM, keeping total generative parameters at or under the 33B limit (32.25B for Nemotron 3.5 Lightning configs; 9.85B for Qwen 2.5 7B).
+Every configuration pairs the Director with `HuggingFaceTB/SmolVLM-Instruct` (2.25B) for the Analyst/Verifier VLM. By model card that is 32.25B for the Nemotron 3.5 Lightning configs and 9.86B for Qwen 2.5 7B (`7,615,616,512` + `2,246,272,880`), both under the 33B limit. By checkpoint tensor count the Lightning configs are 33.82B, over the limit (see [Parameter budget and speculation](#parameter-budget-and-speculation)); the ablation runner's budget check uses the model-card figures.
 
 ### Run one ablation with one command
 
@@ -407,13 +429,13 @@ uv run python -m gym.run_ablation --all
 
 ### Ablation metrics (live runs pending Brev `DIRECTOR_BASE_URL` endpoint; local stub validation artifacts in `results/ablation_stub_*.json`)
 
-| Ablation Config | Swapped Component | Director Model | Total Gen Params | Prompt | Tools | Thinking | Tool-Call Validity | Task Success | Steps to Report | Time to Report (ms) |
+| Ablation Config | Swapped Component | Director Model | Total Gen Params (card / tensors) | Prompt | Tools | Thinking | Tool-Call Validity | Task Success | Steps to Report | Time to Report (ms) |
 |---|---|---|---:|---|---|---|---:|---:|---:|---:|
-| `prompt_v1` | System prompt (`v1`) | `Nemotron-3.5-Lightning-30B-A3B-NVFP4` | 32.25B | `system_v1` | `verbose` | `off` | TBD (live run pending) | TBD (live run pending) | TBD (live run pending) | TBD (live run pending) |
-| `terse_tools` | Tool schemas (`terse`) | `Nemotron-3.5-Lightning-30B-A3B-NVFP4` | 32.25B | `system_v2` | `terse` | `off` | TBD (live run pending) | TBD (live run pending) | TBD (live run pending) | TBD (live run pending) |
-| `thinking_on` | Thinking (`on`) | `Nemotron-3.5-Lightning-30B-A3B-NVFP4` | 32.25B | `system_v2` | `verbose` | `on` | TBD (live run pending) | TBD (live run pending) | TBD (live run pending) | TBD (live run pending) |
-| `qwen_director` | Model (`Qwen2.5-7B`) | `Qwen2.5-7B-Instruct` | 9.85B | `system_v2` | `verbose` | `off` | TBD (live run pending) | TBD (live run pending) | TBD (live run pending) | TBD (live run pending) |
-| `nemotron_lightning` | Reference (`v2` + `verbose` + `off`) | `Nemotron-3.5-Lightning-30B-A3B-NVFP4` | 32.25B | `system_v2` | `verbose` | `off` | TBD (live run pending) | TBD (live run pending) | TBD (live run pending) | TBD (live run pending) |
+| `prompt_v1` | System prompt (`v1`) | `Nemotron-3.5-Lightning-30B-A3B-NVFP4` | 32.25B / 33.82B | `system_v1` | `verbose` | `off` | TBD (live run pending) | TBD (live run pending) | TBD (live run pending) | TBD (live run pending) |
+| `terse_tools` | Tool schemas (`terse`) | `Nemotron-3.5-Lightning-30B-A3B-NVFP4` | 32.25B / 33.82B | `system_v2` | `terse` | `off` | TBD (live run pending) | TBD (live run pending) | TBD (live run pending) | TBD (live run pending) |
+| `thinking_on` | Thinking (`on`) | `Nemotron-3.5-Lightning-30B-A3B-NVFP4` | 32.25B / 33.82B | `system_v2` | `verbose` | `on` | TBD (live run pending) | TBD (live run pending) | TBD (live run pending) | TBD (live run pending) |
+| `qwen_director` | Model (`Qwen2.5-7B`) | `Qwen2.5-7B-Instruct` | 9.86B / 9.86B | `system_v2` | `verbose` | `off` | TBD (live run pending) | TBD (live run pending) | TBD (live run pending) | TBD (live run pending) |
+| `nemotron_lightning` | Reference (`v2` + `verbose` + `off`) | `Nemotron-3.5-Lightning-30B-A3B-NVFP4` | 32.25B / 33.82B | `system_v2` | `verbose` | `off` | TBD (live run pending) | TBD (live run pending) | TBD (live run pending) | TBD (live run pending) |
 
 ## Demo script (3 min)
 

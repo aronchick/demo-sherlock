@@ -291,6 +291,40 @@ verification on the H100.
 
 ### Run the benchmark
 
+To check the complete flow without a GPU or model endpoint:
+
+```bash
+uv sync
+just bench-stub
+just preflight-stub
+```
+
+`bench-stub` runs both workloads at concurrency 1, 4, 8 and 16.
+`preflight-stub` checks model readiness, sends the Director tool-call and
+JPEG smoke requests, then runs both sweeps and the A/B comparison. The
+cache-off/cache-on sequence is simulated: it never starts or stops Docker
+containers and demonstrates no caching benefit. The stub derives tool
+arguments from the request's current schemas; it performs no inference.
+
+Both commands start their own loopback-only server, override configured
+model endpoints for that run, and stop the server before returning. They
+force `evidence_kind: stub` and `execution_mode: local_stub`. Token counts
+and cache metrics are synthetic; timings measure only local protocol work.
+Outputs default to the ignored `.runtime/vllm-stub/`, outside the dashboard's
+`results/` directory. `--output-dir` can choose another directory, but
+`results/` and symlinks into it are rejected in stub mode. The dashboard
+also rejects the stub evidence marker if a report is copied there.
+
+The same entry points are available directly:
+
+```bash
+uv run scripts/bench_vllm.py --stub --metrics
+uv run scripts/brev_preflight.py --stub --mode ab --requests 16
+```
+
+The preflight recipe uses 16 requests per cell for a quick protocol check;
+pass `--requests 200` to either recipe to exercise larger result tables.
+
 Set `DIRECTOR_BASE_URL` and `ANALYST_BASE_URL` to the two OpenAI-compatible
 base URLs, including `/v1`. With those set, this is the complete command:
 

@@ -102,3 +102,11 @@ lint:
 
 # Lint, then test: what CI would run
 check: lint test
+
+# Judge-run protocol benchmark: no GPU; stub evidence stays outside results/
+bench-stub *args:
+    uv run scripts/bench_vllm.py --stub --metrics {{args}}
+
+# Judge-run readiness, smoke, sweep and simulated prefix-cache A/B; no Docker
+preflight-stub *args:
+    uv run scripts/brev_preflight.py --stub --mode ab --requests 16 {{args}}

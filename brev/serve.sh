@@ -56,7 +56,7 @@ if [[ "$DIRECTOR_PRESET" != "qwen" ]] || ! docker container inspect vlm >/dev/nu
   docker run -d --name vlm --gpus all --ipc=host -p 8002:8000 \
     -v ~/.cache/huggingface:/root/.cache/huggingface "$IMG" \
     --model "$VLM" --served-model-name "$VLM" vlm \
-    --max-model-len 8192 --gpu-memory-utilization 0.30 --max-num-seqs 8 --limit-mm-per-prompt image=1
+    --max-model-len 8192 --gpu-memory-utilization 0.30 --max-num-seqs 8 --limit-mm-per-prompt '{"image": 1}'
 fi
 
 echo "director ($DIRECTOR_PRESET): http://<brev-host>:8001/v1   vlm: http://<brev-host>:8002/v1"

@@ -6,7 +6,6 @@ import re
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
-
 from sherlock.dashboard.pipeline import mount_pipeline
 
 

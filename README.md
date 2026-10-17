@@ -374,7 +374,7 @@ When the Brev box or the venue network is out, run all three models on the lapto
 ```bash
 ollama pull nemotron-3.5-lightning:30b-mlx   # once, on a good network (19 GB); Ollama 0.40 or newer
 just local-up       # Director and VLM on 127.0.0.1; returns once both answer (about a minute)
-just local-live     # Sherlock against them; `just local-live --synthetic` rehearses with no camera
+just local-live     # Sherlock against them; `just local-live --synthetic` rehearses on hero + scout1
 just local-down     # stops exactly what local-up started; fails unless both ports are free
 ```
 `just local-status` shows what `local-up` started and whether each server answers.
@@ -394,7 +394,10 @@ downloads it and the 500M weights (about 1 GB). On any other machine `local-up` 
 
 `local-live` exports `DIRECTOR_BASE_URL`, `ANALYST_BASE_URL`, `VERIFIER_BASE_URL`, the three `*_MODEL` names and
 `VERIFIER_MARGIN=-1.0`, which win over a `.env` that points at Brev; `eval "$(scripts/local.sh env)"` prints the same
-exports for running `run.py` yourself. -1.0 is the demo's Verifier operating point for the 500M on tight crops (the
+exports for running `run.py` yourself. With `--synthetic` it also sets
+`CAMERAS=hero:fake:synthetic,scout1:fake:synthetic` (unless the shell sets `CAMERAS`), so the board shows both cameras
+and a covered hero hands off to scout1. It stops before starting if the dashboard port (`--port`, else
+`DASHBOARD_PORT`, else 8000) is in use. -1.0 is the demo's Verifier operating point for the 500M on tight crops (the
 code default stays 0.0): 62 of 70 weapons confirmed instead of 57, and still 0 of 20 knife claims accepted on cups and
 bottles, the closest at -2.6, 1.6 log-odds below the bar. The cost is more wrong-weapon claims accepted on a real
 weapon, 8 to 12 of 70. Twenty benign crops is a small sample: retune on the room's own props before the demo. Set

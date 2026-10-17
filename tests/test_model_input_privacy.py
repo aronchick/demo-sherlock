@@ -3,6 +3,7 @@ Verifier clients talk to a loopback OpenAI-compatible stub that records every re
 tests read the exact image bytes each model received."""
 import base64
 import json
+import pathlib
 import threading
 import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -13,7 +14,10 @@ import numpy as np
 import pytest
 from sherlock.agents.vision import Analyst, Verifier, _b64
 from sherlock.config import Endpoint
-from test_weapon_flow import _frozen_sherlock, _knife_det
+from sherlock.events import BUS
+from test_weapon_flow import _frozen_sherlock, _knife_det, drain
+
+STATIC = pathlib.Path(__file__).resolve().parents[1] / "sherlock" / "sherlock" / "dashboard" / "static"
 
 YES = {"content": [{"token": "Yes", "logprob": -0.05, "bytes": None,
                     "top_logprobs": [{"token": "Yes", "logprob": -0.05, "bytes": None},
@@ -132,3 +136,21 @@ def test_the_verifier_alone_decides(tmp_path, said, yes):
         assert report["description"] == "" and report["analyst_mismatch"] == "Cake."
     else:
         assert "analyst_mismatch" not in report and report["description"] == (said or "")
+
+
+def test_the_on_screen_privacy_claims_hold(tmp_path, endpoint):
+    """The board captions the head crop 'not analyzed', the chain narrates 'review crop · no
+    model', and the topology says 'no frame ever crosses' to the model servers. The words
+    are pinned here to what the model requests actually carried."""
+    assert "head · not analyzed" in (STATIC / "index.html").read_text()
+    assert "no frame ever crosses" in (STATIC / "topology.html").read_text()
+    ep, bodies, _ = endpoint
+    s = _frozen_sherlock(tmp_path)
+    s.tools.analyst, s.tools.verifier = Analyst(ep), Verifier(ep)
+    q = BUS.subscribe()
+    s._investigate(_knife_det())
+    narrated = [e.msg for e in drain(q) if e.stage == "narration"]
+    assert "storing the review crop · no model" in narrated
+    ev = s.tools.evidence
+    assert set(_images(bodies)) == {f"data:image/jpeg;base64,{_b64(ev['weapon_crop'])}"}
+    assert ev["face_crop"].shape != ev["weapon_crop"].shape or not np.array_equal(ev["face_crop"], ev["weapon_crop"])

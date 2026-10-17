@@ -249,3 +249,19 @@ def test_backend_name_registers_and_parses(monkeypatch):
     cam = build_camera("hero", "insta360", "synthetic")  # --synthetic runs need no hardware
     assert isinstance(cam, Insta360Camera) and isinstance(cam.transport, FakeTransport)
     cam.close()
+
+
+def test_synthetic_runs_simulate_the_optics_so_look_at_lands_on_the_box():
+    class Marker(Frames):
+        def read(self, newer_than: float = 0.0) -> np.ndarray:
+            f = np.zeros((H, W, 3), np.uint8)
+            f[500:560, 1000:1060] = 255  # off-centre target
+            return f
+
+    cam = Insta360Camera("hero", "0", transport=FakeTransport(), frames=Marker(),
+                         tuning=Tuning(home_after_s=0, settle_s=0), simulate_optics=True)
+    cam.wide_frame()
+    cam.look_at((1000, 500, 1060, 560))
+    img = cam.snapshot()
+    assert img[H // 2, W // 2].min() == 255  # target is dead centre
+    assert (img == 255).mean() > 0.04        # and magnified 4x

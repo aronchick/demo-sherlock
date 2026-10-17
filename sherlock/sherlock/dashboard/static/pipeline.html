@@ -691,6 +691,8 @@ function onReport(ev) {
     }
     const verdict = d.verified === true ? ' · verified' : d.verified === false ? ' · not verified' : '';
     caption(`${d.claim || ''}${verdict}${calls ? ' · ' + calls : ''}`);
+
+    if (d.analyst_mismatch) $('c-analyst').querySelector('.v').textContent = WITHHELD;   // in case it played first
     cellSet('decision', action === 'alert' ? 'ALERT, evidence kept' : 'logged, evidence kept', calls + secs);
     if (S.docked) S.docked.fade = true;
     await wait(500);
@@ -700,6 +702,13 @@ function onReport(ev) {
 }
 
 // ---- SSE ------------------------------------------------------------------------------------------------
+// The report withholds the Analyst's words when they name another object than the confirmed
+// claim (a knife read as 'Cake.'). It usually lands before the Analyst beat plays, so the
+// beat, which reads ev.msg when it runs, shows the note instead of the words.
+const WITHHELD = 'named another object · not shown';
+
+let analystEv = null;
+
 const es = new EventSource('/events');
 es.onmessage = e => {
   const ev = JSON.parse(e.data), m = ev.msg || '';
@@ -707,10 +716,13 @@ es.onmessage = e => {
     case 'scout': return onScout(ev);
     case 'director': return afterScout(() => onDirector(ev));
     case 'tool': return afterScout(() => onTool(ev));
-    case 'analyst': return afterScout(() => onAnalyst(ev));
+    case 'analyst': analystEv = ev; return afterScout(() => onAnalyst(ev));
     case 'verifier': return afterScout(() => onVerifier(ev));
     case 'system':
-      if (m.startsWith('REPORT')) return afterScout(() => onReport(ev));
+      if (m.startsWith('REPORT')) {
+        if (ev.data && ev.data.analyst_mismatch && analystEv) analystEv.msg = WITHHELD;
+        return afterScout(() => onReport(ev));
+      }
       if (/covered$/.test(m) && /^hero /.test(m)) $('wideFrame').classList.toggle('covered', !/uncovered/.test(m));
       if (/will fail|corrupted arguments/.test(m)) { glow('camera', 1, C.bad); badge('camera', /fail/.test(m) ? 'armed: fail' : 'armed: garbage', C.bad, 1500); }
       if (/already handled/.test(m)) {

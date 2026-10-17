@@ -107,6 +107,11 @@ const live = c => !covered[c] && !(c in unavailable);
 
 const feedBuffer = [];
 
+// The latest Analyst event and its feed row: the report can still withhold its words.
+const WITHHELD = "named another object in the crop · not shown";
+
+let analystEv = null, analystLi = null;
+
 /* ----------------------------------------------------------------- feed */
 const feed = $("feed");
 
@@ -147,6 +152,8 @@ function addRow(ev) {
     s.textContent = text;
     li.append(s);
   }
+
+  if (ev === analystEv) analystLi = li;
 
   li.classList.add("fresh");
   feed.querySelector(".empty")?.remove();
@@ -316,7 +323,11 @@ function showIncident(d) {
 
   inc.dataset.state = d.action === "alert" ? "alert" : "log";
   $("inc-title").textContent = (d.action === "alert" ? "WEAPON ALERT · " : "LOGGED · ") + d.label.toUpperCase();
-  $("inc-claim").textContent = d.description || d.claim;
+  // The claim leads: it is what the Verifier answered. The Analyst's words follow, and the
+  // server leaves them out when they name another object (a confirmed knife read as "Cake.").
+  $("inc-claim").textContent = d.claim ? d.claim[0].toUpperCase() + d.claim.slice(1) : "";
+  $("inc-said").hidden = !d.description;
+  $("inc-said").querySelector("span").textContent = d.description || "";
   meta.textContent = "";
   v.dataset.ok = !!d.verified;
   v.textContent = d.verified ? "verified" : "not verified";
@@ -749,6 +760,13 @@ function onReport(d) {
   }
 
   stepState(6, "done", tier);
+
+  if (d.analyst_mismatch && analystEv) {
+    analystEv.msg = WITHHELD; // a row still buffered behind a paused feed renders it this way
+
+    if (analystLi) analystLi.querySelector(".msg").textContent = WITHHELD;
+  }
+
   $("node-director").dataset.active = false;
   $("node-director").dataset.fault = false;
   looking(null);
@@ -783,6 +801,8 @@ function onReport(d) {
 
 function onEvent(ev) {
   const d = ev.data || {};
+
+  if (ev.stage === "analyst") [analystEv, analystLi] = [ev, null];
 
   addRow(ev);
 

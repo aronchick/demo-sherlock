@@ -4,6 +4,7 @@ recovery from bad/failed calls, verification, graceful fallback."""
 from __future__ import annotations
 
 import json
+import re
 import time
 
 from openai import OpenAI
@@ -37,6 +38,36 @@ def weapon_claim(label: str) -> str:
     just that the Analyst's description fits the crop (a cup described as a cup
     is a supported claim, and still no reason to alert)."""
     return _WEAPON_CLAIMS.get(label, f"a {label}")
+
+
+# Words that name the same object as a claim does. A claim outside these groups (an LLM
+# Director's free text, a benign object) matches on any shared content word instead.
+_SAME_OBJECT = (frozenset({"knife", "knive", "blade", "cleaver", "dagger", "machete"}),
+                frozenset({"scissor", "shear"}),
+                frozenset({"bat", "club"}),
+                frozenset({"gun", "pistol", "rifle", "firearm", "handgun"}))
+_ANY_WEAPON = frozenset({"weapon"}).union(*_SAME_OBJECT)  # the fine-tuned Scout's catch-all class
+_FILLER = frozenset({"a", "an", "the", "of", "pair", "on", "in", "with", "and", "object", "this", "it"})
+
+
+def _words(text: str) -> set[str]:
+    # Plain plurals fold ("bats", "scissors"); "knives" folds to "knive", listed above.
+    return {w[:-1] if len(w) > 3 and w.endswith("s") and not w.endswith("ss") else w
+            for w in re.findall(r"[a-z]+", text.lower()) if w not in _FILLER}
+
+
+def names_claim(description: str, claim: str) -> bool:
+    """Does the Analyst's description name the object the claim is about? SmolVLM-500M
+    answers 'What is this object?' with the biggest thing in a cluttered crop: 'Cake.' for
+    a knife lying beside one, while the Verifier, asked about the knife itself, confirms it.
+    False means the two cannot be shown side by side."""
+    said, claimed = _words(description), _words(claim)
+    if "weapon" in claimed:
+        return bool(said & _ANY_WEAPON)
+    groups = [g for g in _SAME_OBJECT if claimed & g]
+    if groups:
+        return any(said & g for g in groups)
+    return not claimed or bool(said & claimed)
 
 
 class Director:

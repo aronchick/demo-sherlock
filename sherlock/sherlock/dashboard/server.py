@@ -62,11 +62,13 @@ def make_app(sherlock: Sherlock) -> FastAPI:
     @app.get("/mode")
     def mode():
         """What the board labels itself with: the mock runtime or the live models,
-        and which program serves them (asked of each server, never assumed)."""
+        which program serves them (asked of each server, never assumed), and which
+        Scout detector runs (scene truth on a synthetic scene, YOLO or motion)."""
         cfg = sherlock.cfg
         return {"mock": cfg.mock,
                 "director_model": None if cfg.mock else cfg.director.model,
                 "vlm_model": None if cfg.mock else cfg.analyst.model,
+                "scout_backend": getattr(getattr(sherlock, "scout", None), "kind", None),
                 "scout_ms": BUS.snapshot().get("scout_ms"),
                 "servers": describe(cfg)}
 

@@ -1,6 +1,6 @@
 """The board's backend contract: static files and routes, the measured-results card,
-the chain metadata on tool events, the head-only review crop, and the live-only Scout
-latency."""
+the Scout detector /mode reports, the chain metadata on tool events, the head-only
+review crop, and the live-only Scout latency."""
 import json
 import pathlib
 import queue
@@ -14,14 +14,16 @@ import numpy as np
 import pytest
 from fastapi import APIRouter
 from fastapi.testclient import TestClient
+from sherlock.agents import scout as scout_module
 from sherlock.agents.director import RuleDirector
 from sherlock.agents.scout import Detection, Scout, head_region
 from sherlock.agents.vision import MockAnalyst, MockVerifier, _mock_classify
 from sherlock.camera import FakePTZCamera
-from sherlock.config import Config
+from sherlock.config import CameraSpec, Config
 from sherlock.dashboard import numbers
 from sherlock.dashboard.server import STATIC, make_app
 from sherlock.events import BUS
+from sherlock.orchestrator import Sherlock
 from sherlock.scene import ScriptedScene
 from sherlock.tools import ToolBox
 
@@ -67,8 +69,8 @@ def test_board_is_served_at_log_and_later_routes_still_win():
         for asset in ("styles.css", "app.js", "icons.svg", "numbers.js"):
             assert client.get(f"/{asset}").status_code == 200
         assert client.get("/").json() == {"page": "flow"}  # beats the static index.html
-        assert client.get("/mode").json() == {"mock": True, "director_model": None,
-                                               "vlm_model": None, "scout_ms": None, "servers": None}
+        assert client.get("/mode").json() == {"mock": True, "director_model": None, "vlm_model": None,
+                                               "scout_backend": None, "scout_ms": None, "servers": None}
         assert client.get("/stream/wide/nope").status_code == 404
         assert client.get("/nope.js").status_code == 404
 
@@ -121,6 +123,37 @@ def test_numbers_js_renders_tbd_from_an_empty_results_dir(tmp_path, monkeypatch)
     labels = {i: shown.pop(i) for i in ("number-director", "number-ablation", "number-scout")}
     assert labels == {"number-director": "Director", "number-ablation": "NeMo Gym", "number-scout": "Scout · weapon"}
     assert set(shown.values()) == {"TBD"} and len(shown) == 8
+
+
+def scout_backend(tmp_path, *, mock: bool, synthetic: bool, backend: str = "yolo") -> str:
+    """What /mode says the Scout runs for this runtime."""
+    cfg = Config(mock=mock, scout_backend=backend, cameras=[CameraSpec("hero", "fake", "synthetic")])
+    s = Sherlock(cfg, synthetic=synthetic, evidence_dir=str(tmp_path))
+    return TestClient(make_app(s)).get("/mode").json()["scout_backend"]
+
+
+def test_mode_names_the_scout_detector_that_runs(tmp_path, monkeypatch):
+    class FakeYolo:  # ultralytics is not installed for mock runs or the test gate
+        def __init__(self, model_path):
+            pass
+
+    monkeypatch.setattr(scout_module, "YoloScout", FakeYolo)
+    monkeypatch.setenv("MODEL_SERVER", "vLLM")  # a live /mode must not probe model servers
+    monkeypatch.delenv("SCOUT_MISLABEL", raising=False)
+    # Live models on synthetic cameras: the Scout reads scene truth, not YOLO.
+    assert scout_backend(tmp_path, mock=False, synthetic=True) == "scene"
+    assert scout_backend(tmp_path, mock=False, synthetic=False) == "yolo"
+    assert scout_backend(tmp_path, mock=False, synthetic=False, backend="motion") == "motion"
+    assert scout_backend(tmp_path, mock=True, synthetic=True) == "scene"
+    assert scout_backend(tmp_path, mock=True, synthetic=False) == "motion"  # mock without a scene
+
+
+def test_board_labels_every_scout_detector_by_name():
+    app_js = (pathlib.Path(STATIC) / "app.js").read_text()
+    table = re.search(r"const SCOUT = \{(.*?)\n\};", app_js, re.DOTALL).group(1)
+    labels = dict(re.findall(r'^\s+(\w+): \["([^"]+)"', table, re.MULTILINE))
+    assert labels == {"scene": "scene truth", "yolo": "YOLO", "motion": "Motion detector"}
+    assert "YOLO + motion" not in app_js, "no Scout runs YOLO and motion together"
 
 
 def test_review_crop_is_the_head_not_the_knife():

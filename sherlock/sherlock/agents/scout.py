@@ -177,6 +177,9 @@ class Scout:
             self.impl: YoloScout | MotionScout | SceneScout = SceneScout(truth)
         else:
             self.impl = YoloScout(model_path) if backend == "yolo" else MotionScout()
+        # The detector that actually runs, for the dashboard. It can differ from the
+        # backend asked for: "mock" and unknown names fall back to motion.
+        self.kind = {SceneScout: "scene", YoloScout: "yolo"}.get(type(self.impl), "motion")
         self.trackers: dict[str, _Tracker] = {}
         self.dwell = dwell
         self.last_dets: dict[str, list[Detection]] = {}  # every box this frame, for the dashboard overlay

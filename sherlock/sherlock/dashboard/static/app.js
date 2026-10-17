@@ -12,10 +12,18 @@ const C = { accent: "#f2c14e", ok: "#8fe0a4", warn: "#ff9c62", err: "#ff6f6a", f
 
 const CAMS = ["hero", "scout1"];
 
+// The Scout card names the detector that runs (/mode scout_backend) in either mode:
+// a synthetic scene is read as scene truth even when the models are live.
+const SCOUT = {
+  scene: ["scene truth", "synthetic scene · no detector runs"],
+  yolo: ["YOLO", "measured per frame · beside the cameras"],
+  motion: ["Motion detector", "background subtraction · no model"],
+};
+
 const LABELS = {
   mock: {
     badge: ["MOCK", "synthetic scene · rule director · canned VLM"],
-    scout: ["scene truth", "synthetic scene · no detector runs"],
+    scout: SCOUT.scene,
     director: ["Rule director", "deterministic policy · no LLM"],
     vlm: ["Canned analyst + verifier", "recorded answers · no model"],
     fail: "Simulate: break the next tool call",
@@ -23,7 +31,7 @@ const LABELS = {
   },
   live: {
     badge: ["LIVE", "model servers not identified"],
-    scout: ["YOLO + motion", "measured per frame · beside the cameras"],
+    scout: ["Scout", "detector not reported"],
     director: ["Nemotron 3.5 Lightning", "30B total · 3B active · tool loop"],
     vlm: ["SmolVLM 500M", "analyst + verifier · one shared instance"],
     fail: "Break the next tool call",
@@ -59,6 +67,8 @@ function setBadge([tag, text]) {
 function applyMode(m) {
   MODE = m && m.mock === false ? "live" : "mock";
   L = { ...LABELS[MODE] };
+
+  if (m && SCOUT[m.scout_backend]) L.scout = SCOUT[m.scout_backend];
 
   if (MODE === "live") {
     // The table's names belong to the default models; a swapped model shows its own id.

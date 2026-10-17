@@ -1,0 +1,519 @@
+{
+  "evidence_kind": "model_evaluation",
+  "execution_mode": "measured",
+  "evaluation_scope": "confidence_sweep",
+  "environment": "local",
+  "device": "mps",
+  "created_at": "2026-10-17T20:10:05.705956+00:00",
+  "classes": [
+    "person",
+    "weapon",
+    "badge",
+    "bottle",
+    "fedora",
+    "cap"
+  ],
+  "image_count": 107,
+  "dataset_fingerprint": "06a83db64b72255f4a27149d6bd176991800c31205a24cdd0beb1789001a978e",
+  "split": "val",
+  "images": {
+    "coco": 107
+  },
+  "model": "yolov8n.pt",
+  "weights_sha256": "f59b3d833e2ff32e194b5bb8e08d211dc7c5bdf144b90d2c8412c47ccfc83b36",
+  "imgsz": 640,
+  "iou": 0.5,
+  "baseline_file": "scout_eval_local_mps_baseline.json",
+  "baseline_sha256": "fde464459b12724bef9de165e2c5e08fedacc97488c53f6eb312d76492e55c21",
+  "packages": {
+    "torch": "2.14.1",
+    "ultralytics": "8.4.180"
+  },
+  "curve": [
+    {
+      "conf": 0.05,
+      "metrics": {
+        "coco": {
+          "person": {
+            "tp": 247,
+            "fp": 385,
+            "fn": 40,
+            "precision": 0.3908,
+            "recall": 0.8606
+          },
+          "weapon": {
+            "tp": 35,
+            "fp": 91,
+            "fn": 69,
+            "precision": 0.2778,
+            "recall": 0.3365
+          },
+          "badge": {
+            "tp": 0,
+            "fp": 0,
+            "fn": 0,
+            "precision": 0.0,
+            "recall": 0.0
+          },
+          "bottle": {
+            "tp": 89,
+            "fp": 146,
+            "fn": 56,
+            "precision": 0.3787,
+            "recall": 0.6138
+          },
+          "fedora": {
+            "tp": 0,
+            "fp": 0,
+            "fn": 0,
+            "precision": 0.0,
+            "recall": 0.0
+          },
+          "cap": {
+            "tp": 0,
+            "fp": 0,
+            "fn": 0,
+            "precision": 0.0,
+            "recall": 0.0
+          }
+        },
+        "all": {
+          "person": {
+            "tp": 247,
+            "fp": 385,
+            "fn": 40,
+            "precision": 0.3908,
+            "recall": 0.8606
+          },
+          "weapon": {
+            "tp": 35,
+            "fp": 91,
+            "fn": 69,
+            "precision": 0.2778,
+            "recall": 0.3365
+          },
+          "badge": {
+            "tp": 0,
+            "fp": 0,
+            "fn": 0,
+            "precision": 0.0,
+            "recall": 0.0
+          },
+          "bottle": {
+            "tp": 89,
+            "fp": 146,
+            "fn": 56,
+            "precision": 0.3787,
+            "recall": 0.6138
+          },
+          "fedora": {
+            "tp": 0,
+            "fp": 0,
+            "fn": 0,
+            "precision": 0.0,
+            "recall": 0.0
+          },
+          "cap": {
+            "tp": 0,
+            "fp": 0,
+            "fn": 0,
+            "precision": 0.0,
+            "recall": 0.0
+          }
+        }
+      }
+    },
+    {
+      "conf": 0.1,
+      "metrics": {
+        "coco": {
+          "person": {
+            "tp": 236,
+            "fp": 196,
+            "fn": 51,
+            "precision": 0.5463,
+            "recall": 0.8223
+          },
+          "weapon": {
+            "tp": 30,
+            "fp": 33,
+            "fn": 74,
+            "precision": 0.4762,
+            "recall": 0.2885
+          },
+          "badge": {
+            "tp": 0,
+            "fp": 0,
+            "fn": 0,
+            "precision": 0.0,
+            "recall": 0.0
+          },
+          "bottle": {
+            "tp": 79,
+            "fp": 73,
+            "fn": 66,
+            "precision": 0.5197,
+            "recall": 0.5448
+          },
+          "fedora": {
+            "tp": 0,
+            "fp": 0,
+            "fn": 0,
+            "precision": 0.0,
+            "recall": 0.0
+          },
+          "cap": {
+            "tp": 0,
+            "fp": 0,
+            "fn": 0,
+            "precision": 0.0,
+            "recall": 0.0
+          }
+        },
+        "all": {
+          "person": {
+            "tp": 236,
+            "fp": 196,
+            "fn": 51,
+            "precision": 0.5463,
+            "recall": 0.8223
+          },
+          "weapon": {
+            "tp": 30,
+            "fp": 33,
+            "fn": 74,
+            "precision": 0.4762,
+            "recall": 0.2885
+          },
+          "badge": {
+            "tp": 0,
+            "fp": 0,
+            "fn": 0,
+            "precision": 0.0,
+            "recall": 0.0
+          },
+          "bottle": {
+            "tp": 79,
+            "fp": 73,
+            "fn": 66,
+            "precision": 0.5197,
+            "recall": 0.5448
+          },
+          "fedora": {
+            "tp": 0,
+            "fp": 0,
+            "fn": 0,
+            "precision": 0.0,
+            "recall": 0.0
+          },
+          "cap": {
+            "tp": 0,
+            "fp": 0,
+            "fn": 0,
+            "precision": 0.0,
+            "recall": 0.0
+          }
+        }
+      }
+    },
+    {
+      "conf": 0.15,
+      "metrics": {
+        "coco": {
+          "person": {
+            "tp": 220,
+            "fp": 125,
+            "fn": 67,
+            "precision": 0.6377,
+            "recall": 0.7666
+          },
+          "weapon": {
+            "tp": 27,
+            "fp": 24,
+            "fn": 77,
+            "precision": 0.5294,
+            "recall": 0.2596
+          },
+          "badge": {
+            "tp": 0,
+            "fp": 0,
+            "fn": 0,
+            "precision": 0.0,
+            "recall": 0.0
+          },
+          "bottle": {
+            "tp": 73,
+            "fp": 39,
+            "fn": 72,
+            "precision": 0.6518,
+            "recall": 0.5034
+          },
+          "fedora": {
+            "tp": 0,
+            "fp": 0,
+            "fn": 0,
+            "precision": 0.0,
+            "recall": 0.0
+          },
+          "cap": {
+            "tp": 0,
+            "fp": 0,
+            "fn": 0,
+            "precision": 0.0,
+            "recall": 0.0
+          }
+        },
+        "all": {
+          "person": {
+            "tp": 220,
+            "fp": 125,
+            "fn": 67,
+            "precision": 0.6377,
+            "recall": 0.7666
+          },
+          "weapon": {
+            "tp": 27,
+            "fp": 24,
+            "fn": 77,
+            "precision": 0.5294,
+            "recall": 0.2596
+          },
+          "badge": {
+            "tp": 0,
+            "fp": 0,
+            "fn": 0,
+            "precision": 0.0,
+            "recall": 0.0
+          },
+          "bottle": {
+            "tp": 73,
+            "fp": 39,
+            "fn": 72,
+            "precision": 0.6518,
+            "recall": 0.5034
+          },
+          "fedora": {
+            "tp": 0,
+            "fp": 0,
+            "fn": 0,
+            "precision": 0.0,
+            "recall": 0.0
+          },
+          "cap": {
+            "tp": 0,
+            "fp": 0,
+            "fn": 0,
+            "precision": 0.0,
+            "recall": 0.0
+          }
+        }
+      }
+    },
+    {
+      "conf": 0.25,
+      "metrics": {
+        "coco": {
+          "person": {
+            "tp": 209,
+            "fp": 57,
+            "fn": 78,
+            "precision": 0.7857,
+            "recall": 0.7282
+          },
+          "weapon": {
+            "tp": 22,
+            "fp": 9,
+            "fn": 82,
+            "precision": 0.7097,
+            "recall": 0.2115
+          },
+          "badge": {
+            "tp": 0,
+            "fp": 0,
+            "fn": 0,
+            "precision": 0.0,
+            "recall": 0.0
+          },
+          "bottle": {
+            "tp": 66,
+            "fp": 21,
+            "fn": 79,
+            "precision": 0.7586,
+            "recall": 0.4552
+          },
+          "fedora": {
+            "tp": 0,
+            "fp": 0,
+            "fn": 0,
+            "precision": 0.0,
+            "recall": 0.0
+          },
+          "cap": {
+            "tp": 0,
+            "fp": 0,
+            "fn": 0,
+            "precision": 0.0,
+            "recall": 0.0
+          }
+        },
+        "all": {
+          "person": {
+            "tp": 209,
+            "fp": 57,
+            "fn": 78,
+            "precision": 0.7857,
+            "recall": 0.7282
+          },
+          "weapon": {
+            "tp": 22,
+            "fp": 9,
+            "fn": 82,
+            "precision": 0.7097,
+            "recall": 0.2115
+          },
+          "badge": {
+            "tp": 0,
+            "fp": 0,
+            "fn": 0,
+            "precision": 0.0,
+            "recall": 0.0
+          },
+          "bottle": {
+            "tp": 66,
+            "fp": 21,
+            "fn": 79,
+            "precision": 0.7586,
+            "recall": 0.4552
+          },
+          "fedora": {
+            "tp": 0,
+            "fp": 0,
+            "fn": 0,
+            "precision": 0.0,
+            "recall": 0.0
+          },
+          "cap": {
+            "tp": 0,
+            "fp": 0,
+            "fn": 0,
+            "precision": 0.0,
+            "recall": 0.0
+          }
+        }
+      }
+    },
+    {
+      "conf": 0.35,
+      "metrics": {
+        "coco": {
+          "person": {
+            "tp": 195,
+            "fp": 36,
+            "fn": 92,
+            "precision": 0.8442,
+            "recall": 0.6794
+          },
+          "weapon": {
+            "tp": 19,
+            "fp": 2,
+            "fn": 85,
+            "precision": 0.9048,
+            "recall": 0.1827
+          },
+          "badge": {
+            "tp": 0,
+            "fp": 0,
+            "fn": 0,
+            "precision": 0.0,
+            "recall": 0.0
+          },
+          "bottle": {
+            "tp": 52,
+            "fp": 10,
+            "fn": 93,
+            "precision": 0.8387,
+            "recall": 0.3586
+          },
+          "fedora": {
+            "tp": 0,
+            "fp": 0,
+            "fn": 0,
+            "precision": 0.0,
+            "recall": 0.0
+          },
+          "cap": {
+            "tp": 0,
+            "fp": 0,
+            "fn": 0,
+            "precision": 0.0,
+            "recall": 0.0
+          }
+        },
+        "all": {
+          "person": {
+            "tp": 195,
+            "fp": 36,
+            "fn": 92,
+            "precision": 0.8442,
+            "recall": 0.6794
+          },
+          "weapon": {
+            "tp": 19,
+            "fp": 2,
+            "fn": 85,
+            "precision": 0.9048,
+            "recall": 0.1827
+          },
+          "badge": {
+            "tp": 0,
+            "fp": 0,
+            "fn": 0,
+            "precision": 0.0,
+            "recall": 0.0
+          },
+          "bottle": {
+            "tp": 52,
+            "fp": 10,
+            "fn": 93,
+            "precision": 0.8387,
+            "recall": 0.3586
+          },
+          "fedora": {
+            "tp": 0,
+            "fp": 0,
+            "fn": 0,
+            "precision": 0.0,
+            "recall": 0.0
+          },
+          "cap": {
+            "tp": 0,
+            "fp": 0,
+            "fn": 0,
+            "precision": 0.0,
+            "recall": 0.0
+          }
+        }
+      }
+    }
+  ],
+  "limitations": [
+    "Same standalone licensed COCO val subset as baseline; not confirmed as fine-tune held-out data.",
+    "Per-image box metrics, not temporal live-event recall or measured downstream Verifier load.",
+    "Weapon means knife, scissors and baseball bat; no firearm evaluation.",
+    "No badge/fedora/cap ground truth in this subset; zero-support rows do not measure recall."
+  ],
+  "baseline_035_reproduced": true,
+  "app_threshold": {
+    "conf": 0.35,
+    "source": "sherlock/sherlock/agents/scout.py:YoloScout.__init__",
+    "wiring": "Scout constructs YoloScout(model_path) without a conf override; Config/.env.example expose no Scout confidence setting.",
+    "default_changed": false,
+    "dwell_default_seconds": 0.6
+  },
+  "recommendation": {
+    "conf": 0.1,
+    "status": "recommendation for rehearsal only; owner decision pending",
+    "reason": "Recovers11 extra true boxes vs0.35 (30 vs19) with33 false positives. 0.05 recovers only5 more true boxes but adds58 false positives.",
+    "load_caveat": "63 predicted weapon boxes at0.10 vs21 at0.35 (3x); box counts are not measured Director/Verifier request counts. Temporal dwell, room data and Verifier load were not evaluated."
+  }
+}

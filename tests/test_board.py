@@ -70,7 +70,8 @@ def test_board_is_served_at_log_and_later_routes_still_win():
             assert client.get(f"/{asset}").status_code == 200
         assert client.get("/").json() == {"page": "flow"}  # beats the static index.html
         assert client.get("/mode").json() == {"mock": True, "director_model": None, "vlm_model": None,
-                                               "scout_backend": None, "scout_ms": None, "servers": None}
+                                               "scout_backend": None, "synthetic": False, "scout_ms": None,
+                                               "servers": None}
         assert client.get("/stream/wide/nope").status_code == 404
         assert client.get("/nope.js").status_code == 404
 
@@ -209,7 +210,8 @@ const handler = {
 };
 const stub = (init = {}) => new Proxy(Object.assign(function () {}, init), handler);
 const els = {};
-const el = id => (els[id] ??= stub({id, textContent: '', title: '', hidden: false, src: '', dataset: {}, disabled: false}));
+const el = id => (els[id] ??= stub({id, textContent: '', title: '', hidden: false, src: '', dataset: {}, disabled: false,
+  replaceChildren(...kids) { this.parts = kids.map(k => typeof k === 'string' ? k : k.textContent); }}));
 let stats = null;
 Object.assign(globalThis, {
   document: stub({getElementById: el, createElement: () => stub({dataset: {}}), body: stub({dataset: {}})}),
@@ -227,21 +229,27 @@ setTimeout(() => {
   const tile = c => ({mark: el('cam-' + c).dataset.unconfigured ? 'not in this run'
                         : el('cam-' + c).dataset.unavailable ? 'unavailable' : 'open',
                       stream: el('img-' + c).src.split('?')[0]});
-  console.log(JSON.stringify({pill: el('pill').textContent, hero: tile('hero'), scout1: tile('scout1')}));
+  console.log(JSON.stringify({pill: el('pill').textContent, hero: tile('hero'), scout1: tile('scout1'),
+                              badge: (el('mode').parts || []).join('')}));
 }, 50);
 }
 """
 
 
-def board_cameras(tmp_path, *, mock: bool, synthetic: bool, cameras: list[str]) -> dict:
-    """What the board shows once a runtime with these cameras answers and streams."""
+def board_view(tmp_path, *, mock: bool, synthetic: bool, cameras: list[str]) -> dict:
+    """What the board shows once a runtime with these cameras answers and streams, and
+    whether its /mode called the run synthetic."""
     cfg = Config(mock=mock, cameras=[CameraSpec(name, "fake", "synthetic") for name in cameras])
     client = TestClient(make_app(Sherlock(cfg, synthetic=synthetic, evidence_dir=str(tmp_path))))
     routes = {path: client.get(path).json() for path in ("/mode", "/cameras", "/reports")}
     arg = {"script": str(pathlib.Path(STATIC) / "app.js"), "routes": routes}
     run = subprocess.run(["node", "-e", RUN_APP_JS, json.dumps(arg)], capture_output=True, text=True,
                          timeout=30, check=True)
-    return json.loads(run.stdout)
+    return {**json.loads(run.stdout), "synthetic": routes["/mode"]["synthetic"]}
+
+
+def cameras_shown(view: dict) -> dict:
+    return {key: view[key] for key in ("pill", "hero", "scout1")}
 
 
 @needs_node
@@ -254,17 +262,28 @@ def test_board_counts_only_the_cameras_the_run_opened(tmp_path, monkeypatch):
     monkeypatch.setenv("MODEL_SERVER", "vLLM")  # a live /mode must not probe model servers
     monkeypatch.delenv("SCOUT_MISLABEL", raising=False)
     # A one-camera live run: scout1 was never configured, so it is not watched or streamed.
-    assert board_cameras(tmp_path, mock=False, synthetic=False, cameras=["hero"]) == {
+    assert cameras_shown(board_view(tmp_path, mock=False, synthetic=False, cameras=["hero"])) == {
         "pill": "MONITORING · 1 CAMERA",
         "hero": {"mark": "open", "stream": "/stream/wide/hero"},
         "scout1": {"mark": "not in this run", "stream": ""},
     }
     # The two-camera synthetic run watches both.
-    assert board_cameras(tmp_path, mock=True, synthetic=True, cameras=["hero", "scout1"]) == {
+    assert cameras_shown(board_view(tmp_path, mock=True, synthetic=True, cameras=["hero", "scout1"])) == {
         "pill": "MONITORING · 2 CAMERAS",
         "hero": {"mark": "open", "stream": "/stream/wide/hero"},
         "scout1": {"mark": "open", "stream": "/stream/wide/scout1"},
     }
+
+
+@needs_node
+def test_mock_badge_says_synthetic_scene_only_on_a_synthetic_run(tmp_path, monkeypatch):
+    monkeypatch.delenv("SCOUT_MISLABEL", raising=False)
+    synthetic = board_view(tmp_path, mock=True, synthetic=True, cameras=["hero", "scout1"])
+    assert synthetic["synthetic"] is True
+    assert synthetic["badge"] == "MOCK · synthetic scene · rule director · canned VLM"
+    plain = board_view(tmp_path, mock=True, synthetic=False, cameras=["hero"])  # plain --mock
+    assert plain["synthetic"] is False
+    assert plain["badge"] == "MOCK · rule director · canned VLM"
 
 
 def test_board_labels_every_scout_detector_by_name():

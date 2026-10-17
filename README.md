@@ -12,6 +12,204 @@ Scout (YOLOv8n detector, every frame, ~10 ms)
 ```
 One tiny model gates the expensive ones. The dashboard counts "VLM calls avoided" live.
 
+## Architecture, end to end
+
+Sherlock runs on two machines. The laptop with the cameras watches every
+frame and decides when a model is worth calling. A Brev GPU box serves the
+models with vLLM. Expanso Edge is meant to move everything that happens
+after a decision (events, incidents, evidence, serving metrics, training
+examples) from the laptop to a cloud core. That data plane is designed in
+[Expanso Edge data plane](#expanso-edge-data-plane-proposed-not-built) but
+**is not built yet**.
+
+```
+ LAPTOP (Mac, cameras attached)            BREV GPU BOX (1x H100 80GB)
+ ──────────────────────────────            ───────────────────────────────
+ hero:   Insta360 Link 2 (gimbal)          vLLM v0.28.0, two containers
+ scout1: MacBook camera
+      │ every frame (~30 ms loop)          :8001 "director"
+      ▼                                      Nemotron 3.5 Lightning
+ Scout: YOLOv8n, ~10 ms a frame              30B-A3B NVFP4, tool calling,
+      │ new object held 0.6 s                thinking off, prefix caching
+      ▼
+ Orchestrator                              :8002 "vlm"
+      │                                      SmolVLM-500M-Instruct,
+      ▼                                      shared Analyst + Verifier
+ Director tool loop ── HTTP /v1 ─────────► :8001
+   look_at / move ──► gimbal or crop
+   snapshot / verify ── crop JPEG ───────► :8002
+   report
+      │
+      ▼
+ snapshots/<incident>/
+ dashboard on 127.0.0.1:8000
+```
+
+### One detection, step by step
+
+1. **Frames to the Scout.** The orchestrator loop
+   (`sherlock/sherlock/orchestrator.py`) reads a wide frame from each camera
+   about every 30 ms and passes it to the Scout. A failed camera is retried
+   after 0.5 s without slowing the others.
+2. **The Scout gates everything.** YOLOv8n (3.2M parameters, about 10 ms a
+   frame) runs on the laptop (`agents/scout.py`). Its tracker raises an
+   object only after it stays **0.6 s** (`DWELL_SECONDS`) and forgets it
+   after **3 s**. Labels map to a threat: `weapon` (knife, scissors,
+   baseball bat) escalates; `badge`, `bottle`, cup, phone and other COCO
+   objects are `benign`; `person` only supplies the head box. `motion` and
+   scripted-scene backends replace YOLO for the hat demo and mock mode.
+3. **Duplicates and overlaps are dropped.** The same label seen on another
+   camera moments ago counts as a duplicate. A detection that arrives while
+   an investigation is running is counted as `dropped_busy`, not "avoided".
+4. **Benign objects stop here.** The Director calls `report(ignore)` with no
+   `look_at` and no `snapshot`, so **no VLM call is made**. This is the
+   "VLM calls avoided" number.
+5. **The Director (Nemotron) drives the camera.** `agents/director.py`
+   sends the detection as JSON with the six tool schemas in
+   `sherlock/sherlock/tools.py` (`look_at`, `move`, `snapshot`, `verify`,
+   `list_cameras`, `report`), at temperature 0.1, 300 output tokens and
+   thinking off. A weapon runs `look_at` weapon → `snapshot(weapon)` →
+   `look_at` head → `snapshot(face)` → `verify` → `report(alert)`. The
+   budget is `MAX_TOOL_CALLS` (6) plus 4 for weapons, to leave room for
+   recovery. A tool error makes the Director try another camera or other
+   arguments; prose instead of a tool call gets one nudge.
+6. **`look_at` moves real hardware.** On the Insta360 Link 2 it sends UVC
+   pan/tilt/zoom over USB with `link-ctl` (macOS only). Other cameras use a
+   software crop (`FakePTZ`).
+7. **The VLM sees only the crop.** The Analyst describes the zoomed object
+   crop. The Verifier asks a yes/no question about the claim and decides on
+   `log P(yes) - log P(no)` (margin 0.0 by default), or on the reply's first
+   word when the server returns no usable logprobs
+   ([Verifier verdicts](#verifier-verdicts)).
+8. **The face crop never reaches a model.** It is saved for a human
+   reviewer. Nothing identifies or describes the person.
+9. **The orchestrator has the last word.** It re-checks the final claim
+   against the current weapon crop, and an `alert` without a verified claim
+   is **downgraded to `log`**. Evidence lands in `snapshots/<incident>/`;
+   every step streams to the dashboard over SSE.
+10. **Fallbacks.** If the Director endpoint is unreachable, `RuleDirector`
+    runs the same tools with no LLM. A covered or failed hero camera hands
+    the investigation to `scout1`. `--mock --synthetic` runs the whole loop
+    with no models and no cameras.
+
+### Where each piece runs
+
+| Piece | Runs on | Code | What it is |
+|---|---|---|---|
+| Scout | Laptop | `agents/scout.py` | YOLOv8n, stock or fine-tuned here |
+| Orchestrator, tools, cameras | Laptop | `orchestrator.py`, `tools.py`, `camera/` | Loop, tool dispatcher, gimbal control |
+| Director | Brev `:8001`, vLLM | `agents/director.py` | Nemotron 3.5 Lightning 30B-A3B NVFP4 |
+| Analyst + Verifier | Brev `:8002`, vLLM | `agents/vision.py` | One shared SmolVLM-500M-Instruct |
+| `RuleDirector` | Laptop | `agents/director.py` | No-LLM fallback with the same tools |
+| Dashboard | Laptop, `127.0.0.1:8000` | `dashboard/` | FastAPI, SSE events, MJPEG feeds |
+| vLLM benchmark | Laptop, calling Brev | `scripts/bench_vllm.py` | Latency, tool validity, prefix-cache A/B |
+| NeMo Gym ablation | Laptop, calling Brev | `gym/` | Director policy evaluation |
+| Scout fine-tune | Laptop (MPS) or any CUDA box | `scripts/*scout*` | The only training in the project |
+
+**Nemotron** is the Director only:
+`nvidia/NVIDIA-Nemotron-3.5-Lightning-30B-A3B-NVFP4` (30B total, 3B
+active), started by `brev/serve.sh` with `--tool-call-parser qwen3_coder
+--reasoning-parser nemotron_v3`. Configuration B swaps in Nemotron Nano
+9B/12B v2 and Llama-3.1-Nemotron-Nano-VL-8B.
+
+**vLLM** serves every generative model. `brev/serve.sh` starts two
+`vllm/vllm-openai:v0.28.0` containers on one GPU: the Director with 0.60 of
+GPU memory, 32,768 tokens of context and 16 sequences; the VLM with 0.30,
+8,192 and 8, one image per prompt. Prefix caching is the optimization under
+test (`PREFIX_CACHING=1` or `0`). No speculative-decoding draft model is
+loaded, which is what keeps Configuration A under the 33B cap. The laptop
+reaches both through `DIRECTOR_BASE_URL` and `ANALYST_BASE_URL`, directly or
+over an SSH tunnel. Model calls are plain OpenAI-compatible HTTP, so a local
+Ollama or mlx-vlm server is a one-line swap for rehearsal (not bounty
+evidence: the bounty requires vLLM).
+
+**Fine-tuning** touches only the Scout. Nemotron and SmolVLM run stock
+weights. The Scout kit builds an open COCO 2017 CC-BY subset plus prop
+photos from the room, trains YOLOv8n on four classes in about 20 minutes on
+the M5 Max, and scores before vs after
+([Fine-tune the Scout](#fine-tune-the-scout-about-20-minutes-on-this-mac)).
+`YOLO_MODEL=runs/scout/weights/best.pt` loads the result.
+
+**NeMo Gym** evaluates; it does not train. Eight scripted tasks and a fixed
+verifier score the Director while YAML configs change one component at a
+time: prompt, tool descriptions, thinking, or Director model
+([NeMo Gym ablation](#nemo-gym-ablation)). No weights change.
+
+### Expanso Edge data plane (proposed, not built)
+
+**Status today:** nothing in this repository runs on Expanso. The dashboard
+footer that mentions Expanso shows "not connected" unless
+`SHERLOCK_EXPANSO=connected` is set by hand. The design below is what the
+footer should describe once it is real.
+
+**What Expanso carries, and what it does not.** Model calls stay direct
+HTTP from the orchestrator to vLLM: they sit inside a tool loop where every
+millisecond shows on stage. Expanso Edge moves what happens after each
+decision, on the laptop and in the cloud, and Expanso Cloud deploys and
+monitors every job by node label.
+
+```
+ LAPTOP: node sherlock-edge               CLOUD: node sherlock-core
+ (role=sherlock-edge)                     (role=sherlock-core)
+
+ orchestrator                             C1 sherlock-core-intake
+   ├─POST─► E1 sherlock-telemetry ──┐       ├─► incidents/  + alert webhook
+   ├─POST─► E2 sherlock-incidents ──┼──────►├─► telemetry/
+   └─POST─► E3 sherlock-examples ───┘       └─► examples/  (next Scout set)
+
+ dashboard ◄──────────────────────────── C2 sherlock-vllm-metrics
+                                            ◄── :8001/metrics, :8002/metrics
+
+ Expanso Cloud: deploys all five jobs by label, shows node
+ health, job revisions and rollbacks
+```
+
+| Job | Node | Input | What it does | Output |
+|---|---|---|---|---|
+| E1 `sherlock-telemetry` | Laptop | `http_server` on loopback; the orchestrator POSTs each dashboard event | Drops image fields; adds node, camera, model and Git commit; batches | Core intake `/telemetry` |
+| E2 `sherlock-incidents` | Laptop | `http_server`; one POST per report | `switch` on action: `alert` goes out at once with the weapon crop; `log` and `ignore` send metadata only. The face crop is replaced by its SHA-256 and local path | Core intake `/incident` |
+| E3 `sherlock-examples` | Laptop | `http_server`; object crops the Verifier rejected or scored near the threshold | Hard examples for the next Scout fine-tune. Object crops only, never faces. Off by default | Core intake `/example` |
+| C1 `sherlock-core-intake` | Cloud | `http_server /{endpoint}` | Validates, stamps receipt time, routes by endpoint; failed messages are logged and rejected, not dropped silently | `file` stores per stream; `http_client` alert webhook |
+| C2 `sherlock-vllm-metrics` | Cloud (Brev box) | `generate` every 10 s, then GET both vLLM `/metrics` | Per-model KV-cache use, prefix-cache hits, queue depth, request counts | Core store and the laptop dashboard |
+
+Every component named here (`http_server`, `http_client`, `generate`,
+`switch`, `file`, Bloblang `.hash()`) is in the Expanso Edge
+documentation; the job layout follows `demo-edge-to-core-fleet`
+(`core-intake`) and `demo-edge-zoom-on-interest`.
+
+**Code changes to build it:**
+
+1. A small event sink in `sherlock/sherlock/events.py` that POSTs events and
+   reports to E1 and E2 when `SHERLOCK_EDGE_URL` is set, and does nothing
+   when it is not, so `just up` keeps working with no Expanso.
+2. `jobs/` with the five job files, deployed through Expanso Cloud.
+3. Dashboard: read C2's metrics, and drive the Expanso footer from a real
+   node heartbeat instead of the `SHERLOCK_EXPANSO` flag.
+4. Expanso credentials and node identity in project-local, gitignored paths
+   with owner-only permissions; never a global profile.
+
+**Open decisions:**
+
+1. **Where the core node runs.** The Brev box already exists and sits next
+   to vLLM, but stopping Brev stops the core. A small persistent cloud VM
+   keeps incidents and history between sessions.
+2. **Whether the face crop ever leaves the laptop.** Proposed: no. Only its
+   hash and local path go up, so a reviewer opens it on the device.
+3. **Whether E3 starts on.** Proposed: off. Room photos show real people,
+   and the Scout publisher already requires everyone pictured to agree.
+
+### Not measured yet
+
+- **vLLM on the H100:** latency, tool-call validity and the prefix-cache
+  A/B have only run against the local stub
+  ([Results pending live endpoint](#results-pending-live-endpoint)).
+- **NeMo Gym ablations:** live results are pending Brev endpoints.
+- **Verifier threshold:** fitted on 50 COCO crops, not on room photos.
+  SmolVLM-500M confirmed 27/30 real weapon crops and accepted 1/20 false
+  "kitchen knife" claims.
+- **Linux gimbal control:** the Link 2 cannot be aimed on Linux; the hero
+  comes up offline there and the Director uses the next camera.
+
 ## Model lineup
 
 ### Configuration A (default: 30.51B generative parameters by model card, 32.09B by checkpoint tensor count)

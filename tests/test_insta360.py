@@ -365,6 +365,27 @@ def test_partial_failure_resends_the_whole_pose_on_the_next_move():
     assert tr.calls == [("pantilt", 0, 0), ("zoom", 100)]  # not skipped as "no change"
 
 
+def test_frames_read_while_a_timed_out_set_is_stuck_cannot_be_aimed_from():
+    tr = GatedTransport()
+    cam = make(tr, cmd_timeout_s=0.1, units_per_deg=1, slew_deg_s=10000.0)
+    tr.gate.clear()
+    with pytest.raises(CameraError, match="no answer within"):
+        cam.move(pan=10)  # the SET is still on the wire; the gimbal may be moving
+    cam.wide_frame()
+    assert cam._view_pose is None  # no pose to aim from
+    with pytest.raises(CameraError, match="still has no answer"):
+        cam.look_at(box_at(W * 0.75, H / 2))  # re-home is refused while quarantined
+    tr.gate.set()
+    deadline = time.monotonic() + 2
+    while "set 10 end" not in tr.log and time.monotonic() < deadline:
+        time.sleep(0.01)
+    with pytest.raises(CameraError, match="re-homed, look again"):
+        cam.look_at(box_at(W * 0.75, H / 2))  # that box was still from the unknown pose
+    cam.wide_frame()
+    assert cam._view_pose == cam.home
+    assert cam.look_at(box_at(W * 0.75, H / 2)).pan > 0
+
+
 def test_reconnects_when_the_gimbal_comes_back():
     tr = FakeTransport(fail=True)
     cam = make(tr)

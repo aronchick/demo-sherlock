@@ -225,7 +225,7 @@
         <div class="model-heading"><img class="model-logo" id="analystLogo" alt="" hidden><div class="model-name" id="analystModel"></div></div>
         <div class="model-runtime" id="analystRuntime"></div>
         <div class="model-body">
-          <div class="model-copy"><div class="kind">Read</div><div class="name">Analyst</div><div class="sub" id="analystSub">describes the crop</div></div>
+          <div class="model-copy"><div class="kind">Read</div><div class="name">Analyst</div><div class="sub" id="analystSub">parallel object description</div></div>
           <figure class="model-preview">
             <div class="model-preview-image"><span class="empty" id="analystEmpty">No crop yet</span><img id="analystPreview" alt="Object crop sent to the Analyst" hidden></div>
             <figcaption id="analystPreviewState"></figcaption>
@@ -237,7 +237,7 @@
         <div class="model-heading"><img class="model-logo" id="verifierLogo" alt="" hidden><div class="model-name" id="verifierModel"></div></div>
         <div class="model-runtime" id="verifierRuntime"></div>
         <div class="model-body">
-          <div class="model-copy"><div class="kind">Check</div><div class="name">Verifier</div><div class="sub" id="verifierSub">second look at the same crop</div></div>
+          <div class="model-copy"><div class="kind">Check</div><div class="name">Verifier</div><div class="sub" id="verifierSub">parallel claim check</div></div>
           <figure class="model-preview">
             <div class="model-preview-image"><span class="empty" id="verifierEmpty">No crop yet</span><img id="verifierPreview" alt="Object crop sent to the Verifier" hidden></div>
             <figcaption id="verifierPreviewState"></figcaption>
@@ -252,8 +252,12 @@
         <div class="kind">Archived</div><div class="num" id="n-ignored">0</div><div class="sub">benign, no VLM call</div>
         <div class="keep" aria-hidden="true"></div>
       </article>
+      <article class="dest comparison" id="st-comparison" style="--c: var(--verifier)">
+        <div class="kind">Compare both checks</div><strong id="comparison-status">Waiting</strong>
+        <div class="sub" id="comparison-reason">Both must support the claim</div>
+      </article>
       <article class="dest" id="d-logged" style="--c: var(--analyst)">
-        <div class="kind">Logged</div><div class="num" id="n-logged">0</div><div class="sub">looked at, kept as evidence</div>
+        <div class="kind">Review needed</div><div class="num" id="n-logged">0</div><div class="sub">uncertain or conflicting checks</div>
       </article>
       <article class="dest" id="d-alert" style="--c: var(--weapon)">
         <div class="kind">Alert</div><div class="num" id="n-alerts">0</div><div class="sub">verified weapon</div>
@@ -287,6 +291,7 @@
     <a href="/phone" target="sherlock-phone">phone</a>
     <a href="/custody" target="sherlock-evidence">evidence</a>
     <button type="button" onclick="post('/demo/fail/1')">Break next tool call</button>
+    <button type="button" onclick="post('/demo/disagree/1')">Simulate disagreement</button>
     <button type="button" id="coverBtn" onclick="toggleCover()">Cover hero lens</button>
   </footer>
 </div>
@@ -359,7 +364,7 @@ pollExpanso();
 
 // ---- stages (DOM) -------------------------------------------------------------------
 const ST = { camera: $('wideFrame'), scout: $('st-scout'), director: $('st-director'), analyst: $('st-analyst'),
-  verifier: $('st-verifier'), bucket: $('st-bucket'), ignored: $('d-ignored'), logged: $('d-logged'), alert: $('d-alert') };
+  verifier: $('st-verifier'), comparison: $('st-comparison'), bucket: $('st-bucket'), ignored: $('d-ignored'), logged: $('d-logged'), alert: $('d-alert') };
 const badgeEl = id => id === 'camera' ? $('b-camera') : ST[id].querySelector('.badge');
 const timers = new WeakMap();
 function later(el, key, fn, ms) {
@@ -434,11 +439,13 @@ function layout() {
   E.crop = mk([P(c.r, c.cy - 7), P(g1 - 6, c.cy - 7), P(g1 - 6, lane), P(g3 - 7, lane), P(g3 - 7, an.cy), P(an.l, an.cy)],
     { label: 'zoomed crop', color: C.analyst, lseg: 2 });
   E.seal = mk([P(c.r, c.cy + 7), P(g1 + 6, c.cy + 7), P(g1 + 6, bk.cy), P(bk.l, bk.cy)], { label: 'sealed', color: C.benign, lseg: 1 });
-  E.judge = mk([P(an.cx, an.b), P(an.cx, v.t)], { label: 'crop + claim', color: C.verifier });
-  E.store = mk([P(v.l, v.cy + 6), P(g3 + 7, v.cy + 6), P(g3 + 7, bk.cy + 14), P(bk.r, bk.cy + 14)], { label: 'verdict', dash: true, color: C.benign, lseg: 0 });
+  E.judge = mk([P(c.r, c.cy), P(g1, c.cy), P(g1, lane + 14), P(g3, lane + 14), P(g3, v.cy), P(v.l, v.cy)], { label: 'same crop', color: C.verifier, lseg: 2 });
+  E.assessA = mk([P(an.r, an.cy), P(g5 - 7, an.cy), P(g5 - 7, R.comparison.cy - 8), P(R.comparison.l, R.comparison.cy - 8)], {color: C.analyst});
+  E.assessV = mk([P(v.r, v.cy), P(g5 + 7, v.cy), P(g5 + 7, R.comparison.cy + 8), P(R.comparison.l, R.comparison.cy + 8)], {color: C.verifier});
+  E.store = mk([P(c.r, c.cy + 7), P(g1 + 6, c.cy + 7), P(g1 + 6, bk.cy), P(bk.l, bk.cy)], { label: 'evidence', color: C.benign, lseg: 1 });
   E.toIgnore = mk([P(d.r, d.cy), P(g5, d.cy), P(g5, R.ignored.cy), P(R.ignored.l, R.ignored.cy)], { color: C.benign });
-  E.toLog = mk([P(v.r, v.cy - 6), P(g5 - 6, v.cy - 6), P(g5 - 6, R.logged.cy), P(R.logged.l, R.logged.cy)], { color: C.analyst });
-  E.toAlert = mk([P(v.r, v.cy + 6), P(g5 + 6, v.cy + 6), P(g5 + 6, R.alert.cy), P(R.alert.l, R.alert.cy)], { color: C.weapon });
+  E.toLog = mk([P(R.comparison.cx - 20, R.comparison.b), P(R.comparison.cx - 20, R.logged.t)], { color: C.analyst });
+  E.toAlert = mk([P(R.comparison.r, R.comparison.cy), P(R.out.r + 9, R.comparison.cy), P(R.out.r + 9, R.alert.cy), P(R.alert.r, R.alert.cy)], { color: C.weapon });
 }
 addEventListener('resize', layout);
 if (document.fonts) document.fonts.ready.then(layout);
@@ -616,6 +623,8 @@ function playScout(ev) {
     S.zoom = null; S.docked = null;
     cellsReset();
     modelCards.reset();
+    $('comparison-status').textContent = 'Waiting';
+    $('comparison-reason').textContent = 'Both must support the claim';
     cellSet('scout', `${d.label || 'object'} · ${threat}${d.person ? ' · person nearby' : ''}`, ev.latency_ms ? fmtMs(ev.latency_ms) : '');
     flash($('wideFrame')); $('wideFrame').classList.remove('alert');
     setStamp($('stamp'), '', ''); setStamp($('wideStamp'), '', ''); caption('');
@@ -712,42 +721,49 @@ function onTool(ev) {
 
 function onModelInput(ev) {
   const {role, image} = ev.data || {};
-
-  if (!['analyst', 'verifier'].includes(role) || !image?.startsWith('data:image/png;base64,')) return;
+  if (role !== 'analyst' || !image?.startsWith('data:image/png;base64,')) return;
   const input = new Image();
   input.src = image;
   beat(async () => {
     cur.crop = input;
-    modelCards.show(role, image);
-    glow(role, 1);
+    for (const check of ['analyst', 'verifier']) {
+      modelCards.show(check, image);
+      glow(check, 1);
+    }
+    flow('crop', 700, C.analyst);
+    flow('judge', 700, C.verifier);
+    $('comparison-status').textContent = 'Checking in parallel';
+    $('comparison-reason').textContent = 'Same crop, different prompts';
+    await wait(700);
   });
 }
 function onAnalyst(ev) {
-  beat(async () => {                                                    // the zoomed crop is what leaves the laptop
-    // model_input captured the actual crop before inference, unaffected by later head zooms.
-    flash($('cropFrame'));
-    flow('crop', 900, cur.color);
-    glow('analyst', 0.6);
-    await ride('crop', 950, { bmp: cur.crop, w: 50, color: cur.color }, null);
+  beat(async () => {
     glow('analyst', 1); latency('analyst', ev.latency_ms);
     cellSet('analyst', ev.msg, ev.latency_ms ? fmtMs(ev.latency_ms) : '');
     modelCards.complete('analyst');
-    caption(ev.msg);
-    await wait(650);
+    flow('assessA', 600, C.analyst);
   });
 }
 function onVerifier(ev) {
   const ok = /^CONFIRMED/.test(ev.msg || '');
   beat(async () => {
-    flow('judge', 700, C.verifier);
-    await ride('judge', 700, { bmp: cur.crop || cur.card, w: 40, color: cur.color });
     cur.verdict = ok;
     modelCards.complete('verifier');
     glow('verifier', 1, ok ? C.ok : C.bad); latency('verifier', ev.latency_ms);
-    burst(R.verifier.cx, R.verifier.cy, ok ? C.ok : C.bad, ok ? 18 : 34);
-    setStamp($('stamp'), ok ? 'confirmed' : 'rejected', ok ? 'ok' : 'bad');
     cellSet('verifier', ev.msg, ev.latency_ms ? fmtMs(ev.latency_ms) : '');
-    await wait(700);
+    flow('assessV', 600, C.verifier);
+  });
+}
+function onComparison(ev) {
+  beat(async () => {
+    const result = ev.data || {};
+    modelCards.complete('analyst');
+    modelCards.complete('verifier');
+    $('comparison-status').textContent = result.status === 'agreed' ? 'Both support the claim' : 'Review needed';
+    $('comparison-reason').textContent = result.reason || ev.msg;
+    glow('comparison', 1, result.status === 'agreed' ? C.ok : C.bad);
+    await wait(400);
   });
 }
 function onReport(ev) {
@@ -785,7 +801,7 @@ function onReport(ev) {
     burst(slot.x, slot.y, C.benign, 10);
     const dest = action === 'alert' ? 'toAlert' : 'toLog';
     flow(dest, 800, color);
-    await ride(dest, 850, { text: action === 'alert' ? 'ALERT' : 'logged', color });
+    await ride(dest, 850, { text: action === 'alert' ? 'ALERT' : 'REVIEW', color });
     ping(action === 'alert' ? 'alert' : 'logged', color);
     if (action === 'alert') {
       $('wideFrame').classList.add('alert');
@@ -797,8 +813,8 @@ function onReport(ev) {
     const verdict = d.verified === true ? ' · verified' : d.verified === false ? ' · not verified' : '';
     caption(`${d.claim || ''}${verdict}${calls ? ' · ' + calls : ''}`);
 
-    if (ev.analyst) $('c-analyst').querySelector('.v').textContent = ev.analyst.msg;   // it played while still reading
-    cellSet('decision', action === 'alert' ? 'ALERT, evidence kept' : 'logged, evidence kept', calls + secs);
+    
+    cellSet('decision', action === 'alert' ? 'ALERT, evidence kept' : 'review, evidence kept', calls + secs);
     if (S.docked) S.docked.fade = true;
     await wait(500);
     for (const b of S.boxes) b.alpha = 0.99;
@@ -807,13 +823,7 @@ function onReport(ev) {
 }
 
 // ---- SSE ------------------------------------------------------------------------------------------------
-// The Analyst's words wait for the report, which shows them or withholds them when they name
-// another object than the confirmed claim (a knife read as 'Cake.'). Beats read ev.msg when
-// they play, so a report that lands first is the only text the Analyst beat ever shows.
-const READING = 'reading the crop…', WITHHELD = 'named another object · not shown';
-
-let analystEv = null;
-
+// Both checks keep their own answers visible, including disagreements.
 const es = new EventSource('/events');
 es.onmessage = e => {
   const ev = JSON.parse(e.data), m = ev.msg || '';
@@ -822,15 +832,12 @@ es.onmessage = e => {
     case 'director': return afterScout(() => onDirector(ev));
     case 'tool': return afterScout(() => onTool(ev));
     case 'model_input': return afterScout(() => onModelInput(ev));
-    case 'analyst': analystEv = ev; ev.said = ev.msg; ev.msg = READING; return afterScout(() => onAnalyst(ev));
+    case 'analyst': return afterScout(() => onAnalyst(ev));
+    case 'comparison': return afterScout(() => onComparison(ev));
     case 'verifier': return afterScout(() => onVerifier(ev));
     case 'system':
       if (m.startsWith('REPORT')) {
-        if (analystEv) {
-          analystEv.msg = ev.data && ev.data.analyst_mismatch ? WITHHELD : analystEv.said;
-          ev.analyst = analystEv; analystEv = null;
-        }
-        return afterScout(() => onReport(ev));
+return afterScout(() => onReport(ev));
       }
       if (/covered$/.test(m) && /^hero /.test(m)) $('wideFrame').classList.toggle('covered', !/uncovered/.test(m));
       if (/will fail|corrupted arguments/.test(m)) { glow('camera', 1, C.bad); badge('camera', /fail/.test(m) ? 'armed: fail' : 'armed: garbage', C.bad, 1500); }

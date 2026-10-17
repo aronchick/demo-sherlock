@@ -1,9 +1,9 @@
 // @ts-check
 'use strict';
 
-/** @typedef {{name:string, sha256:string, url:string, integrity:string, camera?:string,captured_at?:number|null}} Artifact */
+/** @typedef {{name:string, sha256:string, url:string, integrity:string, camera?:string,captured_at?:number|null,source_artifact?:string|null,relationship?:string,bbox?:number[]|null}} Artifact */
 /** @typedef {{stage:string, t:number, detail:string}} CustodyEvent */
-/** @typedef {{incident:string, action:string, claim:string, t:number, verified?:boolean, evidence_camera?:string, trigger?:{camera:string}, artifacts:Artifact[], custody:CustodyEvent[], models?:{mock?:boolean,scout?:string,director?:string,analyst?:string,verifier?:string}, notification:{simulated:boolean,status:string,delivered_at?:number,acknowledged_at?:number}}} Incident */
+/** @typedef {{incident:string, action:string, claim:string, t:number, verified?:boolean, comparison?:{status:string,reason:string,claim:string,analyst_supports:boolean,verifier_supports:boolean}, evidence_camera?:string, trigger?:{camera:string}, artifacts:Artifact[], custody:CustodyEvent[], models?:{mock?:boolean,scout?:string,director?:string,analyst?:string,verifier?:string}, notification:{simulated:boolean,status:string,delivered_at?:number,acknowledged_at?:number}}} Incident */
 
 (() => {
   const phone = document.getElementById('phone-content');
@@ -117,17 +117,22 @@
     phone.append(element('p', acknowledged ? 'ACKNOWLEDGED · SIMULATED' : 'DELIVERED · SIMULATED', `phone-status${acknowledged ? ' acknowledged' : ''}`));
     phone.append(element('h2', record.claim || 'Verified incident'));
     phone.append(element('p', `Detected on ${record.trigger?.camera || 'unrecorded camera'} · ${timestamp(record.t)}`));
-    const artifact = record.artifacts.find(item => item.name !== 'face_crop');
+    const gallery = element('div', '', 'phone-gallery');
+    const original = record.artifacts.find(item => item.name === 'original_frame');
+    const crops = record.artifacts.filter(item => ['weapon_crop', 'object_crop', 'face_crop'].includes(item.name));
 
-    if (artifact) {
-      const link = pictureLink(record, artifact);
-      link.className = 'phone-image';
-      phone.append(link);
+    for (const artifact of [...(original ? [original] : []), ...crops]) {
+      const picture = pictureLink(record, artifact);
+      picture.className = artifact.name === 'original_frame' ? 'phone-scene' : 'phone-crop';
+      const image = picture.querySelector('img');
+
+      if (image) image.classList.remove('face-preview');
+      picture.append(element('span', artifact.name === 'original_frame' ? 'Original scene' : artifact.name === 'face_crop' ? 'Face · human review' : 'Object'));
+      gallery.append(picture);
     }
 
-    phone.append(element('p', `Evidence camera: ${record.evidence_camera || 'not recorded'}`));
-    phone.append(element('p', record.models?.mock ? 'Mock analysis' : 'Live analysis'));
-    phone.append(element('p', `Incident ${record.incident}`));
+    phone.append(gallery);
+    phone.append(element('p', `${record.incident} · ${record.models?.mock ? 'Mock' : 'Live'}`, 'phone-id'));
     const link = document.createElement('a');
     link.href = custodyUrl(record.incident);
     link.target = 'sherlock-evidence';
@@ -171,10 +176,18 @@
     const summary = element('div', '', 'incident-summary');
     summary.append(fact('Incident', record.incident), fact('Trigger camera', record.trigger?.camera || 'Not recorded'), fact('Evidence camera', record.evidence_camera || 'Not recorded'), fact('Analysis', record.models?.mock ? 'Mock run' : 'Live run'), fact('Decision', record.action), fact('Recorded', timestamp(record.t)));
     custody.append(summary, element('h2', record.claim || 'Incident evidence'));
+
+    if (record.comparison) {
+      const comparison = element('section', '', 'comparison-record');
+      comparison.append(element('h3', `Comparison: ${record.comparison.status}`), element('p', record.comparison.reason), element('p', `Analyst supports claim: ${record.comparison.analyst_supports ? 'yes' : 'no'} · Verifier supports claim: ${record.comparison.verifier_supports ? 'yes' : 'no'}`));
+      custody.append(comparison);
+    }
+
     const grid = element('div', '', 'artifact-grid');
 
     for (const artifact of record.artifacts) {
-      const figure = element('figure', '', 'artifact');
+      const figure = element('figure', '', `artifact${artifact.name === 'original_frame' ? ' original-scene' : ''}`);
+      figure.id = `artifact-${artifact.name}`;
       const img = document.createElement('img');
       img.src = artifact.url;
       img.alt = artifact.name.replaceAll('_', ' ');
@@ -188,6 +201,17 @@
       } else figure.append(img);
       figure.append(element('figcaption', `${artifact.name.replaceAll('_', ' ')} · ${artifact.camera || record.evidence_camera || 'camera not recorded'}`));
       figure.append(element('p', `Captured ${timestamp(artifact.captured_at)}`));
+
+      if (artifact.source_artifact) {
+        const association = element('p', `${artifact.relationship === 'subsequent_capture' ? 'Later camera capture, associated with' : 'Source image:'} `);
+        const source = document.createElement('a');
+        source.href = `#artifact-${artifact.source_artifact}`;
+        source.textContent = artifact.source_artifact.replaceAll('_', ' ');
+        association.append(source);
+        figure.append(association);
+      }
+
+      if (artifact.bbox) figure.append(element('p', `Target box in source coordinates: ${artifact.bbox.join(', ')}`));
       const good = artifact.integrity === 'verified';
       figure.append(element('p', good ? 'SHA-256 matches saved record' : `Integrity check: ${artifact.integrity}`, good ? 'integrity-ok' : 'integrity-error'));
       figure.append(element('code', `SHA-256 ${artifact.sha256}`));

@@ -85,13 +85,13 @@ class ModelCards {
 
     image.src = source;
 
-    modelElement(`${role}PreviewState`).textContent = role === 'director' ? 'Context · ticket only' : 'Evaluating this crop';
+    modelElement(`${role}PreviewState`).textContent = role === 'director' ? 'Ticket only' : 'Evaluating this crop';
     modelElement(`st-${role}`).dataset.evaluating = 'true';
   }
 
   /** @param {string} role */
   complete(role) {
     modelElement(`st-${role}`).dataset.evaluating = 'false';
-    modelElement(`${role}PreviewState`).textContent = role === 'director' ? 'Context · ticket only' : 'Evaluated crop';
+    modelElement(`${role}PreviewState`).textContent = role === 'director' ? 'Ticket only' : 'Evaluated crop';
   }
 }

@@ -93,7 +93,7 @@ incident label with Current investigation.
 
 ## Final validation checkpoint
 
-The integrated local gate passed 583 tests with one Ray warning and zero Ruff
+The integrated local gate passed 585 tests with one Ray warning and zero Ruff
 findings. Twenty view tests passed again after narration corrections. The runtime
 reports the selected Scout SHA, and signed incident metadata now records it.
 Director prefetch configuration passed both model smoke calls; this warm-cache
@@ -102,3 +102,35 @@ reconfiguration is not a measured improvement in cold provider restart time.
 The three changed standalone browser modules passed anti-slop lint and TypeScript
 checking with browser-only libraries (no inherited unrelated Node or React types).
 The final label correction passed 23 targeted tests and a browser event retest.
+
+## Additional cold-cycle findings
+
+The final cold-cycle test on October 18 exposed two startup problems after
+`just down` reported STOPPED in 54.7 seconds:
+
+- The provider continued rejecting starts with `status=STOPPING` beyond the
+  original three-minute retry window. The bounded window is now ten minutes.
+  A later attempt failed before that limit; its exact provider error was not
+  retained. A subsequent explicit start succeeded.
+- Brev omitted the not-yet-running instance from SSH configuration. Once Brev
+  reported RUNNING/HEALTHY, refreshing restored the SSH alias. Readiness polling
+  now refreshes on failures, at most every 30 seconds, within its ten-minute limit.
+
+Both fixes are merged (#122 and #123). The full local gate passed 585 tests.
+This recovery required intervention; do not describe it as an unattended clean
+cold-start pass or promise a fast cold restart. Use `just down-local` for a brief
+recording break when retaining GPU compute billing is acceptable.
+
+The recovered cold start passed Director and VLM inference on October 18 at
+05:40 UTC. The Director readiness loop took about 9.5 minutes after model
+startup, in addition to provider shutdown/boot and the SSH-alias recovery.
+Prefetch is supported and active; this run does not establish a startup speedup.
+The old Scaleway instance remains retained and billable pending a visible physical
+prop run. No old-instance deletion occurred.
+
+After recovery, `/mode` confirmed the promoted Scout hash and both model endpoints,
+OBSBOT was available, and all five Expanso Cloud jobs were running. `just down`
+then closed the owned local services and Brev reported Nebius STOPPED. Provider
+shutdown can lag that inventory state; retained storage remains billable.
+The photo servers and isolated validation browser are closed. Claude's process
+and the original training outputs were left untouched.

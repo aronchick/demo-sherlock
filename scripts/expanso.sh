@@ -51,7 +51,11 @@ load_creds() {
   local file perm key value
   file="$(env_file)"
   [[ -f "$file" ]] || die "no credentials file at $file (README: Expanso)"
-  perm="$(stat -f '%Lp' "$file" 2>/dev/null || stat -c '%a' "$file")"
+  if [[ "$(uname -s)" == Darwin ]]; then
+    perm="$(stat -f '%Lp' "$file")"
+  else
+    perm="$(stat -c '%a' "$file")"
+  fi
   [[ "$perm" == 600 ]] || die "$file must be readable only by you (chmod 600)"
   EXPANSO_CLI_ENDPOINT="" EXPANSO_CLI_API_KEY="" EXPANSO_EDGE_BOOTSTRAP_TOKEN=""
   while IFS='=' read -r key value; do

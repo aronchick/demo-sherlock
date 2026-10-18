@@ -189,3 +189,11 @@ def test_promoted_scout_keeps_architecture_and_checkpoint_identity():
     assert card['name'] == 'YOLOv8n · fine-tuned'
     assert card['logo'] == '/pipeline/assets/brand-ultralytics.svg'
     assert card['runtime'] == 'scout-r2-960.pt · revision 2'
+
+
+def test_board_state_modules_are_served():
+    client = TestClient(mount_pipeline(FastAPI()))
+    for name in ('board-hydration.js', 'expanso-status.js'):
+        response = client.get(f'/pipeline/assets/{name}')
+        assert response.status_code == 200
+        assert response.headers['cache-control'] == 'no-cache'

@@ -113,11 +113,34 @@ class ModelCards {
     for (const role of this.roles) {
       const image = /** @type {HTMLImageElement} */ (modelElement(`${role}Preview`));
 
+      image.onload = null;
       image.hidden = true;
+      modelElement(`${role}Empty`).textContent = role === 'director' ? 'No detection yet' : 'No crop yet';
       image.removeAttribute('src');
       modelElement(`${role}Empty`).hidden = false;
       modelElement(`${role}PreviewState`).textContent = role === 'director' ? 'Detection context' : 'Waiting for the crop';
       modelElement(`st-${role}`).dataset.evaluating = 'false';
+    }
+  }
+
+  /** @param {string} role @param {string|null|undefined} source @param {string} label */
+  restore(role, source, label) {
+    const image = /** @type {HTMLImageElement} */ (modelElement(`${role}Preview`));
+
+    image.onload = null;
+    image.hidden = true;
+    modelElement(`${role}Empty`).hidden = true;
+    modelElement(`${role}PreviewState`).textContent = label;
+    modelElement(`st-${role}`).dataset.evaluating = 'false';
+
+    if (source) {
+      image.onload = () => { image.hidden = false; };
+
+      image.src = source;
+    } else {
+      image.removeAttribute('src');
+      modelElement(`${role}Empty`).textContent = 'No saved crop';
+      modelElement(`${role}Empty`).hidden = false;
     }
   }
 

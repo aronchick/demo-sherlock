@@ -305,6 +305,7 @@
 <canvas id="fx" aria-hidden="true"></canvas>
 
 <script src="/pipeline/assets/pipeline-models.js"></script>
+<script src="/pipeline/assets/board-hydration.js"></script>
 <script src="/pipeline/assets/custody-detail.js" defer></script>
 <script src="/pipeline/assets/incidents.js" defer></script>
 <script src="/pipeline/assets/expanso-status.js"></script>
@@ -867,8 +868,10 @@ function settleAnalyst(report) {
   analystEv = null;
 }
 
+const hydration = new IncidentHydration(record => hydrateIncident(record, modelCards, cellSet));
 const es = new EventSource('/events');
 es.onmessage = e => {
+  hydration.live();
   const ev = JSON.parse(e.data), m = ev.msg || '';
 
   if (ev.stage === 'analyst') holdAnalyst(ev);   // held now: the report may land before the beat plays
@@ -898,6 +901,7 @@ es.onmessage = e => {
       return;
   }
 };
+hydration.load();
 let lastFrames = 0;
 es.addEventListener('stats', e => {
   const s = JSON.parse(e.data);

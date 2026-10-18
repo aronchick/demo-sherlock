@@ -50,6 +50,43 @@ def test_ssh_readiness_refreshes_alias_after_boot(monkeypatch):
     assert calls[2][-2:] == ['new', 'true']
 
 
+@pytest.mark.parametrize('exit_code', [1, 2, 255])
+def test_setup_disconnect_recovers_with_verification_only(monkeypatch, exit_code):
+    calls = []
+
+    def execute(args, **kwargs):
+        calls.append(args)
+        if len(calls) == 1:
+            raise subprocess.CalledProcessError(exit_code, args)
+
+    monkeypatch.setattr(workflow, 'run', execute)
+    monkeypatch.setattr(workflow, 'wait_for_ssh', lambda name: calls.append(('ready', name)))
+    if exit_code != 255:
+        with pytest.raises(subprocess.CalledProcessError):
+            workflow.setup_remote('new', 'release')
+        assert len(calls) == 1
+    else:
+        workflow.setup_remote('new', 'release')
+        assert len(calls) == 3
+        assert calls[1] == ('ready', 'new')
+        assert calls[2][-1] == 'cd release && bash brev/setup.sh --verify-only'
+
+
+def test_setup_disconnect_recovery_does_not_loop(monkeypatch):
+    calls = []
+
+    def fail(args, **kwargs):
+        calls.append(args)
+        raise subprocess.CalledProcessError(255, args)
+
+    monkeypatch.setattr(workflow, 'run', fail)
+    monkeypatch.setattr(workflow, 'wait_for_ssh', lambda _: None)
+    with pytest.raises(subprocess.CalledProcessError):
+        workflow.setup_remote('new', 'release')
+    assert len(calls) == 2
+    assert calls[-1][-1].endswith('--verify-only')
+
+
 def test_model_environment_is_exact_and_does_not_replace_camera_settings():
     env = workflow.model_env('sherlock-h100')
     assert env['DIRECTOR_MODEL'] == workflow.DIRECTOR
@@ -533,7 +570,8 @@ def test_invalid_receipt_cannot_skip_gpu_shutdown(receipt, tmp_path, monkeypatch
     ('--safetensors-load-strategy=prefetch --safetensors-load-strategy lazy', True),
 ])
 @pytest.mark.parametrize('running', ['true', 'false'])
-def test_setup_reconciles_strategy_and_reuses_matching_caches(tmp_path, strategy, replaced, running):
+@pytest.mark.parametrize('verify_only', [False, True])
+def test_setup_reconciles_strategy_and_reuses_matching_caches(tmp_path, strategy, replaced, running, verify_only):
     import os
 
     fake = tmp_path / 'bin'
@@ -554,12 +592,18 @@ esac
         tool = fake / name
         tool.write_text('#!/bin/sh\nexit 0\n')
         tool.chmod(0o755)
-    result = subprocess.run(['bash', str(ROOT / 'brev/setup.sh')],
+    args = ['bash', str(ROOT / 'brev/setup.sh'), *(['--verify-only'] if verify_only else [])]
+    result = subprocess.run(args,
                             env={**os.environ, 'PATH': f'{fake}:{os.environ["PATH"]}',
                                  'CALLS': str(calls), 'STRATEGY': strategy, 'RUNNING': running},
                             capture_output=True, text=True, check=False)
-    assert result.returncode == 0, result.stderr
     operations = calls.read_text().splitlines()
+    if verify_only:
+        assert result.returncode == (1 if replaced or running == 'false' else 0), result.stderr
+        assert not any(line.startswith(('start ', 'container rm ', 'container stop ', 'pull ', 'run '))
+                       for line in operations)
+        return
+    assert result.returncode == 0, result.stderr
     if replaced:
         assert operations.index('pull vllm/vllm-openai:v0.28.0') < operations.index('container stop --timeout 30 director')
         assert 'container rm director' in operations

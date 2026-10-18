@@ -144,6 +144,20 @@ def start_existing(name):
             time.sleep(5)
 
 
+def setup_remote(name, remote):
+    command = f'cd {remote} && bash brev/setup.sh'
+    try:
+        run([*ssh(name), command])
+    except subprocess.CalledProcessError as exc:
+        if exc.returncode != 255:
+            raise
+        # The remote containers can survive a dropped SSH session. Do not replay
+        # mutations while the original setup might still be running.
+        print('Setup SSH disconnected; reconnecting to verify existing models without restart.', flush=True)
+        wait_for_ssh(name)
+        run([*ssh(name), f'{command} --verify-only'])
+
+
 def up(name):
     item = find_instance(name)
     if 'H100' not in item.get('gpu', '').upper():
@@ -169,7 +183,7 @@ def up(name):
                    'pyproject.toml', 'uv.lock', 'tests/fixtures/vllm'],
                   cwd=ROOT, capture_output=True).stdout
     run([*ssh(name), f'mkdir -p {remote} && tar -xf - -C {remote}'], input=archive)
-    run([*ssh(name), f'cd {remote} && bash brev/setup.sh'])
+    setup_remote(name, remote)
     print(f'GPU setup verified: {name}.', flush=True)
 
 

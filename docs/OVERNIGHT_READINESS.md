@@ -177,3 +177,11 @@ dark. Hardware control was tested separately from photo-driven detection.
 
 The requested visible prop-to-camera loop remains a daylight validation step.
 The old Scaleway instance has not been deleted; its compute billing continues.
+
+The setup command now handles an SSH exit 255 with one reconnect and a
+verification-only pass. That pass requires the exact expected containers to be
+running, then checks model readiness and inference without starting, stopping,
+replacing or pulling containers. Ordinary setup errors still fail immediately;
+a second SSH failure is reported rather than retried indefinitely. Automated
+tests cover those boundaries. A new live cold cycle is still required to verify
+this recovery under provider conditions.

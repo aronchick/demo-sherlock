@@ -50,9 +50,9 @@ Show the real decision and description. Do not wait for a second incident.
 ### 1:47–2:12 · Human response · `/phone`
 
 Select this incident, page through its images, then choose Investigate and
-Notify team. Keep the building location and response status in frame.
+Notify team. Keep the camera identifier and response status in frame.
 
-> The phone view puts the location and pictures together. I can open the
+> The phone view puts the camera identifier and pictures together. I can open the
 > notice, page through the scene and the close-up, and mark it for
 > investigation. Notify team records the next response action. The person
 > gets the evidence they need to decide what to do.

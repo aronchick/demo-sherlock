@@ -130,8 +130,19 @@ start_node() {
   else
     args+=(--data-dir "$STATE/sherlock-$role")
   fi
-  nohup expanso-edge "${args[@]}" >| "$RUNTIME/$role.log" 2>&1 </dev/null &
-  echo $! >| "$RUNTIME/$role.pid"
+  # A separate session survives the invoking terminal/SSH connection closing.
+  need uv
+  uv run --no-project python - "$RUNTIME/$role.log" "$RUNTIME/$role.pid" "${args[@]}" <<'PY'
+import pathlib
+import subprocess
+import sys
+
+with open(sys.argv[1], 'ab') as log:
+    process = subprocess.Popen(['expanso-edge', *sys.argv[3:]],
+                               stdin=subprocess.DEVNULL, stdout=log, stderr=log,
+                               start_new_session=True)
+pathlib.Path(sys.argv[2]).write_text(str(process.pid) + '\n')
+PY
   echo "$mode" >| "$RUNTIME/mode"
 }
 

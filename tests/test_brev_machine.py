@@ -29,6 +29,27 @@ def test_busy_port_is_left_alone():
         assert server.fileno() >= 0
 
 
+def test_ssh_readiness_refreshes_alias_after_boot(monkeypatch):
+    calls = []
+    refreshed = False
+
+    def execute(args, **kwargs):
+        nonlocal refreshed
+        calls.append(args)
+        if args == ['brev', 'refresh']:
+            refreshed = True
+            return SimpleNamespace(returncode=0)
+        return SimpleNamespace(returncode=0 if refreshed else 255)
+
+    monkeypatch.setattr(workflow.subprocess, 'run', execute)
+    monkeypatch.setattr(workflow.time, 'sleep', lambda _: None)
+    workflow.wait_for_ssh('new')
+    assert len(calls) == 3
+    assert calls[1] == ['brev', 'refresh']
+    assert calls[0][-2:] == ['new', 'true']
+    assert calls[2][-2:] == ['new', 'true']
+
+
 def test_model_environment_is_exact_and_does_not_replace_camera_settings():
     env = workflow.model_env('sherlock-h100')
     assert env['DIRECTOR_MODEL'] == workflow.DIRECTOR

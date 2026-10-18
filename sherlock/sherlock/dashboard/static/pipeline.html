@@ -268,7 +268,6 @@
           <span class="mini-phone" aria-hidden="true"><span id="phone-light"></span></span>
           <span><strong>Phone</strong><span id="phone-summary">Waiting for an alert</span><small>Simulated · open tab</small></span>
         </a>
-        <span id="phone-error" class="phone-error" role="status"></span>
       </article>
 
       <article class="dest cloud-evidence" id="st-cloud" style="--c: var(--scout)">
@@ -302,6 +301,7 @@
     <button type="button" onclick="post('/demo/fail/1')">Break next tool call</button>
     <button type="button" onclick="post('/demo/disagree/1')">Simulate disagreement</button>
     <button type="button" id="coverBtn" onclick="toggleCover()">Cover hero lens</button>
+    <span id="phone-error" class="phone-error" role="status"></span>
   </footer>
 </div>
 <canvas id="fx" aria-hidden="true"></canvas>

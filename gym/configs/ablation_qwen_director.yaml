@@ -1,0 +1,53 @@
+# Ablation 2 (Model Swap): Director = Qwen2.5-7B-Instruct vs Nemotron 3.5 Lightning (all else fixed)
+# Generative parameters: 7.62B (Qwen2.5-7B-Instruct, 7,615,616,512 tensors) + 0.51B (SmolVLM-500M-Instruct,
+# 507,482,304 tensors) = 8.12B <= 33B. Neither checkpoint has MTP, so card and tensor counts agree.
+sherlock:
+  resources_servers:
+    sherlock:
+      entrypoint: app.py
+      domain: agent
+      verified: true
+      datasets:
+        - name: sherlock_ablation_eval
+          type: example
+          jsonl_fpath: gym/resources_servers/sherlock/data/tasks.jsonl
+          num_repeats: 1
+
+policy_model:
+  responses_api_models:
+    vllm_model:
+      entrypoint: app.py
+      base_url: ${oc.env:QWEN_DIRECTOR_BASE_URL,http://127.0.0.1:18900/v1}
+      api_key: ${oc.env:QWEN_DIRECTOR_API_KEY,${oc.env:DIRECTOR_API_KEY,EMPTY}}
+      model: ${oc.env:QWEN_DIRECTOR_MODEL,Qwen/Qwen2.5-7B-Instruct}
+      return_token_id_information: false
+      uses_reasoning_parser: false
+      chat_template_kwargs:
+        enable_thinking: false
+      extra_body:
+        reasoning_effort: none
+        chat_template_kwargs:
+          enable_thinking: false
+
+sherlock_agent:
+  responses_api_agents:
+    sherlock_agent:
+      entrypoint: app.py
+      resources_server:
+        type: resources_servers
+        name: sherlock
+      model_server:
+        type: responses_api_models
+        name: policy_model
+      max_steps: 6
+      weapon_extra_steps: 4
+      prompt_config: gym/prompts/system_v2.yaml
+      tool_descriptions: verbose
+      ablation_id: qwen_director
+      ablation_component: "Model (Qwen2.5-7B-Instruct vs Nemotron 3.5 Lightning)"
+      ablation_description: "Swap Director model to Qwen/Qwen2.5-7B-Instruct; hold prompt (v2), tools (verbose), thinking (off) fixed"
+      endpoint_env_var: QWEN_DIRECTOR_BASE_URL
+      director_model_name: ${oc.env:QWEN_DIRECTOR_MODEL,Qwen/Qwen2.5-7B-Instruct}
+      director_params_b: 7.616
+      vlm_model_name: HuggingFaceTB/SmolVLM-500M-Instruct
+      vlm_params_b: 0.507

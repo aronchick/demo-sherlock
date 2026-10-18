@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sherlock / evidence and response</title>
+  <link rel="stylesheet" href="/pipeline/assets/incidents.css">
+  <link rel="stylesheet" href="/pipeline/assets/phone.css">
+  <script src="/pipeline/assets/custody-detail.js" defer></script>
+<script src="/pipeline/assets/incidents.js" defer></script>
+  <script src="/pipeline/assets/phone.js" defer></script>
+<link rel="stylesheet" href="/pipeline/assets/casefile.css">
+</head>
+<body class="incident-page">
+  <header class="incident-header">
+    <a href="/" target="sherlock-flow">Sherlock / incident operations</a>
+    <nav aria-label="Views"><a href="/phone" target="sherlock-phone">Responder phone</a><a href="/custody" target="sherlock-evidence">Evidence</a></nav>
+  </header>
+  <main id="incident-main">
+    <section id="phone-view" hidden>
+      <section class="responder-device" aria-label="Interactive responder phone">
+        <div class="responder-speaker" aria-hidden="true"></div>
+        <div id="phone-app"></div>
+      </section>
+    </section>
+    <section id="custody-view" hidden>
+      <div class="page-intro"><p class="eyebrow">Evidence / chain of custody</p><h1 id="custody-title">Incident register</h1><p>Expand a case to inspect captures, model decisions, responder actions and cryptographic verification.</p></div>
+      <p id="custody-error" role="status"></p>
+      <div id="custody-content"><p>Loading evidence records…</p></div>
+      <nav class="incident-pagination" id="incident-pagination" aria-label="Evidence pages" hidden><button id="previous-incidents" type="button">Previous</button><span id="incident-page-label"></span><button id="next-incidents" type="button">Next</button></nav>
+    </section>
+  </main>
+</body>
+</html>

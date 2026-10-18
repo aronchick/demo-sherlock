@@ -1,0 +1,476 @@
+"""Evidence selection tests use labelled fixtures, never publish model scores."""
+
+from __future__ import annotations
+
+import copy
+import json
+import os
+from types import SimpleNamespace
+
+import pytest
+from fastapi.testclient import TestClient
+from sherlock.dashboard import numbers
+from sherlock.dashboard.server import make_app
+
+
+def benchmark():
+    def row(concurrency, p50, p95):
+        return {
+            "workload": "director",
+            "model": "director",
+            "concurrency": concurrency,
+            "summary": {
+                "succeeded": 200,
+                "attempted": 200,
+                "failed": 0,
+                "e2e_ms": {"p50": p50, "p95": p95},
+                "output_tokens_per_s": 42.5,
+                "requests_per_s": 3.5,
+            },
+        }
+
+    return {
+        "evidence_kind": "endpoint",
+        "prefix_caching": "on",
+        "workload_fingerprint": "current-prompt",
+        "runs": [
+            row(1, 100, 200),
+            row(16, 300, 400),
+            {"workload": "vlm", "concurrency": 32},
+        ],
+        "comparison": {
+            "baseline_workload_fingerprint": "current-prompt",
+            "candidate_workload_fingerprint": "current-prompt",
+            "results": [
+                {
+                    "workload": "director",
+                    "model": "director",
+                    "concurrency": 1,
+                    "baseline_failed": 0,
+                    "candidate_failed": 0,
+                    "e2e_p95_change_pct": -90,
+                },
+                {
+                    "workload": "director",
+                    "model": "director",
+                    "concurrency": 16,
+                    "baseline_failed": 0,
+                    "candidate_failed": 0,
+                    "e2e_p95_change_pct": -12.5,
+                },
+            ]
+        },
+    }
+
+
+def ablation():
+    return {
+        "execution_mode": "live_endpoint",
+        "runtime": "local_ollama",
+        "model_server": {"label": "Ollama"},
+        "ablation_id": "nemotron_lightning",
+        "summary_metrics": {
+            "num_tasks": 8,
+            "task_success": 0.75,
+            "tool_call_validity": 0.9,
+        },
+    }
+
+
+def scout():
+    return {
+        "evidence_kind": "model_evaluation",
+        "execution_mode": "measured",
+        "split": "test",
+        "images": {"room": 4},
+        "before": {
+            "model": "stock.pt",
+            "room": {
+                "weapon": {"tp": 2, "fp": 1, "fn": 2, "precision": 0.667, "recall": 0.5}
+            },
+        },
+        "after": {
+            "model": "tuned.pt",
+            "room": {
+                "weapon": {"tp": 3, "fp": 0, "fn": 1, "precision": 1.0, "recall": 0.75}
+            },
+        },
+    }
+
+
+def brev():
+    """The Brev H100 Gym reference row as gym/run_ablation.py records it."""
+    data = ablation()
+    data["runtime"] = "brev_vllm"
+    data["model_server"] = {"name": "vLLM", "version": "0.28.0", "reachable": True, "source": "detected",
+                            "host": "sherlock-h100", "label": "vLLM"}
+    data["summary_metrics"]["task_success"] = 1.0
+    return data
+
+
+def write(root, name, data, age=1):
+    path = root / name
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(data))
+    os.utime(path, (age, age))
+    return path
+
+
+def test_missing_and_checked_in_stub_results_are_tbd(tmp_path):
+    assert numbers.read_numbers(tmp_path) == {
+        "director": None,
+        "ablation": None,
+        "ablation_secondary": None,
+        "scout": None,
+    }
+    # The checked-in benchmark is explicitly protocol-only evidence.
+    for path in (numbers.ROOT / "results").glob("vllm_bench_*.json"):
+        data = json.loads(path.read_text())
+        if data.get("evidence_kind") == "stub":
+            assert numbers.director_result(data) is None
+
+
+@pytest.mark.parametrize(
+    "key, value",
+    [
+        ("evidence_kind", "stub"),
+        ("evidence_kind", None),
+        ("execution_mode", "local_stub"),
+        ("stub", True),
+        ("is_stub", True),
+        ("mock", True),
+    ],
+)
+def test_benchmark_stub_markers_override_other_labels(key, value):
+    data = benchmark()
+    data[key] = value
+    assert numbers.director_result(data) is None
+
+
+def test_latest_real_result_includes_nested_preflight_outputs(tmp_path):
+    older = benchmark()
+    older["runs"][1]["summary"]["e2e_ms"]["p50"] = 999
+    write(tmp_path, "results/vllm_bench_old.json", older, 1)
+    write(
+        tmp_path, "results/brev_preflight_run/on/vllm_bench_live.json", benchmark(), 2
+    )
+    newer_stub = {**benchmark(), "evidence_kind": "stub"}
+    write(tmp_path, "results/vllm_bench_new_stub.json", newer_stub, 3)
+    result = numbers.read_numbers(tmp_path)["director"]
+    assert result["file"] == "vllm_bench_live.json"
+    assert (
+        result["concurrency"] == 16
+        and result["p50_ms"] == 300
+        and result["p95_ms"] == 400
+    )
+    assert result["output_tokens_per_s"] == 42.5 and result["requests_per_s"] == 3.5
+    assert result["prefix_cache_p95_change_pct"] == -12.5
+
+
+@pytest.mark.parametrize(
+    "change", ["missing", "model", "concurrency", "failed", "off", "stub"]
+)
+def test_ab_delta_requires_same_cell_and_valid_comparison(change):
+    data = benchmark()
+    row = data["comparison"]["results"][1]
+    if change == "missing":
+        data.pop("comparison")
+    elif change == "model":
+        row["model"] = "other-model"
+    elif change == "concurrency":
+        row["concurrency"] = 8
+    elif change == "failed":
+        row["baseline_failed"] = 1
+    elif change == "off":
+        data["prefix_caching"] = "off"
+    else:
+        row["evidence_kind"] = "stub"
+    assert numbers.director_result(data)["prefix_cache_p95_change_pct"] is None
+
+
+def test_latest_failed_run_does_not_fall_back_to_older_success(tmp_path):
+    write(tmp_path, "results/vllm_bench_old.json", benchmark(), 1)
+    data = benchmark()
+    for row in data["runs"][:2]:
+        row["summary"].update(
+            succeeded=0,
+            failed=200,
+            e2e_ms={"p50": None, "p95": None},
+            output_tokens_per_s=None,
+            requests_per_s=0,
+        )
+    write(tmp_path, "results/vllm_bench_failed.json", data, 2)
+    result = numbers.read_numbers(tmp_path)["director"]
+    assert result["file"] == "vllm_bench_failed.json" and result["succeeded"] == 0
+    assert result["p50_ms"] is None and result["prefix_cache_p95_change_pct"] is None
+
+
+@pytest.mark.parametrize(
+    "value", [None, True, "123", float("nan"), float("inf"), -1, 10**500]
+)
+def test_invalid_numbers_stay_missing(value):
+    assert numbers.number(value) is None
+
+
+def test_zero_values_are_preserved():
+    assert numbers.number(0) == 0
+    data = ablation()
+    data["summary_metrics"]["task_success"] = 0
+    assert numbers.ablation_result(data)["task_success"] == 0
+
+
+def test_ablation_requires_live_mode_and_labels_reference(tmp_path):
+    write(tmp_path, "results/ablation_nemotron_lightning.json", ablation(), 1)
+    write(
+        tmp_path,
+        "results/ablation_stub.json",
+        {**ablation(), "execution_mode": "local_stub"},
+        2,
+    )
+    result = numbers.read_numbers(tmp_path)["ablation"]
+    assert result["file"] == "ablation_nemotron_lightning.json" and result["tasks"] == 8
+    assert result["task_success"] == 0.75
+    assert numbers.ablation_result({**ablation(), "execution_mode": None}) is None
+    other = {**ablation(), "ablation_id": "other"}
+    other["summary_metrics"] = {**other["summary_metrics"], "task_success": 1}
+    summary = {"execution_mode": "live_endpoint", "results": [other, ablation()]}
+    assert numbers.ablation_result(summary)["config"] == "nemotron_lightning"
+    summary["execution_mode"] = "local_stub"
+    assert numbers.ablation_result(summary) is None
+
+
+def test_results_say_where_they_were_measured():
+    ollama = {"name": "Ollama", "version": "0.40.5", "host": "laptop", "label": "Ollama"}
+    bare = {key: value for key, value in ablation().items() if key not in ("model_server", "runtime")}
+    assert numbers.ablation_result({**bare, "model_server": ollama})["measured_on"] == "local · Ollama"
+    assert numbers.ablation_result(ablation())["measured_on"] == "Ollama"  # a label, no host
+    assert numbers.ablation_result({**bare, "runtime": "local_ollama"})["measured_on"] == "local_ollama"
+    assert numbers.ablation_result(bare)["measured_on"] is None
+    summary = {"execution_mode": "live_endpoint", "model_server": ollama, "results": [bare]}
+    assert numbers.ablation_result(summary)["measured_on"] == "local · Ollama"  # inherited by the row
+    vllm = {"name": "vLLM", "version": "0.28.0", "host": "brev-l40s", "label": "vLLM"}
+    assert numbers.director_result({**benchmark(), "model_server": vllm})["measured_on"] == "brev-l40s · vLLM"
+    h100 = {"name": "vLLM", "version": "0.28.0", "host": "sherlock-h100", "hardware": "Brev, 1x H100 PCIe 80GB",
+            "label": "Brev · vLLM", "source": "declared"}  # the producer's own label wins
+    assert numbers.director_result({**benchmark(), "model_server": h100})["measured_on"] == "Brev · vLLM"
+    brev_gym = {"name": "vLLM", "host": "sherlock-h100", "label": "vLLM"}  # run_ablation.py's runtime says Brev
+    assert numbers.ablation_result(brev())["measured_on"] == "Brev · vLLM"
+    assert numbers.ablation_result({**brev(), "runtime": "brev_ollama"})["measured_on"] == "sherlock-h100 · vLLM"
+    assert numbers.ablation_result({**brev(), "model_server": {**brev_gym, "host": "laptop"},
+                                    "runtime": "local_vllm"})["measured_on"] == "local · vLLM"
+    unknown = {"name": None, "host": "sherlock-h100", "label": "sherlock-h100", "reachable": True}
+    assert numbers.director_result({**benchmark(), "model_server": unknown})["measured_on"] == "sherlock-h100"
+    assert numbers.director_result({**benchmark(), "environment": "brev-l40s"})["measured_on"] == "brev-l40s"
+    assert numbers.director_result({**benchmark(), "environment": "unspecified"})["measured_on"] is None
+    assert numbers.director_result(benchmark())["measured_on"] is None
+    assert numbers.scout_result({**scout(), "environment": "local", "device": "mps"})["measured_on"] == "local · MPS"
+
+
+def test_scout_provenance_split_and_matched_ground_truth():
+    data = scout()
+    result = numbers.scout_result(data)
+    assert result["source"] == "room" and result["boxes"] == 4
+    assert result["before_recall"] == 0.5 and result["after_recall"] == 0.75
+    for overrides in (
+        {"evidence_kind": "stub"},
+        {"evidence_kind": None},
+        {"execution_mode": "smoke"},
+        {"execution_mode": "local_stub"},
+        {"execution_mode": "unknown"},
+        {"execution_mode": None},
+        {"split": "train"},
+        {"mock": True},
+    ):
+        assert numbers.scout_result({**data, **overrides}) is None
+    data["after"]["room"]["weapon"]["fn"] = 0
+    assert numbers.scout_result(data) is None
+
+
+def test_scout_all_fallback_and_supported_locations(tmp_path):
+    data = scout()
+    for side in ("before", "after"):
+        data[side]["all"] = data[side].pop("room")
+    write(tmp_path, "runs/scout/eval.json", data)
+    assert numbers.read_numbers(tmp_path)["scout"]["source"] == "all"
+    write(tmp_path, "results/scout_eval_latest.json", scout(), 2)
+    assert numbers.read_numbers(tmp_path)["scout"]["source"] == "room"
+
+
+@pytest.mark.parametrize("missing", [("evidence_kind",), ("execution_mode",), ("evidence_kind", "execution_mode")])
+def test_scout_unlabelled_reports_are_not_evidence(missing):
+    data = scout()
+    data.update(conf=0.35, iou=0.5)
+    for key in missing:
+        data.pop(key)
+    assert numbers.scout_result(data) is None
+
+
+def test_scout_newer_smoke_is_skipped_and_nested_smoke_is_rejected(tmp_path):
+    write(tmp_path, "results/scout_eval_measured.json", scout())
+    data = {**scout(), "execution_mode": "smoke"}
+    write(tmp_path, "runs/scout/eval.json", data, 2)
+    assert numbers.read_numbers(tmp_path)["scout"]["file"] == "scout_eval_measured.json"
+    for side in ("before", "after"):
+        data = scout()
+        data[side]["execution_mode"] = "smoke"
+        assert numbers.scout_result(data) is None
+
+
+def test_malformed_and_oversized_files_do_not_break_dashboard(tmp_path, monkeypatch):
+    path = write(tmp_path, "results/vllm_bench_bad.json", {})
+    for raw in (
+        "{incomplete",
+        "null",
+        "[]",
+        '{"evidence_kind": []}',
+        '{"evidence_kind":"endpoint","runs":{}}',
+    ):
+        path.write_text(raw)
+        assert numbers.read_numbers(tmp_path)["director"] is None
+    path.write_bytes(b"\xff\xfe\x00")
+    assert numbers.read_numbers(tmp_path)["director"] is None
+    write(tmp_path, "results/vllm_bench_large.json", benchmark())
+    monkeypatch.setattr(numbers, "MAX_BYTES", 16)
+    assert numbers.read_numbers(tmp_path)["director"] is None
+
+
+def test_symlink_artifacts_are_not_read(tmp_path):
+    target = write(tmp_path, "outside.json", benchmark())
+    results = tmp_path / "results"
+    results.mkdir()
+    (results / "vllm_bench_link.json").symlink_to(target)
+    assert numbers.read_numbers(tmp_path)["director"] is None
+
+
+def test_api_reads_updated_files_and_returns_only_summary(tmp_path, monkeypatch):
+    monkeypatch.setattr(numbers, "ROOT", tmp_path)
+    with TestClient(make_app(SimpleNamespace())) as client:
+        assert client.get("/numbers").json() == {
+            "director": None,
+            "ablation": None,
+            "ablation_secondary": None,
+            "scout": None,
+        }
+        data = benchmark()
+        data["director_base_url"] = "https://secret-host/private"
+        write(tmp_path, "results/vllm_bench_live.json", data)
+        write(tmp_path, "results/ablation_nemotron_lightning.json", ablation())
+        write(tmp_path, "runs/scout/eval.json", scout())
+        response = client.get("/numbers")
+        assert (
+            response.status_code == 200
+            and response.headers["cache-control"] == "no-store"
+        )
+        assert "secret-host" not in response.text
+        assert response.json()["director"]["concurrency"] == 16
+        assert response.json()["ablation"]["tasks"] == 8
+        assert response.json()["ablation"]["runtime"] == "local_ollama"
+        assert response.json()["ablation"]["model_server_label"] == "Ollama"
+        assert response.json()["scout"]["boxes"] == 4
+        assert client.get("/numbers.js").status_code == 200
+        page = client.get("/log").text
+        assert 'id="avoided"' in page
+
+
+def test_no_producer_objects_are_mutated():
+    data = benchmark()
+    original = copy.deepcopy(data)
+    numbers.director_result(data)
+    assert data == original
+
+
+@pytest.mark.parametrize("field", ["baseline_workload_fingerprint", "candidate_workload_fingerprint"])
+@pytest.mark.parametrize("value", [None, "old-prompt", ""])
+def test_ab_delta_rejects_missing_or_different_workload_hash(field, value):
+    data = benchmark()
+    data["comparison"][field] = value
+    result = numbers.director_result(data)
+    assert result["prefix_cache_p95_change_pct"] is None
+    assert result["p95_ms"] == 400
+
+
+@pytest.mark.parametrize("scope", [None, "before_after", "baseline_only"])
+def test_scout_partial_requires_explicit_baseline_scope(scope):
+    data = scout()
+    data["after"] = None
+    data["evaluation_scope"] = scope
+    result = numbers.scout_result(data)
+    if scope == "baseline_only":
+        assert result["before_precision"] == 0.667
+        assert result["after_precision"] is None
+        data["execution_mode"] = "smoke"
+        assert numbers.scout_result(data) is None
+    else:
+        assert result is None
+
+
+@pytest.mark.parametrize("summary_age,reference_age,other_age", [(1, 1, 1), (1, 2, 3), (3, 2, 1)])
+def test_ablation_fixed_priority_ignores_mtimes(tmp_path, summary_age, reference_age, other_age):
+    reference = ablation()
+    reference["runtime"] = "local_ollama"
+    reference["model_server"] = {"label": "Ollama", "name": "ignored-name"}
+    summary = {"execution_mode": "live_endpoint", "results": [
+        {**ablation(), "ablation_id": "aaa"}, reference]}
+    write(tmp_path, "results/ablation_summary.json", summary, summary_age)
+    fallback = ablation()
+    fallback["summary_metrics"]["task_success"] = 0.5
+    write(tmp_path, "results/ablation_nemotron_lightning.json", fallback, reference_age)
+    write(tmp_path, "results/ablation_zzz.json", {**ablation(), "ablation_id": "zzz"}, other_age)
+    result = numbers.read_numbers(tmp_path)["ablation"]
+    assert result["file"] == "ablation_summary.json" and result["task_success"] == 0.75
+    assert result["runtime"] == "local_ollama" and result["model_server_label"] == "Ollama"
+
+
+@pytest.mark.parametrize("invalid", [None, {}, {"execution_mode": "local_stub"},
+    {"execution_mode": "live_endpoint", "results": [{"ablation_id": "other"}]}])
+def test_ablation_reference_file_fallback_only(tmp_path, invalid):
+    if invalid is not None:
+        write(tmp_path, "results/ablation_summary.json", invalid)
+    path = write(tmp_path, "results/ablation_nemotron_lightning.json", ablation())
+    write(tmp_path, "results/ablation_other.json", {**ablation(), "ablation_id": "other"}, 99)
+    assert numbers.read_numbers(tmp_path)["ablation"]["file"] == path.name
+    path.unlink()
+    assert numbers.read_numbers(tmp_path)["ablation"] is None
+
+
+def test_ablation_summary_inherits_server_metadata_and_rejects_stub_reference():
+    data = {"execution_mode": "live_endpoint", "runtime": "local_ollama",
+            "model_server": {"name": "Ollama"}, "results": [ablation()]}
+    data["results"][0].pop("runtime")
+    data["results"][0].pop("model_server")
+    result = numbers.ablation_result(data)
+    assert result["runtime"] == "local_ollama" and result["model_server_label"] == "Ollama"
+    data["results"][0]["execution_mode"] = "local_stub"
+    assert numbers.ablation_result(data) is None
+
+
+@pytest.mark.parametrize("brev_age,local_age", [(1, 1), (1, 9), (9, 1)])
+def test_brev_gym_run_is_primary_and_local_secondary(tmp_path, brev_age, local_age):
+    """Both run directories present: the Brev reference row leads whatever the mtimes."""
+    local = {"execution_mode": "live_endpoint", "results": [{**ablation(), "ablation_id": "aaa"}, ablation()]}
+    write(tmp_path, "results/ablation_summary.json", local, local_age)
+    write(tmp_path, "results/brev_vllm/ablation_summary.json",
+          {"execution_mode": "live_endpoint", "results": [{**brev(), "ablation_id": "aaa"}, brev()]}, brev_age)
+    write(tmp_path, "results/brev_vllm/ablation_zzz.json", {**brev(), "ablation_id": "zzz"}, 99)
+    result = numbers.read_numbers(tmp_path)
+    primary, secondary = result["ablation"], result["ablation_secondary"]
+    assert primary["file"] == "brev_vllm/ablation_summary.json" and primary["config"] == "nemotron_lightning"
+    assert primary["task_success"] == 1.0 and primary["runtime"] == "brev_vllm"
+    assert primary["measured_on"] == "Brev · vLLM" and primary["model_server_label"] == "vLLM"
+    assert secondary["file"] == "ablation_summary.json" and secondary["task_success"] == 0.75
+    assert secondary["runtime"] == "local_ollama" and secondary["measured_on"] == "Ollama"
+
+
+@pytest.mark.parametrize("invalid", [None, {"execution_mode": "local_stub"},
+    {"execution_mode": "live_endpoint", "results": [{"ablation_id": "other"}]}])
+def test_brev_gym_falls_back_to_its_reference_file_then_to_local(tmp_path, invalid):
+    if invalid is not None:
+        write(tmp_path, "results/brev_vllm/ablation_summary.json", invalid)
+    local = write(tmp_path, "results/ablation_summary.json", {"execution_mode": "live_endpoint", "results": [ablation()]})
+    reference = write(tmp_path, "results/brev_vllm/ablation_nemotron_lightning.json", brev())
+    result = numbers.read_numbers(tmp_path)
+    assert result["ablation"]["file"] == "brev_vllm/ablation_nemotron_lightning.json"
+    assert result["ablation_secondary"]["file"] == local.name
+    reference.unlink()  # no Brev run: the local one leads, with nothing under it
+    result = numbers.read_numbers(tmp_path)
+    assert result["ablation"]["file"] == local.name and result["ablation_secondary"] is None

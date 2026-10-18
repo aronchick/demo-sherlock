@@ -1,0 +1,334 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Scout review</title>
+<style>
+@font-face { font-family: 'Schibsted Grotesk'; src: url('/fonts/schibsted-grotesk.woff2') format('woff2'); font-weight: 100 900; }
+@font-face { font-family: 'IBM Plex Mono'; src: url('/fonts/plex-mono-400.woff2') format('woff2'); font-weight: 400; }
+@font-face { font-family: 'IBM Plex Mono'; src: url('/fonts/plex-mono-500.woff2') format('woff2'); font-weight: 500; }
+:root {
+  color-scheme: dark;
+  --bg: #0c0d10; --surface: #14161b; --surface-2: #1b1e25; --line: #2b3039;
+  --text: #eceef2; --text-dim: #a3aab6;
+  --accent: #f2c14e;  /* the next action */
+  --ok: #8fe0a4;      /* reviewed */
+  --warn: #ff8a5c;    /* a box is missing or suspect */
+  --sans: 'Schibsted Grotesk', sans-serif;
+  --mono: 'IBM Plex Mono', monospace;  /* all prose: the grotesk subset has no , or . */
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html, body { margin: 0; }
+body {
+  min-height: 100vh; background: var(--bg); color: var(--text);
+  font: 14px/1.45 var(--mono); font-variant-numeric: tabular-nums;
+}
+header {
+  display: flex; gap: 18px; align-items: center; flex-wrap: wrap;
+  padding: 12px 20px; border-bottom: 1px solid var(--line);
+}
+header h1 { margin: 0; font: 700 20px var(--sans); letter-spacing: -0.01em; }
+.splits { display: flex; gap: 8px; flex-wrap: wrap; }
+.splits span { padding: 4px 10px; border-radius: 5px; border: 1px solid var(--line); color: var(--text-dim); font-size: 13px; }
+.splits span.done { border-color: var(--ok); color: var(--ok); }
+.splits b { color: var(--text); font-weight: 500; }
+main { display: grid; grid-template-columns: minmax(0, 1fr) 360px; gap: 20px; padding: 16px 20px; }
+.stage { min-width: 0; }
+canvas {
+  display: block; width: 100%; border-radius: 8px; border: 3px solid var(--line);
+  background: var(--surface); cursor: crosshair;
+}
+.stage.reviewed canvas { border-color: var(--ok); }
+.where { display: flex; gap: 14px; flex-wrap: wrap; margin-top: 8px; color: var(--text-dim); font-size: 13px; }
+.where .tag { color: var(--text); }
+.where .ok { color: var(--ok); }
+.where .warn { color: var(--warn); }
+.banner {
+  margin-top: 10px; padding: 10px 14px; border-radius: 8px; font-size: 15px;
+  background: rgba(255, 138, 92, 0.12); border: 1px solid var(--warn); color: var(--text);
+}
+.banner b { color: var(--warn); }
+aside { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; }
+.panel h2 {
+  margin: 0 0 8px; font: 500 12px var(--mono); letter-spacing: 0.08em;
+  text-transform: uppercase; color: var(--text-dim);
+}
+button {
+  font: inherit; color: inherit; cursor: pointer; border-radius: 8px;
+  border: 1px solid var(--line); background: var(--surface-2); padding: 8px 10px;
+}
+button.go { width: 100%; padding: 14px; font: 700 18px var(--mono); background: var(--accent); color: #17140a; border-color: var(--accent); }
+.row { display: flex; gap: 8px; margin-top: 8px; }
+.row button { flex: 1; }
+.keys { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 6px 12px; margin: 0; }
+.keys dt { white-space: nowrap; }
+.keys dt kbd {
+  font: 500 12px var(--mono); padding: 2px 6px; border-radius: 4px;
+  border: 1px solid var(--line); background: var(--surface-2);
+}
+.keys dd { margin: 0; color: var(--text-dim); }
+.classes { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.classes button { display: flex; align-items: center; gap: 8px; text-align: left; padding: 6px 8px; }
+.classes button.on { border-color: var(--text); background: #262a33; }
+.swatch { width: 12px; height: 12px; border-radius: 3px; flex: none; }
+.boxes { display: flex; flex-direction: column; gap: 4px; }
+.boxes div {
+  display: flex; align-items: center; gap: 8px; padding: 4px 6px; border-radius: 6px;
+  border: 1px solid transparent; cursor: pointer;
+}
+.boxes div.sel { border-color: var(--text); background: var(--surface-2); }
+.boxes div span.name { flex: 1; }
+.boxes div button { padding: 2px 8px; font-size: 12px; }
+.empty { color: var(--text-dim); }
+.finished { padding: 60px 20px; text-align: center; font-size: 18px; }
+.finished b { color: var(--ok); }
+</style>
+</head>
+<body>
+<header>
+  <h1>Scout review</h1>
+  <div class="splits" id="splits"></div>
+</header>
+<main>
+  <section class="stage" id="stage">
+    <canvas id="cv" width="1920" height="1080"></canvas>
+    <div class="where" id="where"></div>
+    <div class="banner" id="banner" hidden></div>
+    <div class="finished" id="finished" hidden><b>Every photo is reviewed.</b><br>Tell Claude to build and train.</div>
+  </section>
+  <aside>
+    <div class="panel">
+      <button class="go" id="accept">Space · looks right, next</button>
+      <div class="row">
+        <button id="prev">← back</button>
+        <button id="next">skip →</button>
+      </div>
+    </div>
+    <div class="panel">
+      <h2>What to do</h2>
+      <dl class="keys">
+        <dt><kbd>Space</kbd></dt><dd>every box is right: save, next photo</dd>
+        <dt>wrong box</dt><dd>click it, then <kbd>Delete</kbd> (or right-click it)</dd>
+        <dt>missing box</dt><dd>drag around the object (uses the class picked below)</dd>
+        <dt>wrong class</dt><dd>click the box, then press <kbd>1</kbd>-<kbd>7</kbd></dd>
+        <dt><kbd>U</kbd></dt><dd>undo</dd>
+        <dt><kbd>←</kbd> <kbd>→</kbd></dt><dd>back or skip, without saving</dd>
+      </dl>
+    </div>
+    <div class="panel">
+      <h2>Class for new boxes</h2>
+      <div class="classes" id="classes"></div>
+    </div>
+    <div class="panel">
+      <h2>Boxes on this photo</h2>
+      <div class="boxes" id="boxes"></div>
+    </div>
+    <div class="panel">
+      <h2>What counts as right</h2>
+      <div class="empty">One tight box per visible prop (knife / can / hat) and one box around the whole visible person. A prop you cannot see gets no box.</div>
+    </div>
+  </aside>
+</main>
+<script>
+const COLORS = ['#7fb2d9', '#ff5a52', '#f2c14e', '#6fcf97', '#e88a3c', '#4fd1c5', '#ff8fb1'];
+const PROP_WORD = {weapon: 'knife', coke: 'can', fedora: 'fedora', cap: 'cap', badge: 'badge', bottle: 'bottle'};
+const $ = (id) => document.getElementById(id);
+const cv = $('cv'), ctx = cv.getContext('2d');
+let classes = [], photos = [], i = -1, img = null, meta = null;
+let labels = [], history = [], cls = 0, sel = null, drag = null;
+
+const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;'}[c]));
+
+async function api(path, body) {
+  const r = await fetch(path, body ? {method: 'POST', headers: {'content-type': 'application/json'}, body: JSON.stringify(body)} : {});
+  if (!r.ok) throw new Error(`${path}: ${r.status}`);
+  return r.json();
+}
+
+function nextUnreviewed(from) {
+  for (let k = 1; k <= photos.length; k++) {
+    const j = (from + k) % photos.length;
+    if (!photos[j].reviewed) return j;
+  }
+  return -1;
+}
+
+async function load(j) {
+  if (j < 0) { finish(); return; }
+  i = j;
+  const p = photos[i];
+  const [m, im] = await Promise.all([api(`/api/labels/${p.rel}`), loadImage(`/photos/${p.rel}`)]);
+  meta = m; img = im; labels = m.labels.map((b) => ({cls: b.cls, box: b.box})); history = []; sel = null;
+  cls = m.default_class;
+  cv.width = img.naturalWidth; cv.height = img.naturalHeight;
+  $('finished').hidden = true; cv.hidden = false;
+  const n = photos[nextUnreviewed(i)];
+  if (n) loadImage(`/photos/${n.rel}`);  // warm the cache
+  render();
+}
+
+function loadImage(src) {
+  return new Promise((ok, fail) => { const im = new Image(); im.onload = () => ok(im); im.onerror = fail; im.src = src; });
+}
+
+function finish() {
+  cv.hidden = true; $('banner').hidden = true; $('where').innerHTML = '';
+  $('finished').hidden = false; renderSplits();
+}
+
+const toPx = (v, axis) => v / 1000 * (axis === 'x' ? cv.width : cv.height);
+function canvasPoint(e) {
+  const r = cv.getBoundingClientRect();
+  return [(e.clientX - r.left) / r.width * 1000, (e.clientY - r.top) / r.height * 1000];
+}
+
+function hit(x, y) {  // smallest box under the point, so nested boxes stay reachable
+  let best = null, area = Infinity;
+  labels.forEach((l, k) => {
+    const [x1, y1, x2, y2] = l.box, a = (x2 - x1) * (y2 - y1);
+    if (x >= x1 && x <= x2 && y >= y1 && y <= y2 && a < area) { best = k; area = a; }
+  });
+  return best;
+}
+
+function edit(fn) { history.push(labels.map((l) => ({cls: l.cls, box: [...l.box]}))); fn(); render(); }
+
+function draw() {
+  ctx.drawImage(img, 0, 0);
+  const lw = Math.max(3, cv.width / 400), fs = Math.round(cv.width / 55);
+  ctx.font = `500 ${fs}px 'IBM Plex Mono', monospace`;
+  labels.forEach((l, k) => {
+    const [x1, y1, x2, y2] = l.box, c = COLORS[l.cls];
+    const X = toPx(x1, 'x'), Y = toPx(y1, 'y'), W = toPx(x2 - x1, 'x'), H = toPx(y2 - y1, 'y');
+    if (k === sel) { ctx.fillStyle = c + '33'; ctx.fillRect(X, Y, W, H); }
+    ctx.strokeStyle = c; ctx.lineWidth = k === sel ? lw * 2 : lw; ctx.strokeRect(X, Y, W, H);
+    const t = classes[l.cls], tw = ctx.measureText(t).width + fs * 0.6;
+    const ty = Y > fs * 1.4 ? Y - fs * 1.35 : Y;
+    ctx.fillStyle = c; ctx.fillRect(X - lw / 2, ty, tw, fs * 1.35);
+    ctx.fillStyle = '#0c0d10'; ctx.fillText(t, X + fs * 0.3 - lw / 2, ty + fs * 1.02);
+  });
+  if (drag) {
+    const [a, b] = drag;
+    ctx.setLineDash([lw * 4, lw * 3]); ctx.strokeStyle = COLORS[cls]; ctx.lineWidth = lw;
+    ctx.strokeRect(toPx(Math.min(a[0], b[0]), 'x'), toPx(Math.min(a[1], b[1]), 'y'),
+                   toPx(Math.abs(b[0] - a[0]), 'x'), toPx(Math.abs(b[1] - a[1]), 'y'));
+    ctx.setLineDash([]);
+  }
+}
+
+function render() {
+  if (!img) return;
+  draw();
+  const p = photos[i];
+  $('stage').classList.toggle('reviewed', p.reviewed);
+  $('where').innerHTML =
+    `<span class="tag">${i + 1} / ${photos.length}</span><span>${esc(p.rel)}</span>` +
+    `<span class="tag">${p.split} split</span>` +
+    (p.reviewed ? '<span class="ok">reviewed</span>' : '<span>not reviewed yet</span>') +
+    (meta.gemini ? '<span>boxes drafted by Gemini</span>' : '<span class="warn">no Gemini draft: stock YOLO guesses only</span>');
+  const warn = [];
+  const want = meta.prop_class;
+  if (want !== null && !labels.some((l) => l.cls === want)) {
+    warn.push(`<b>No ${classes[want]} box.</b> This is a ${esc(p.prop)} photo: drag a box around the ${PROP_WORD[classes[want]] || classes[want]}, unless it is truly out of sight.`);
+  }
+  if (p.prop === 'none') {
+    const odd = labels.filter((l) => l.cls !== 0).map((l) => classes[l.cls]);
+    if (odd.length) warn.push(`<b>Empty-hands photo with a ${[...new Set(odd)].join(' and ')} box.</b> Delete it unless the object is really there.`);
+  }
+  if (!labels.some((l) => l.cls === 0)) warn.push('<b>No person box.</b> Drag one around the whole visible person if anyone is in the shot.');
+  $('banner').innerHTML = warn.join('<br>'); $('banner').hidden = !warn.length;
+  $('classes').innerHTML = classes.map((c, k) =>
+    `<button data-k="${k}" class="${k === cls ? 'on' : ''}"><span class="swatch" style="background:${COLORS[k]}"></span>${k + 1} ${c}</button>`).join('');
+  $('boxes').innerHTML = labels.length ? labels.map((l, k) =>
+    `<div data-k="${k}" class="${k === sel ? 'sel' : ''}"><span class="swatch" style="background:${COLORS[l.cls]}"></span>` +
+    `<span class="name">${classes[l.cls]}</span><button data-del="${k}">delete</button></div>`).join('')
+    : '<span class="empty">No boxes. Space saves the photo as empty.</span>';
+  renderSplits();
+}
+
+function renderSplits() {
+  $('splits').innerHTML = ['test', 'val', 'train'].map((s) => {
+    const mine = photos.filter((p) => p.split === s), done = mine.filter((p) => p.reviewed).length;
+    return `<span class="${done === mine.length ? 'done' : ''}">${s} <b>${done}/${mine.length}</b></span>`;
+  }).join('') + (photos.some((p) => !p.gemini)
+    ? `<span>${photos.filter((p) => !p.gemini).length} still waiting on Gemini</span>` : '');
+}
+
+let saving = false;  // a held Space repeats: one save per photo
+async function accept() {
+  if (i < 0 || !img || saving) return;
+  saving = true;
+  try {
+    const p = photos[i];
+    await api(`/api/labels/${p.rel}`, {labels});
+    p.reviewed = true;
+    await load(nextUnreviewed(i));
+  } finally { saving = false; }
+}
+
+function setClass(k) {
+  cls = k;
+  if (sel !== null && labels[sel].cls !== k) edit(() => { labels[sel].cls = k; });
+  else render();
+}
+
+cv.addEventListener('mousedown', (e) => {
+  if (e.button !== 0) return;
+  const pt = canvasPoint(e);
+  drag = [pt, pt];
+});
+cv.addEventListener('mousemove', (e) => { if (drag) { drag[1] = canvasPoint(e); draw(); } });
+window.addEventListener('mouseup', (e) => {
+  if (!drag) return;
+  const [a, b] = drag; drag = null;
+  if (Math.abs(b[0] - a[0]) < 6 && Math.abs(b[1] - a[1]) < 6) {  // a click, not a drag: select
+    sel = hit(...a); if (sel !== null) cls = labels[sel].cls; render(); return;
+  }
+  const box = [Math.min(a[0], b[0]), Math.min(a[1], b[1]), Math.max(a[0], b[0]), Math.max(a[1], b[1])]
+    .map((v) => Math.min(1000, Math.max(0, v)));
+  edit(() => { labels.push({cls, box}); sel = labels.length - 1; });
+});
+cv.addEventListener('contextmenu', (e) => {
+  e.preventDefault();
+  const k = hit(...canvasPoint(e));
+  if (k !== null) edit(() => { labels.splice(k, 1); sel = null; });
+});
+$('classes').addEventListener('click', (e) => { const b = e.target.closest('button'); if (b) setClass(+b.dataset.k); });
+$('boxes').addEventListener('click', (e) => {
+  const del = e.target.closest('button[data-del]');
+  if (del) { const k = +del.dataset.del; edit(() => { labels.splice(k, 1); sel = null; }); return; }
+  const row = e.target.closest('div[data-k]');
+  if (row) { sel = +row.dataset.k; cls = labels[sel].cls; render(); }
+});
+$('accept').addEventListener('click', accept);
+$('prev').addEventListener('click', () => { if (i > 0) load(i - 1); });
+$('next').addEventListener('click', () => { if (i < photos.length - 1) load(i + 1); });
+document.addEventListener('keydown', (e) => {
+  if (e.metaKey || e.ctrlKey || e.altKey) return;
+  document.activeElement?.blur();  // else Space also clicks the last clicked button
+  const k = e.key;
+  if (k === ' ' || k === 'Enter') { e.preventDefault(); accept(); }
+  else if (k === 'Delete' || k === 'Backspace') {
+    e.preventDefault();
+    if (sel !== null) edit(() => { labels.splice(sel, 1); sel = null; });
+  }
+  else if (k >= '1' && k <= String(classes.length)) setClass(+k - 1);
+  else if (k === 'u' || k === 'U') { if (history.length) { labels = history.pop(); sel = null; render(); } }
+  else if (k === 'Escape') { sel = null; render(); }
+  else if (k === 'ArrowLeft' && i > 0) load(i - 1);
+  else if (k === 'ArrowRight' && i < photos.length - 1) load(i + 1);
+  else return;
+});
+
+(async () => {
+  const d = await api('/api/photos');
+  classes = d.classes; photos = d.photos;
+  await document.fonts.ready;
+  load(nextUnreviewed(photos.length - 1));
+})();
+</script>
+</body>
+</html>

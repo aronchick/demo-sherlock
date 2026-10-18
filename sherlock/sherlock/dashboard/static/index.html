@@ -1,0 +1,177 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sherlock</title>
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body data-state="monitoring" data-mode="mock">
+<a class="skip-link" href="#feed">Skip to the event feed</a>
+
+<header class="mast">
+  <div class="brand">
+    <h1>SHERLOCK</h1>
+    <p>a 10 ms Scout decides when a model is worth calling</p>
+  </div>
+  <span class="mode" id="mode"></span>
+  <output class="pill" id="pill" data-state="clear" aria-live="polite">STANDBY · WAITING FOR THE RUNTIME</output>
+</header>
+
+<div class="console" role="group" aria-label="Operator controls">
+  <span class="kicker">break it</span>
+  <button type="button" class="ctl" id="btn-fail"></button>
+  <button type="button" class="ctl" id="btn-cover" aria-pressed="false"></button>
+  <span class="ctl-status" id="ctl-status" role="status"></span>
+</div>
+
+<main class="stage" id="stage">
+  <canvas id="flow" aria-hidden="true"></canvas>
+
+  <section class="cameras" aria-label="Cameras">
+    <figure class="cam" id="cam-hero" data-cam="hero">
+      <img id="img-hero" alt="Hero camera, wide view with Scout boxes" hidden>
+      <div class="empty" id="hero-empty">STANDBY</div>
+      <figcaption><svg class="icon" aria-hidden="true"><use href="icons.svg#camera"/></svg>hero · wide <em id="hero-note">· PTZ</em></figcaption>
+    </figure>
+    <figure class="cam" id="cam-scout1" data-cam="scout1">
+      <img id="img-scout1" alt="Scout1 camera, wide view with Scout boxes" hidden>
+      <div class="empty" id="scout1-empty">STANDBY</div>
+      <figcaption><svg class="icon" aria-hidden="true"><use href="icons.svg#camera"/></svg>scout1 · wide <em>· fixed</em></figcaption>
+    </figure>
+    <figure class="cam" id="cam-zoom" data-role="zoom">
+      <img id="img-zoom" alt="Where the camera looked" hidden>
+      <div class="empty" id="zoom-empty">NOTHING WORTH A CLOSER LOOK YET</div>
+      <div class="reticle" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+      <figcaption><svg class="icon" aria-hidden="true"><use href="icons.svg#scan"/></svg><span id="zoom-label">where the camera looked</span></figcaption>
+    </figure>
+  </section>
+
+  <section class="cascade" id="cascade" data-awake="none" data-gate="clear" aria-label="The cascade">
+    <article class="node scout" id="node-scout">
+      <span class="kicker">scout · notice · the gate</span>
+      <h2 id="scout-name"></h2>
+      <p class="meta" id="scout-meta"></p>
+      <div class="nums">
+        <div><b class="hot" id="n-frames">0</b><small>frames seen</small></div>
+        <div><b id="n-flagged">0</b><small>flagged</small></div>
+      </div>
+      <div class="ledger">
+        <div class="big"><b id="avoided">0</b><span>VLM calls avoided</span></div>
+        <div class="meter">
+          <div><small>frames seen by the Scout <b id="m-frames">0</b></small><i><b id="m-frames-bar"></b></i></div>
+          <div><small>VLM calls <b id="m-vlm">0</b></small><i><b id="m-vlm-bar"></b></i></div>
+        </div>
+        <p class="note">same track, same scale · the baseline is one VLM call per frame</p>
+      </div>
+      <div class="last">
+        <h3>LAST FLAGGED</h3>
+        <ul id="last" aria-label="Last flagged objects"><li class="empty">nothing flagged yet</li></ul>
+      </div>
+      <p class="state" id="scout-state">waiting for frames</p>
+    </article>
+
+    <article class="node director" id="node-director">
+      <span class="kicker">director · decide + zoom</span>
+      <h2 id="director-name"></h2>
+      <p class="meta" id="director-meta"></p>
+      <div class="nums">
+        <div><b id="n-calls">0</b><small>tool calls</small></div>
+        <div class="err" data-zero="true"><b id="n-errors">0</b><small>failed</small></div>
+        <div class="warn" data-zero="true"><b id="n-recovered">0</b><small>recovered</small></div>
+      </div>
+      <p class="state" id="director-state">asleep · nothing has crossed the gate</p>
+    </article>
+
+    <article class="node vlm" id="node-vlm">
+      <span class="kicker">vlm · read + verify</span>
+      <h2 id="vlm-name"></h2>
+      <p class="meta" id="vlm-meta"></p>
+      <div class="nums">
+        <div class="vlm"><b id="n-vlm">0</b><small>VLM calls</small></div>
+        <div><b id="n-confirmed">0</b><small>confirmed</small></div>
+      </div>
+      <p class="state" id="vlm-state">asleep · no crop in hand</p>
+    </article>
+
+    <section class="chain" aria-label="The chain">
+      <div class="chain-head"><h3>The chain</h3><span id="chain-title">waiting for the Scout</span></div>
+      <ol class="steps" id="steps">
+        <li class="step" data-step="1" data-state="pending"><i>1</i><b>zoom weapon</b><small></small></li>
+        <li class="step" data-step="2" data-state="pending"><i>2</i><b>read crop</b><small></small></li>
+        <li class="step" data-step="3" data-state="pending"><i>3</i><b>zoom head</b><small></small></li>
+        <li class="step" data-step="4" data-state="pending" data-lane="face"><i>4</i><b>review crop</b><small></small></li>
+        <li class="step" data-step="5" data-state="pending"><i>5</i><b>verify claim</b><small></small></li>
+        <li class="step" data-step="6" data-state="pending"><i>6</i><b>report</b><small></small></li>
+      </ol>
+    </section>
+
+    <div class="feed-wrap">
+      <div class="feed-head"><h3>EVENTS</h3><span class="hint">hover to pause</span></div>
+      <ol class="feed" id="feed" tabindex="0"><li class="empty">awaiting the first detection</li></ol>
+    </div>
+  </section>
+
+  <section class="outcomes" aria-label="Outcomes">
+    <div class="tiers">
+      <div class="tier" data-tier="alert" data-zero="true" id="tier-alert">
+        <svg class="icon" aria-hidden="true"><use href="icons.svg#siren"/></svg>
+        <div><strong>ALERT</strong><small>verified weapon · report recorded</small></div>
+        <b id="t-alert">0</b>
+      </div>
+      <div class="tier" data-tier="log" data-zero="true" id="tier-log">
+        <svg class="icon" aria-hidden="true"><use href="icons.svg#clipboard"/></svg>
+        <div><strong>LOGGED</strong><small>unverified · kept for review</small></div>
+        <b id="t-log">0</b>
+      </div>
+      <div class="tier" data-tier="ignore" data-zero="true" id="tier-ignore">
+        <svg class="icon" aria-hidden="true"><use href="icons.svg#x-circle"/></svg>
+        <div><strong>IGNORED</strong><small>benign · 0 VLM calls</small></div>
+        <b id="t-ignore">0</b>
+      </div>
+    </div>
+
+    <article class="incident" id="incident" data-state="none" aria-live="polite">
+      <div class="inc-head"><strong id="inc-title">NO WEAPON INCIDENTS</strong><time id="inc-time"></time></div>
+      <div class="crops">
+        <figure data-lane="weapon">
+          <div class="frame"><span class="empty">weapon crop</span><img id="weapon-img" alt="Weapon crop" hidden></div>
+          <figcaption><b>weapon crop</b><span>sent to the VLM</span></figcaption>
+        </figure>
+        <figure data-lane="face">
+          <div class="frame"><span class="empty">review crop</span><img id="face-img" alt="Review crop" hidden></div>
+          <figcaption><b><svg class="icon" aria-hidden="true"><use href="icons.svg#lock"/></svg> review crop</b><span>head · not analyzed</span></figcaption>
+        </figure>
+      </div>
+      <p class="inc-claim" id="inc-claim">A cup is ignored without a vision model. A weapon runs the whole chain.</p>
+      <p class="inc-said" id="inc-said" hidden><b>Analyst</b> <span></span></p>
+      <p class="inc-meta" id="inc-meta"></p>
+    </article>
+
+    <div class="m-slot">
+      <section class="measured" id="numbers" aria-labelledby="numbers-title">
+        <div class="m-head"><h3 id="numbers-title">MEASURED</h3><span id="numbers-status">No measured results yet</span></div>
+        <dl>
+          <dt id="number-director"><b>Director</b></dt>
+          <dd><span>p50 / p95</span><output id="number-latency">not measured</output></dd>
+          <dd data-rank="3"><span>throughput</span><output id="number-throughput">not measured</output></dd>
+          <dd data-rank="2" title="Prefix cache on versus off at the same concurrency. Negative means lower latency."><span>cache p95</span><output id="number-cache">not measured</output></dd>
+          <dt id="number-ablation"><b>NeMo Gym</b></dt>
+          <dd data-rank="3"><span>config</span><output id="number-ablation-config">not measured</output></dd>
+          <dd><span>task success</span><output id="number-success">not measured</output></dd>
+          <dd data-rank="2"><span>valid tool calls</span><output id="number-validity">not measured</output></dd>
+          <dd data-rank="4" id="number-ablation-secondary" hidden><span id="number-ablation-secondary-where"></span><output id="number-ablation-secondary-success">not measured</output></dd>
+          <dt id="number-scout"><b>Scout</b><span> · weapon</span></dt>
+          <dd><span>precision<i> before→after</i></span><output id="number-precision">not measured</output></dd>
+          <dd data-rank="2"><span>recall<i> before→after</i></span><output id="number-recall">not measured</output></dd>
+        </dl>
+      </section>
+    </div>
+  </section>
+</main>
+
+<script src="app.js"></script>
+<script src="numbers.js" defer></script>
+</body>
+</html>

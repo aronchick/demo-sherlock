@@ -1,0 +1,9 @@
+opencv-python
+numpy
+openai>=1.40
+fastapi
+uvicorn
+pydantic
+ultralytics      # scout backend "yolo" (optional in mock mode)
+python-dotenv
+link-ctl>=2.2.1 ; sys_platform == "darwin"   # Insta360 Link 2 USB-direct PTZ

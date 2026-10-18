@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sherlock · Briefing</title>
+<link rel="stylesheet" href="/pipeline/assets/slides.css">
+<script src="/pipeline/assets/slides.js" defer></script>
+</head>
+<body>
+<header><a href="/" target="sherlock-board">SHERLOCK</a><span>Camera intelligence / Case briefing</span><nav aria-label="Demo tabs"><a href="/" target="sherlock-board">Board</a><a href="/phone" target="sherlock-phone">Phone</a><a href="/custody" target="sherlock-evidence">Evidence</a></nav></header>
+<main>
+<section id="problem" aria-labelledby="problem-title">
+<p class="eyebrow">01 / Sherlock</p>
+<h1 id="problem-title">A camera that takes<br>a closer look.</h1>
+<p class="lead">More cameras. Limited human attention.</p>
+<p class="presenter"><strong>David Aronchick</strong> · Expanso<br><a href="https://github.com/aronchick/demo-sherlock">github.com/aronchick/demo-sherlock</a></p>
+</section>
+<section id="camera-problem" aria-labelledby="camera-problem-title" hidden>
+<p class="eyebrow">02 / The problem</p>
+<h1 id="camera-problem-title">Cameras are naive.</h1>
+<p class="lead">Too much data. Too far. Too fast.</p>
+<div class="ledger"><p><b>Infrastructure</b><span>Bandwidth, storage and inference costs add up.</span></p><p><b>Security teams</b><span>Missing context. Unclear details. Slower investigations.</span></p></div>
+<p class="closing">Get the right evidence sooner. Save time and money.</p>
+</section>
+<section id="camera-loop" aria-labelledby="loop-title" hidden>
+<p class="eyebrow">03 / Watch the camera respond</p>
+<h1 id="loop-title">Detect. Decide. Zoom.</h1>
+<ol class="sequence"><li><span class="step">Local machine</span><h2>YOLO detects</h2><p>Send a detection ticket.</p></li><li><span class="step">NVIDIA Brev</span><h2>Director decides</h2><p>Request a closer look.</p></li><li><span class="step">OBSBOT camera</span><h2>Camera zooms</h2><p>Capture the detail.</p></li></ol>
+<a class="demo-link" href="/" target="sherlock-board">Show the camera →</a>
+</section>
+<section id="evidence" aria-labelledby="evidence-title" hidden>
+<p class="eyebrow">04 / Continue in the product</p>
+<h1 id="evidence-title">From close-up<br>to investigation.</h1>
+<div class="ledger"><p><b>Check</b><span>Verify the object crop.</span></p><p><b>Investigate</b><span>Review the scene and camera location.</span></p><p><b>Trace</b><span>Linked images. Hashes. Signed history.</span></p></div>
+<p class="demo-actions"><a href="/phone" target="sherlock-phone">Open phone →</a><a href="/custody" target="sherlock-evidence">Inspect evidence →</a></p>
+</section>
+<section id="serving" aria-labelledby="serving-title" hidden>
+<p class="eyebrow">05 / How it works</p>
+<h1 id="serving-title">Local detection. Cloud reasoning.</h1>
+<div class="architecture" aria-label="Camera sends video to the local machine, which sends detection tickets and masked crops to the cloud. Camera commands return through the local machine. Expanso carries incident data to backend storage.">
+<div class="component camera"><span class="step">Camera</span><h2>OBSBOT</h2><p>Pan · tilt · zoom</p></div>
+<div class="connection"><span>Video</span><i class="arrow" aria-hidden="true"></i><i class="arrow reverse" aria-hidden="true"></i><span>Camera control</span></div>
+<div class="component local"><span class="step">Local machine</span><h2>YOLO Scout</h2><p>Capture + control</p></div>
+<div class="connection"><span>Ticket / object crop</span><i class="arrow" aria-hidden="true"></i><i class="arrow reverse" aria-hidden="true"></i><span>Camera command</span></div>
+<div class="component cloud"><span class="step">NVIDIA Brev · H100</span><h2>Cloud models</h2><p>Nemotron FP8 · SmolVLM<br>vLLM</p></div>
+<div class="storage-link"><span>Expanso · incident data</span><i class="down-arrow" aria-hidden="true"></i></div>
+<div class="component storage"><span class="step">Backend storage</span><h2>Evidence + records</h2></div>
+</div>
+<p class="qualification">Original scene stays local. Vision models receive masked object crops.</p>
+</section>
+<section id="impact" aria-labelledby="impact-title" hidden>
+<p class="eyebrow">06 / What this enables</p>
+<h1 id="impact-title">Review incidents,<br>not hours of video.</h1>
+<p class="lead">Fewer uploads. Focused review. Traceable evidence.</p>
+<p class="qualification">Projected benefits; validate against full-frame analysis.</p>
+<a class="repo" href="https://github.com/aronchick/demo-sherlock" target="sherlock-repository" rel="noopener">github.com/aronchick/demo-sherlock ↗</a>
+</section>
+</main>
+<footer><span id="slide-status" aria-live="polite" aria-atomic="true">01 / 06</span><span class="key-help">← → or Space to advance</span><div><button id="previous" type="button" aria-label="Previous slide">← Back</button><button id="next" type="button" aria-label="Next slide">Next →</button></div></footer>
+</body>
+</html>

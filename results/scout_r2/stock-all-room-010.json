@@ -1,0 +1,132 @@
+{
+  "evidence_kind": "model_evaluation",
+  "execution_mode": "measured",
+  "evaluation_scope": "baseline_only",
+  "environment": "local",
+  "device": "cpu",
+  "imgsz": 640,
+  "split": "all-room",
+  "conf": 0.1,
+  "iou": 0.5,
+  "images": {
+    "room": 608
+  },
+  "classes": [
+    "person",
+    "weapon",
+    "badge",
+    "bottle",
+    "fedora",
+    "cap",
+    "coke"
+  ],
+  "image_count": 608,
+  "dataset_fingerprint": "b7e60f8a2a892d98ab17d4bd025a63da3e0791995d8a97c37f10efff845189f3",
+  "before": {
+    "model": "yolov8n.pt",
+    "room": {
+      "person": {
+        "tp": 614,
+        "fp": 12,
+        "fn": 1,
+        "precision": 0.9808,
+        "recall": 0.9984
+      },
+      "weapon": {
+        "tp": 13,
+        "fp": 17,
+        "fn": 187,
+        "precision": 0.4333,
+        "recall": 0.065
+      },
+      "badge": {
+        "tp": 0,
+        "fp": 0,
+        "fn": 0,
+        "precision": 0.0,
+        "recall": 0.0
+      },
+      "bottle": {
+        "tp": 0,
+        "fp": 14,
+        "fn": 0,
+        "precision": 0.0,
+        "recall": 0.0
+      },
+      "fedora": {
+        "tp": 0,
+        "fp": 0,
+        "fn": 201,
+        "precision": 0.0,
+        "recall": 0.0
+      },
+      "cap": {
+        "tp": 0,
+        "fp": 0,
+        "fn": 80,
+        "precision": 0.0,
+        "recall": 0.0
+      },
+      "coke": {
+        "tp": 0,
+        "fp": 0,
+        "fn": 118,
+        "precision": 0.0,
+        "recall": 0.0
+      }
+    },
+    "all": {
+      "person": {
+        "tp": 614,
+        "fp": 12,
+        "fn": 1,
+        "precision": 0.9808,
+        "recall": 0.9984
+      },
+      "weapon": {
+        "tp": 13,
+        "fp": 17,
+        "fn": 187,
+        "precision": 0.4333,
+        "recall": 0.065
+      },
+      "badge": {
+        "tp": 0,
+        "fp": 0,
+        "fn": 0,
+        "precision": 0.0,
+        "recall": 0.0
+      },
+      "bottle": {
+        "tp": 0,
+        "fp": 14,
+        "fn": 0,
+        "precision": 0.0,
+        "recall": 0.0
+      },
+      "fedora": {
+        "tp": 0,
+        "fp": 0,
+        "fn": 201,
+        "precision": 0.0,
+        "recall": 0.0
+      },
+      "cap": {
+        "tp": 0,
+        "fp": 0,
+        "fn": 80,
+        "precision": 0.0,
+        "recall": 0.0
+      },
+      "coke": {
+        "tp": 0,
+        "fp": 0,
+        "fn": 118,
+        "precision": 0.0,
+        "recall": 0.0
+      }
+    }
+  },
+  "after": null,
+  "headline": "Scout baseline only; after not measured"
+}

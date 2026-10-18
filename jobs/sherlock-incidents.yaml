@@ -1,0 +1,100 @@
+# E2, laptop: one message per investigation report.
+# Each report travels with its masked weapon or object crop, whatever the decision.
+# The face crop and the original frame never leave the laptop: only their hashes,
+# in the custody metadata, go up, so a reviewer opens them on this device.
+name: sherlock-incidents
+type: pipeline
+labels:
+  demo: sherlock
+  stage: incidents
+
+selector:
+  match_labels:
+    role: sherlock-edge
+
+config:
+  input:
+    label: reports
+    http_server:
+      address: "${SHERLOCK_E2_LISTEN:127.0.0.1:23112}"
+      path: /incident
+      allowed_verbs: ["POST"]
+      timeout: 10s
+
+  pipeline:
+    processors:
+      - label: require_fields
+        mapping: |
+          root = if this.incident.or("") == "" || this.action.or("") == "" {
+            throw("report without incident or action")
+          } else { this }
+
+      # Enforced here, not trusted from the sender: only the masked weapon or object
+      # crop may travel; any other image (a face, the full frame) is dropped. Hash each
+      # transmitted crop; core persistence and integrity readback remain separate proof.
+      - label: crop_policy
+        mapping: |
+          root = this
+          root.crops = this.crops.or({}).filter(kv -> ["weapon_crop", "object_crop"].contains(kv.key)).map_each(kv -> if kv.value.b64.or("") != "" {
+            kv.value.assign({"sha256_edge": kv.value.b64.decode("base64").hash("sha256").encode("hex")})
+          } else { kv.value })
+
+      - label: provenance
+        mutation: |
+          root.edge = {
+            "node": env("EDGE_NODE_NAME").or(hostname()),
+            "pipeline": "sherlock-incidents",
+            "received_at": now()
+          }
+
+      # Log and keep the error: `catch` would clear it and let the message
+      # through. reject_errored on the output then refuses it, so the sender
+      # gets an error response instead of a silent pass.
+      - label: report_failure
+        switch:
+          - check: errored()
+            processors:
+              - log:
+                  level: WARN
+                  message: "incident rejected: ${! error() }"
+
+  output:
+    label: route_by_action
+    reject_errored:
+      switch:
+        cases:
+          - check: this.action == "alert"
+            output:
+              label: alert_now
+              fallback:
+                - http_client:
+                    url: "${SHERLOCK_CORE_URL:http://127.0.0.1:23121}/incident"
+                    verb: POST
+                    headers:
+                      Content-Type: application/json
+                    timeout: 10s
+                    retries: 3
+                    max_in_flight: 1
+                - file:
+                    path: "${SHERLOCK_SPOOL_DIR:/tmp/sherlock-spool}/incidents.jsonl"
+                    codec: lines
+          - output:
+              label: routine_batched
+              fallback:
+                - http_client:
+                    url: "${SHERLOCK_CORE_URL:http://127.0.0.1:23121}/incident"
+                    verb: POST
+                    headers:
+                      Content-Type: application/json
+                    timeout: 10s
+                    retries: 2
+                    max_in_flight: 1
+                    batching:
+                      count: 20
+                      period: 1s
+                      processors:
+                        - archive:
+                            format: json_array
+                - file:
+                    path: "${SHERLOCK_SPOOL_DIR:/tmp/sherlock-spool}/incidents.jsonl"
+                    codec: lines

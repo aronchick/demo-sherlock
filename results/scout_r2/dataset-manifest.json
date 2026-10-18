@@ -1,0 +1,3655 @@
+{
+  "entries": [
+    {
+      "file": "room_cap_hero-20261017-173819_0000.jpg",
+      "source_split": "train",
+      "image_sha256": "cfecb1e8ba060f6eccd9f365c6e0d94dce9aa25eff4af736ac6af4912a555598",
+      "label_sha256": "f60539b0194d591fdffee160fb387ef8c09dcf4e0c7cbafc60624b3f9031e8e4"
+    },
+    {
+      "file": "room_cap_hero-20261017-173819_0001.jpg",
+      "source_split": "train",
+      "image_sha256": "11e90923de8ce8f06e76397ba2c3c11efbd0f834d4aae60d500a9d9e41619938",
+      "label_sha256": "dbdadf7cd642fa39cba604106d717b9ba3a04525ae36a26cead4587792fdb6ec"
+    },
+    {
+      "file": "room_cap_hero-20261017-173819_0002.jpg",
+      "source_split": "train",
+      "image_sha256": "8b3dd037630f5e8b979bec2418778eafaba81332eeb341e2e0a3bf296020a2b5",
+      "label_sha256": "b1fa6e8b80dbda4372f2126de7e288fbed87df1459828ae8cfec6f7105058302"
+    },
+    {
+      "file": "room_cap_hero-20261017-173819_0003.jpg",
+      "source_split": "train",
+      "image_sha256": "61245ab2368a5df4e784760d9e4d2b5e7884b2d48471e116099dcacefc04cad4",
+      "label_sha256": "dcfe7feb897f9156837dda72fead8c57bdff82cb06c15fde60d40ac4c1721332"
+    },
+    {
+      "file": "room_cap_hero-20261017-173819_0004.jpg",
+      "source_split": "train",
+      "image_sha256": "f0b6ad5b6d422dd5b17547af7c5896807379f298676d83f286cc2dbc8e65cdc0",
+      "label_sha256": "3168035819a98d1ae0363c5d4cd3e70ad972f9e15eb7c8e0153aa6325642330c"
+    },
+    {
+      "file": "room_cap_hero-20261017-173819_0005.jpg",
+      "source_split": "train",
+      "image_sha256": "b8e6105cfcc10c057f651e581a16e51e840904737b8de134d3403ada6796a534",
+      "label_sha256": "ab9a95a784e1c84c8e5db8b047431449d6ea8854e1581a7e435d87fbd14389c1"
+    },
+    {
+      "file": "room_cap_hero-20261017-173819_0006.jpg",
+      "source_split": "train",
+      "image_sha256": "877d85e5b7c09055552b7310ce6a154be1be47e4446c3263a46fa3c7f75c727a",
+      "label_sha256": "2ce4ebaf7936c140fce6f7bb367b7c6460055a793d5d8887541611795e445243"
+    },
+    {
+      "file": "room_cap_hero-20261017-173819_0007.jpg",
+      "source_split": "train",
+      "image_sha256": "ca48daff3873706a54c5e51f74c4a342393a9fd0f40895548df7d975b35439e1",
+      "label_sha256": "9c694dfb198ab07e31c5d8fafe60003b7282c5e46f01b4ff89ed10c5a9118542"
+    },
+    {
+      "file": "room_cap_hero-20261017-173819_0008.jpg",
+      "source_split": "train",
+      "image_sha256": "93f7aea1e5f9afa824df1f3bb7a3b07e32013f430e0194a13e7d973766208c68",
+      "label_sha256": "9df833572ca220f82b1d76a4768da535039c631db80f1687c5962ac464d919c7"
+    },
+    {
+      "file": "room_cap_hero-20261017-173819_0009.jpg",
+      "source_split": "train",
+      "image_sha256": "7951a1f36235f2b67a0115fc549fdf93793f57fac65fab400c285799b4960c22",
+      "label_sha256": "9bf3d6c43c7d0560ec5d4b983fb35580b1f568efa34d8201f3b02b5451a89cab"
+    },
+    {
+      "file": "room_cap_hero-20261017-173819_0010.jpg",
+      "source_split": "train",
+      "image_sha256": "bb0c5f2912e5ad2b27a00524cd40f261698fe9a2d689621f625afe210821b641",
+      "label_sha256": "cf68d5973734d6b026643b14bd72cf84c58419c149bd7753bacad5dcc0344764"
+    },
+    {
+      "file": "room_cap_hero-20261017-173819_0011.jpg",
+      "source_split": "train",
+      "image_sha256": "0105083f2b4b8a9e440b3ea4852d7a438e619cb9c26cc10197e8004c5f8fb8d5",
+      "label_sha256": "eb034d8992494b223d916c327e15383b0297b6592f7b505161bec7bee87b374e"
+    },
+    {
+      "file": "room_cap_hero-20261017-173819_0012.jpg",
+      "source_split": "train",
+      "image_sha256": "61710d4c3fac0b6e20d820784859bdafe15c65ea3e0dae27878a3d40f0de143a",
+      "label_sha256": "78bd835452c2fd86833a803f3027b93b4f2968cdab355970d6ed52c5a9a81120"
+    },
+    {
+      "file": "room_cap_hero-20261017-173819_0013.jpg",
+      "source_split": "train",
+      "image_sha256": "41e7bde067a3c2e14f0f963fc942bfdbace117d8807ebf20fbca652a9bdc5e00",
+      "label_sha256": "4711fe83bcf9f2bfebdf85e5219c5d52b5249b9ce0a41dc98fd225d756de15f8"
+    },
+    {
+      "file": "room_cap_hero-20261017-173819_0014.jpg",
+      "source_split": "train",
+      "image_sha256": "e66feb3d423d49d4d63c0f6904ac3010093c5306e47d08376f55233ea503a25f",
+      "label_sha256": "5f87b0efee71f352662abc5e7420ecc1b30ff3204a8a5bf6e1ba3acddbd2abff"
+    },
+    {
+      "file": "room_cap_hero-20261017-173819_0015.jpg",
+      "source_split": "train",
+      "image_sha256": "547ab0e8c2f8bbafb9734670c572cc0523ce1fd9b5829c7177af6c4e7be0e292",
+      "label_sha256": "c3d3c682be926fe82acae2b295c028d69870377b78250d0b367d2462c4a108d3"
+    },
+    {
+      "file": "room_cap_hero-20261017-173819_0016.jpg",
+      "source_split": "train",
+      "image_sha256": "3fb368fd9ff7aec4e361a4706e05cdeede36ecdc218a4ce106eb878a329bb622",
+      "label_sha256": "36185f3719ea355eed003a27b612a5bb1058f8e075e370c451d9267b99b6d814"
+    },
+    {
+      "file": "room_cap_hero-20261017-173819_0017.jpg",
+      "source_split": "train",
+      "image_sha256": "e1b3a25f05f0f1656654a3f2ca45af59d6b8eba69d3bf2dc42b4620df4a08bdf",
+      "label_sha256": "7e44d4dbe64ed6620aab07724466cd46fedbdc9823d735507ca22563b10b7c22"
+    },
+    {
+      "file": "room_cap_hero-20261017-173819_0018.jpg",
+      "source_split": "train",
+      "image_sha256": "892a04da9b28c090aecd9b4b75092f3ce341737889ed5a3885a5cdb73dbb26ef",
+      "label_sha256": "b90bd3f51510716ac6bf27edf5cf2fca77e71a8b268d2e97f725be977448287d"
+    },
+    {
+      "file": "room_cap_hero-20261017-173819_0019.jpg",
+      "source_split": "train",
+      "image_sha256": "c9ba5c1d07e950eb7f4166bb7bd4ac6ed0e8d5c1a4e57fdef90c90c52664bb8d",
+      "label_sha256": "fad47772c214b0bae8bb1dc273f6a111820d05fa427e677f57ddaf6f136d5cbe"
+    },
+    {
+      "file": "room_cap_hero-20261017-173819_0020.jpg",
+      "source_split": "train",
+      "image_sha256": "64eb1b58c75c48087292532ca052640cb24ff89d51d5ab8589ba7d6bf77898e2",
+      "label_sha256": "01ffc78fa1b8cea559d9b7a47d997edda9c76a99d9dce87b5c2eb458af428444"
+    },
+    {
+      "file": "room_cap_hero-20261017-173819_0021.jpg",
+      "source_split": "train",
+      "image_sha256": "e0514ca750199252bf515817c7bfbfb06da28960862afb6ca382adbc98120e39",
+      "label_sha256": "2870c57b4486c1c64e27ffa874579371ad50f372ba4bb21175502616039a34f7"
+    },
+    {
+      "file": "room_cap_hero-20261017-173819_0022.jpg",
+      "source_split": "train",
+      "image_sha256": "c1de171365baa71e5cbe7ec335d0fa6d47c0198fb8746de0cc8b9c4be88bc74e",
+      "label_sha256": "58210fcb2326cff645b42ca3d897d707c261d589d22cc8830946da4f23d544db"
+    },
+    {
+      "file": "room_cap_hero-20261017-173819_0023.jpg",
+      "source_split": "train",
+      "image_sha256": "5ae5d90cd0716afd1c2b58181edffb10c263dc008206e897d0450ddae2e04a11",
+      "label_sha256": "8bb7100d6f9c0776c580f054a5068ff51e6b9d46856118b99dd58e2241fc555b"
+    },
+    {
+      "file": "room_cap_hero-20261017-173819_0024.jpg",
+      "source_split": "train",
+      "image_sha256": "224cefbdce0f49456be9ddb3cac6a9536d61420da00122d2bfd891667bf693ac",
+      "label_sha256": "475d9220dc459d4bc79642c5a28a1d5eefb89795fa6d52724cc4b30a053d89a6"
+    },
+    {
+      "file": "room_cap_hero-20261017-173819_0025.jpg",
+      "source_split": "train",
+      "image_sha256": "350e80636cd478ea6ed67341e8ba36aef5cd803e4c9940d247ba5e37710009f4",
+      "label_sha256": "55ab7377992cc19a528923e210dc2834a655ac00329ef6666e9fb93d12cbfda6"
+    },
+    {
+      "file": "room_cap_hero-20261017-173819_0026.jpg",
+      "source_split": "train",
+      "image_sha256": "7e1b1f341985174992dea1347e92d2ee5cd6bbd24dd254e3d6468eecc44fe99f",
+      "label_sha256": "e9a96617c446ce85f630275086b38e99ac3966f8dc7a85b10aa2079a3b698d71"
+    },
+    {
+      "file": "room_cap_hero-20261017-173819_0027.jpg",
+      "source_split": "train",
+      "image_sha256": "5de6ad13b8802ff4fd2e576ac6b7ec4f589e70da4a602960a20c82fa21866349",
+      "label_sha256": "e0fe0083c1882028720e0c584391e0aa3b183826d99d3f594dccc61f4c853c49"
+    },
+    {
+      "file": "room_cap_scout1-20261017-170942_0000.jpg",
+      "source_split": "train",
+      "image_sha256": "b1638a387fa4b4bbe979573a1789822da7eb4de6737f0245066bd7db5f6673bc",
+      "label_sha256": "801574a2c54e5e2aade3e84e93281b90e5553035d4560ee581fdf6e94599af2b"
+    },
+    {
+      "file": "room_cap_scout1-20261017-170942_0001.jpg",
+      "source_split": "train",
+      "image_sha256": "1eb2b42a808317187cdf6a2e7a1a5c7b3410fa34f540ca38796f4e9a458a8d3e",
+      "label_sha256": "b78a304328c1aa5b71e3cc9bb143b8eb3b4ad552a5f88bbad5b48d7ccd34a7a9"
+    },
+    {
+      "file": "room_cap_scout1-20261017-170942_0002.jpg",
+      "source_split": "train",
+      "image_sha256": "8e36dc2e2c32169e77e4becc21e71e657ba6d499f7aa18888e41ac0c42242b5d",
+      "label_sha256": "d2734cde6e1f266ac8fde2c96aec579a9294dfbb901a52e6e6417eb4051043c1"
+    },
+    {
+      "file": "room_cap_scout1-20261017-170942_0003.jpg",
+      "source_split": "train",
+      "image_sha256": "95fd1c17d160e83dfe0b7ffecdfcfa2e447914ecab9a11702b559d8385c75cc5",
+      "label_sha256": "cc3e22abc72d4168bd2bafb6e2e76f429e7d7e534f3f7f74dc2d6b464afd0168"
+    },
+    {
+      "file": "room_cap_scout1-20261017-170942_0004.jpg",
+      "source_split": "train",
+      "image_sha256": "9b9e86183ff4705a7c172f80f4eb781f13c5db0301404ec86d891bbe3f072258",
+      "label_sha256": "5c92a7a8c98d1adf1f3ffb8526ae86c9e76ff6d87f4a351abe6460ca7db26e9c"
+    },
+    {
+      "file": "room_cap_scout1-20261017-170942_0005.jpg",
+      "source_split": "train",
+      "image_sha256": "1fe4d4d457f36fc4eacd6f49c3d38788ddbce53d8d12fa39446e6e691fcf0225",
+      "label_sha256": "66cda0b559e37cc3b7f6c663decdd34b641f2db424c801f74ed755ccb4976905"
+    },
+    {
+      "file": "room_cap_scout1-20261017-170942_0006.jpg",
+      "source_split": "train",
+      "image_sha256": "b7684e58bfe7bac494dd057077b1c4fa75383acf15c9f5b093fade570eda14db",
+      "label_sha256": "d9e800ac4a1414fdfef04c1831e20c7dc96dc071e324a511b8508876a0d6377f"
+    },
+    {
+      "file": "room_cap_scout1-20261017-170942_0007.jpg",
+      "source_split": "train",
+      "image_sha256": "ba71a184d6f5769c31298d709494a55df24dc0ed7a258c13977b3ad63c9ec86b",
+      "label_sha256": "1a2577177c5e384c5c28fba56c97a268c19890e38b7de93ee2bc521da9cde71e"
+    },
+    {
+      "file": "room_cap_scout1-20261017-170942_0008.jpg",
+      "source_split": "train",
+      "image_sha256": "a2ed1ad7ea81cbfd3ba7e2c92b2d120b79562699af968b9846299c57574eab12",
+      "label_sha256": "f9a0fdab54cf7ad7b2bcef5ec8da01e0a10752055a704b961678a611336f1084"
+    },
+    {
+      "file": "room_cap_scout1-20261017-170942_0009.jpg",
+      "source_split": "train",
+      "image_sha256": "ba8768720d2b7d346deb67141674ebff4467360853109968d02a0badba8c7fd4",
+      "label_sha256": "414f2d730753223e7cf80921e7f12ed5dc9f0dfcd05934786f966880b51b647b"
+    },
+    {
+      "file": "room_cap_scout1-20261017-170942_0010.jpg",
+      "source_split": "train",
+      "image_sha256": "ee60b222b0940ea7d177f6791bc611a654fdc180317a83702fb2739bec7361ab",
+      "label_sha256": "553352b71f8c5150167773ddcb971978030e111a8f2d455f01de30d28faa8795"
+    },
+    {
+      "file": "room_cap_scout1-20261017-170942_0011.jpg",
+      "source_split": "train",
+      "image_sha256": "cc0f4e09a7ecf18c90970f9bbfe5fd2631231b1a9e689156691aecd64de68df4",
+      "label_sha256": "264b50d784122bff06868f1c47e019fe8cc152d8b2f53bb498acd05972e01a64"
+    },
+    {
+      "file": "room_cap_scout1-20261017-170942_0012.jpg",
+      "source_split": "train",
+      "image_sha256": "fd9ed2da7bbdb8af7756baa073269b2e29ce4cb056858eae72dc93f7ddff5b9b",
+      "label_sha256": "04ff153fb6b2e9a0d6ec6d437c3fe669354748849e875e4318798f369ddb3db2"
+    },
+    {
+      "file": "room_cap_scout1-20261017-170942_0013.jpg",
+      "source_split": "train",
+      "image_sha256": "4bdecfa83633a3955ed5c44a2aa6aa48763bc2bbe332f04057779c7e4ef13f95",
+      "label_sha256": "4a3fa298bd8c6242dcfda9ff755e9abaf86290e7f2ce0e51545845956422860e"
+    },
+    {
+      "file": "room_cap_scout1-20261017-170942_0014.jpg",
+      "source_split": "train",
+      "image_sha256": "3055ce47ed6cb5163de6ffc7cc87b8d8647c1069d0949d6c65e038d876da1c08",
+      "label_sha256": "2b0a0d5175f03d065fe1b9b41c012b4a41c8e6ff07cc732ab8d7514f91948ae4"
+    },
+    {
+      "file": "room_cap_scout1-20261017-170942_0015.jpg",
+      "source_split": "train",
+      "image_sha256": "d73298e3c13ed72ae23bffbbc944991df1f0b4fb8b445c4ecf312ba06b412cc1",
+      "label_sha256": "c3066de6bd61a6460a301a14f8e7d62ec8426274f85e3973718acaac1176f97e"
+    },
+    {
+      "file": "room_cap_scout1-20261017-170942_0016.jpg",
+      "source_split": "train",
+      "image_sha256": "7bfb7e9545ebb620cc7a95360acb91e72f9427fe17372f7b4024c20b9e94c104",
+      "label_sha256": "1bfc2614bd9229ff677a3c50271357e974deb0330b73b509281c5aac5e33a81c"
+    },
+    {
+      "file": "room_cap_scout1-20261017-170942_0017.jpg",
+      "source_split": "train",
+      "image_sha256": "9c6f0d318d15f432f495f2fd6d79a3f63896beddd9f9782560a50b13fc612a1c",
+      "label_sha256": "3696a315dd053ca464c6140c25c1ecf7730e47cbae6e1c8e0c81756a7bf65b19"
+    },
+    {
+      "file": "room_cap_scout1-20261017-170942_0018.jpg",
+      "source_split": "train",
+      "image_sha256": "6c676acadedc7ec5e90c2ad94191bbefd987f64a5f1177a8cb463e01d8662aba",
+      "label_sha256": "1739c00b2c338302cc49b937f5c868a88145824c47f5d9fd742b208eb0141a28"
+    },
+    {
+      "file": "room_cap_scout1-20261017-170942_0019.jpg",
+      "source_split": "train",
+      "image_sha256": "05f07009c494188a1006c1ab6a6c59c53a50f4fc680eb699c9a5f43757229326",
+      "label_sha256": "97dab9f8009b96f965b5b215321e0bb0d9fbd828123999145d2566f04ca56ca8"
+    },
+    {
+      "file": "room_cap_scout1-20261017-170942_0020.jpg",
+      "source_split": "train",
+      "image_sha256": "2b918b88baf3b813f3e39c24cbe18c06fb351d2f6a42609fb37442a17066aba2",
+      "label_sha256": "0bb8f115b7e0231cf4c3a7c5eded19ccf8784cfb22e233d2ab9c24cd0020f185"
+    },
+    {
+      "file": "room_cap_scout1-20261017-170942_0021.jpg",
+      "source_split": "train",
+      "image_sha256": "4e054f3737ea9d82b5c71554a54cde033545d68b69deb8a259565a7c5a7cbf57",
+      "label_sha256": "a8389f88f62f8b591a0e8822ef40d379c0425ab1a83fb672e9b3a6a279ae44e5"
+    },
+    {
+      "file": "room_cap_scout1-20261017-170942_0022.jpg",
+      "source_split": "train",
+      "image_sha256": "87a15356a0f69a7442e6b2a5f3de5501da4e8051fdcf2e844d27d7dcefb34be8",
+      "label_sha256": "2f9f28d2d283f8b070898b3e0279530b7d5980f72c2add2a08da68d1f4c352c0"
+    },
+    {
+      "file": "room_cap_scout1-20261017-170942_0023.jpg",
+      "source_split": "train",
+      "image_sha256": "8be1448ae961fc749762d89f4fb7f69c751144311b953e3520fc66cae58a7eb9",
+      "label_sha256": "175bb8acf426c6c9b4349aa8f31dd456858c38891a75edf1ea2d2abff50d25e8"
+    },
+    {
+      "file": "room_cap_scout1-20261017-170942_0024.jpg",
+      "source_split": "train",
+      "image_sha256": "5c140ab56b282ecf21e8c4c3a87c66ec3c084f1fe2e969e9d895e08c6f5f78c1",
+      "label_sha256": "fb1f0a52d38ebcfe253c43a673e89e8b8f2e3d0b2722a9273509322d88a33e04"
+    },
+    {
+      "file": "room_cap_scout1-20261017-170942_0025.jpg",
+      "source_split": "train",
+      "image_sha256": "d0f549c083dd2754439580ac8ad31d35a225edd11b9309c7ed7d1682803b12a6",
+      "label_sha256": "af6203381f59b1e479d7c6f971e56834dfac91cf6c2b3689f48c1459d05d7ab8"
+    },
+    {
+      "file": "room_cap_scout1-20261017-170942_0026.jpg",
+      "source_split": "train",
+      "image_sha256": "e29bd551e93d2dda5bb0e78fd4edd9a4acfd43220c924c667f4905e57e3d1147",
+      "label_sha256": "0ff8fe83fb964f8b346f0cd529c906141beb62629e2c9a4109df0735ac7ce00b"
+    },
+    {
+      "file": "room_cap_scout1-20261017-170942_0027.jpg",
+      "source_split": "train",
+      "image_sha256": "3502f2cd46309863dd1837062e5bd3b11eb9c9f56298ef92a422d00c1b2bc35e",
+      "label_sha256": "2f8f411673101faf88d4a922bff4788fbc389051ee1c9982fb50eb4a9ed74cb4"
+    },
+    {
+      "file": "room_coke_hero-20261017-173858_0000.jpg",
+      "source_split": "train",
+      "image_sha256": "7155e8f13e421da5456907328a276972a0b289eadd77ae24d9ba88eb3ec69866",
+      "label_sha256": "e19d960f6781f9648e8cc9ef64235270423b422b122e0cb243235610c83d2f9c"
+    },
+    {
+      "file": "room_coke_hero-20261017-173858_0001.jpg",
+      "source_split": "train",
+      "image_sha256": "7404a64aced39a1c053f3c1b897f8bd513c34bb982de86d6b3438d6e124784e2",
+      "label_sha256": "0e022b04d741fe9873b41f869c7e105ccacb37a51d1f09be47bf2b2eb350c84c"
+    },
+    {
+      "file": "room_coke_hero-20261017-173858_0002.jpg",
+      "source_split": "train",
+      "image_sha256": "f42f73c70deda8992e715590b0875cc57fd82543d2fe7e5461342fd232a8ef52",
+      "label_sha256": "80edbf63ff497ebb58c0b2f0a0827879e8c2bc6eb3ee610fb93f3b3e7e30ef85"
+    },
+    {
+      "file": "room_coke_hero-20261017-173858_0003.jpg",
+      "source_split": "train",
+      "image_sha256": "16b56c80f07fa018e78af1e31b7e058699cd83ca2fe25dd72f390b7f26cd5c68",
+      "label_sha256": "c0b2be8a54ea31a97b9293d69d217d91ea1aff2e214713920065f5fa840758d4"
+    },
+    {
+      "file": "room_coke_hero-20261017-173858_0004.jpg",
+      "source_split": "train",
+      "image_sha256": "24e335249d1f6543c34d1e63ce6babd8a89d384a879ffb7dc4f0b9789dc3c8d5",
+      "label_sha256": "1821603fedd11fac1285b87ae94d089799ea6b31ac3c477486779d8bf4942ffb"
+    },
+    {
+      "file": "room_coke_hero-20261017-173858_0005.jpg",
+      "source_split": "train",
+      "image_sha256": "30347ee0e3bc2a7e853765ba39c03cb1be4b98de680d73213028b26fe4b6c9ce",
+      "label_sha256": "431b77b0a74a561befac7c6e00f6603d6d09b79063dcb7c7fdacfeb093f4e9f9"
+    },
+    {
+      "file": "room_coke_hero-20261017-173858_0006.jpg",
+      "source_split": "train",
+      "image_sha256": "aa48a19d20faadb89a7c38d03fc597ddda817670a13bf2f2bcbe93b31348004e",
+      "label_sha256": "30effe605522bafd32ad689af48d33f09a358613970f2912c77038a0f77bcdeb"
+    },
+    {
+      "file": "room_coke_hero-20261017-173858_0007.jpg",
+      "source_split": "train",
+      "image_sha256": "25fcae1418e72e92fb4d95ed8de14aa183b96056ac84d9ddfb6792ec6490df2c",
+      "label_sha256": "e2100085d43a15e7a0160f695dc07b9a07f3ec71fd333e6d572166ef3e21509b"
+    },
+    {
+      "file": "room_coke_hero-20261017-173858_0008.jpg",
+      "source_split": "train",
+      "image_sha256": "d5dd19039450220da745228b2b2909ee10f2cb89f5fc385e5e097e2e7859e5f3",
+      "label_sha256": "13ea5d32e34db5a4de34ed23e2c9ae89193befbc3dc39724b32b84bfaf87c260"
+    },
+    {
+      "file": "room_coke_hero-20261017-173858_0009.jpg",
+      "source_split": "train",
+      "image_sha256": "aa283f36a9e83844c6ad4e6c1590d3bb11bf6bd8bc1e5875b157ed2bf3a6ec11",
+      "label_sha256": "6db50fc7fa89077cad3072b7c1dbe54e6639f0b29088bb60ca1ceb5ec0ed936e"
+    },
+    {
+      "file": "room_coke_hero-20261017-173858_0010.jpg",
+      "source_split": "train",
+      "image_sha256": "a7dab4b5fa0baad666c20e538dd3b81d8a408c0d41e6533c778666d96aacfed4",
+      "label_sha256": "c18d74be1b7724f9276de32941fe6ca2f647ee531e69c7a44c38a0a20de47f95"
+    },
+    {
+      "file": "room_coke_hero-20261017-173858_0011.jpg",
+      "source_split": "train",
+      "image_sha256": "fead84548e9e27b88560e84eb3c7d42f42ae6a3cbce5a478cca37218881e6210",
+      "label_sha256": "c0a48ff5063e71555d8ccc81d8b83ec3bba634a525b9de486d3aaa9cf5016728"
+    },
+    {
+      "file": "room_coke_hero-20261017-173858_0012.jpg",
+      "source_split": "train",
+      "image_sha256": "d371b5102d936ccda60ae21f2291dc63153a825137e6266782a9bc7f53f8ae0f",
+      "label_sha256": "8ed0654f5d2b81438620311352e817696a1bc6ed4ee9142c838683f4205dd36f"
+    },
+    {
+      "file": "room_coke_hero-20261017-173858_0013.jpg",
+      "source_split": "train",
+      "image_sha256": "9bf5a542d14103bf41ff1a9e1c11777dfd21bbb69118531b44bcfe8e5fc33101",
+      "label_sha256": "0336ebb20f1c9767cac278f060a16a8677389524cce9ebfd57b5695e0d4a730a"
+    },
+    {
+      "file": "room_coke_hero-20261017-173858_0014.jpg",
+      "source_split": "train",
+      "image_sha256": "d830e893d9f2c59185cfddcfaa2eb391de3451d156bc9fa8d062e0ee291bdb19",
+      "label_sha256": "cad0c0f115680fb84a822126fc11b0d3cad106de7639d15bf684813887f5f4bb"
+    },
+    {
+      "file": "room_coke_hero-20261017-173858_0015.jpg",
+      "source_split": "train",
+      "image_sha256": "4cdf741fdf8dee5e1fbf15177a2c1bc4e3a3bafcf2671149f4b570c59d3abf25",
+      "label_sha256": "8cdca02d02c5d463e4e04d7c04cfa35f1290ab7170c4ec60b721199d1554d99c"
+    },
+    {
+      "file": "room_coke_hero-20261017-173858_0016.jpg",
+      "source_split": "train",
+      "image_sha256": "670e324af72c5cd8acbdda958ee1071507b802e0c4a251677cca89b7381575f7",
+      "label_sha256": "953f1e5433a83863e62911bb76e4cbf504cf688e7c3fdfea25ce9546e5f0fb26"
+    },
+    {
+      "file": "room_coke_hero-20261017-173858_0017.jpg",
+      "source_split": "train",
+      "image_sha256": "dc29ca38db358dd9804ab5e3960548f0a1a93ef0faff82d12cac5dc11a707590",
+      "label_sha256": "6d482a48cda1275032631db1660e49591a0610f732f09394db5fe27fa1e62053"
+    },
+    {
+      "file": "room_coke_hero-20261017-173858_0018.jpg",
+      "source_split": "train",
+      "image_sha256": "83fb7265aa885b2014fbbd3a4095e9b1381d137bc9c7ee51a503d706a88fa3b3",
+      "label_sha256": "346a276e2bc6bcb5eb559e77055250ed4ce2f9965d889d8b9ef0e8d8af1a0192"
+    },
+    {
+      "file": "room_coke_hero-20261017-173858_0019.jpg",
+      "source_split": "train",
+      "image_sha256": "4535a76dc8109faa2d66524b540f0e99b620b69d87ceece92e1ac8c67bfd78b7",
+      "label_sha256": "b1a9f754869367c1d80749cac00edce3c96d9467295ed471a9069ebb108676dd"
+    },
+    {
+      "file": "room_coke_hero-20261017-173858_0020.jpg",
+      "source_split": "train",
+      "image_sha256": "a0b0bd080abcceb5e0ddb5b2e88f244e9e769bd019b21e3344f9ca4fffc5242b",
+      "label_sha256": "393fd95f2a57599f049d32cdee47a2119103c765c181f5ba5434dafac9a223d0"
+    },
+    {
+      "file": "room_coke_hero-20261017-173858_0021.jpg",
+      "source_split": "train",
+      "image_sha256": "8de91c4bcad49d8b92ec3fe19265655610f157ebc9657b9d03bd61b3ae315cfc",
+      "label_sha256": "7ec80aa365c7905a4060c2e1b4593735f31cdfc1b9c711dd5f79716557b268e8"
+    },
+    {
+      "file": "room_coke_hero-20261017-173858_0022.jpg",
+      "source_split": "train",
+      "image_sha256": "f5fc5348264f7a55e2bec5c45aeb7d8fd582a520f782ebafb8cc34feb7fbe8a9",
+      "label_sha256": "a75270ffddf3b4c0da759522ff9222677d2cfbb903da23eddcca4951efb14dcf"
+    },
+    {
+      "file": "room_coke_hero-20261017-173858_0023.jpg",
+      "source_split": "train",
+      "image_sha256": "724ccbb640e476b383a5f462287fce311ee926a6e2e44e9e8ff2ffb97af2d453",
+      "label_sha256": "89288b914d3ee8a36021952b70a7509c94f072acbb972adb8aa1fcf3fc62f3ef"
+    },
+    {
+      "file": "room_coke_hero-20261017-173858_0024.jpg",
+      "source_split": "train",
+      "image_sha256": "ac3c92f5750fcf0fe50fe66506f89cf37afa9e947fb3f2a29cdd7005d38c0951",
+      "label_sha256": "fdc80984068d5c632c08636cf8e22d4a82b2e35b549fe14080c9a5d7f3798b1e"
+    },
+    {
+      "file": "room_coke_hero-20261017-173858_0025.jpg",
+      "source_split": "train",
+      "image_sha256": "37fdfb1209964bb3ea541bdd2b7570ac0cefd0fbdf49a043dbe7d3010f45f722",
+      "label_sha256": "e48d2b565d94b8de2f8911ca54f8ecb683b8e6605b263e64db4fb15c2ba04599"
+    },
+    {
+      "file": "room_coke_hero-20261017-173858_0026.jpg",
+      "source_split": "train",
+      "image_sha256": "5b93220cf1c49a9c626f0f9345ecc3eb0b593cd142d2607d1a7115ad81bdc4ec",
+      "label_sha256": "d5cb46dd3da4a496b1f34bb2c162e656e27a713e4583e01bb93b404ed6d21d51"
+    },
+    {
+      "file": "room_coke_hero-20261017-173858_0027.jpg",
+      "source_split": "train",
+      "image_sha256": "767ba3fa03b7a82c770d2d634ef204249ec84cba85b72cb45744eac7e7bd40fe",
+      "label_sha256": "67550f0dc4095642041de8e5baf7cc26e39100d904112f9915f199b531c258fa"
+    },
+    {
+      "file": "room_coke_scout1-20261017-171038_0000.jpg",
+      "source_split": "train",
+      "image_sha256": "158388f2d776a9efb223be56a19a7c95cc88c0506d005288a0ba9a25f4f911eb",
+      "label_sha256": "520314d95e8e83ff8da1be40951c5b8e981bfd93c38d406e6224f91c1fbc6b02"
+    },
+    {
+      "file": "room_coke_scout1-20261017-171038_0001.jpg",
+      "source_split": "train",
+      "image_sha256": "800e8a65be2695b062073b4f1cd8c9b7810a6142ee1464acca64ecd634fc83ec",
+      "label_sha256": "156329c55d73560adc56abf47b3aa42d2dfa7a8986dc8a61f54ee93df9b2957a"
+    },
+    {
+      "file": "room_coke_scout1-20261017-171038_0002.jpg",
+      "source_split": "train",
+      "image_sha256": "7b08bd3009eba51f25cffa578425fd419b03f75e9e42e8a61ce2a68aa7df80c4",
+      "label_sha256": "ced4c4fc8b3330b23a18d75c88bec626f15b4db6d335aa6b58c3d996cf744d35"
+    },
+    {
+      "file": "room_coke_scout1-20261017-171038_0003.jpg",
+      "source_split": "train",
+      "image_sha256": "9da7d35f8e0d2f4cddbeb963cb62d783443c6594004182ef781a57374766837a",
+      "label_sha256": "9c324732f414fe52d15cf1be4460e48a3fb887ecc480fee7dd1ea6ca4ff8a92f"
+    },
+    {
+      "file": "room_coke_scout1-20261017-171038_0004.jpg",
+      "source_split": "train",
+      "image_sha256": "770ed006c2648943acdb81f4293d5d68c50a2ee12bfafa13c6d5635a250c054a",
+      "label_sha256": "c463d984582ee12d1039d1c4e3c51d700f34c28a3fce5c54488d6c29741de747"
+    },
+    {
+      "file": "room_coke_scout1-20261017-171038_0005.jpg",
+      "source_split": "train",
+      "image_sha256": "d8844b7a958862c6a30851838233db8c210763cc5f304a062c5846ecb4f2b919",
+      "label_sha256": "db334fdedcfbc54380bf33cca7f9ff1bf7c5fccac21afb024288b12fd01340de"
+    },
+    {
+      "file": "room_coke_scout1-20261017-171038_0006.jpg",
+      "source_split": "train",
+      "image_sha256": "c0a459432c8c9eadcd20f8e915e887d1b6cc208526a907a6b76750249371d270",
+      "label_sha256": "f08f9d12fdae8ef5a7135c729bebec3047180e42b6b1efc24bb90ef2cf0898c0"
+    },
+    {
+      "file": "room_coke_scout1-20261017-171038_0007.jpg",
+      "source_split": "train",
+      "image_sha256": "63454f5bd01bc6c41ed08e3f969110816b75fbf4ed2d65be6b9fe1ce531dafce",
+      "label_sha256": "76833ae89459cf37bd388093586298efd64216864ed85e422d58a027c0e8520f"
+    },
+    {
+      "file": "room_coke_scout1-20261017-171038_0008.jpg",
+      "source_split": "train",
+      "image_sha256": "566f45289d28eb85be16260dcf7d541b1a54d4948beeaac9b946760084ecc8c7",
+      "label_sha256": "4dfa52cf87e12207c6a9addec00bc5514b2aa482c10d38cf4f8da128fc06104f"
+    },
+    {
+      "file": "room_coke_scout1-20261017-171038_0009.jpg",
+      "source_split": "train",
+      "image_sha256": "a85af9febe9bb3d70101d0f448c486c7815f80d59a5a615213523e084355022e",
+      "label_sha256": "28c23b83e37addacb16fffe79a2dcb1ab7b15e8a1953a00a219d7ee4fda3a497"
+    },
+    {
+      "file": "room_coke_scout1-20261017-171038_0010.jpg",
+      "source_split": "train",
+      "image_sha256": "bd2dc7c8664fb2a29404ec30f439b2940abb6a5a8d2efb8767cbdcc54dcb81f9",
+      "label_sha256": "cc070913a88f48112a21f8f319f9ca017180a8f71d89d0643318a2a519737631"
+    },
+    {
+      "file": "room_coke_scout1-20261017-171038_0011.jpg",
+      "source_split": "train",
+      "image_sha256": "11e0799a7f6018135d230d7fb4af2fda662042f404af352ae0bb6ae46157f0e1",
+      "label_sha256": "5d2885a5751e5be5f982663a59104d15b7355a835bc491142f62ae2a81d95a22"
+    },
+    {
+      "file": "room_coke_scout1-20261017-171038_0012.jpg",
+      "source_split": "train",
+      "image_sha256": "b274c9f69227838055991f5cb5975f46afd860023b164427d28470ef06201aab",
+      "label_sha256": "d8710aa0957662417e2469d495f1207999dc82f327d7cf061aefc198acee5e11"
+    },
+    {
+      "file": "room_coke_scout1-20261017-171038_0013.jpg",
+      "source_split": "train",
+      "image_sha256": "bda6c57c2676e27c45a7bef43b070825a05d6e6d700c6f3ce629eb000176b7ce",
+      "label_sha256": "67b9618478904a7691839f8c6fa8be8e2a237e10a60e8286353391be25ce4cd3"
+    },
+    {
+      "file": "room_coke_scout1-20261017-171038_0014.jpg",
+      "source_split": "train",
+      "image_sha256": "ba18e6c6f7e43400edc7b46b83af74b753a00164d6f76df7ce28221c5805da69",
+      "label_sha256": "ca617ebedcad98064a8402681045b25b0f1ffece3860dbf00f8af128495f2da1"
+    },
+    {
+      "file": "room_coke_scout1-20261017-171038_0015.jpg",
+      "source_split": "train",
+      "image_sha256": "696206c629c77540abaf2c2f587216e936aea7571e8fcbeefd8b8742e1ebb735",
+      "label_sha256": "cf7aef0c090d290eb5afbc274408c0c608db3fe62192ebfecdfa52d2a405b137"
+    },
+    {
+      "file": "room_coke_scout1-20261017-171038_0016.jpg",
+      "source_split": "train",
+      "image_sha256": "c2035d6c948d1ff774aea2e9a850040a5c6f5c2f55ed99557695cbd325528cff",
+      "label_sha256": "c65cdab0857451fdfc0693a47934b51500036034ef404e5e86ad1b412e281367"
+    },
+    {
+      "file": "room_coke_scout1-20261017-171038_0017.jpg",
+      "source_split": "train",
+      "image_sha256": "475c322087f70cd942c2e561e5f8665bbaee1f073708bb1c7fca82a5dbeb7194",
+      "label_sha256": "40c425fe09893f1a4558b7de8d5708c20a5874f8e8162ed66432ce54ff0bf743"
+    },
+    {
+      "file": "room_coke_scout1-20261017-171038_0018.jpg",
+      "source_split": "train",
+      "image_sha256": "4a78c2876a6d0df88cb76f98349115bcaa0579a04cce7e239e78684dfa79caa0",
+      "label_sha256": "32eb219be30ceb4a5b5d1e672c56351ab8ee52f2798140ef087d5e4a81ed4110"
+    },
+    {
+      "file": "room_coke_scout1-20261017-171038_0019.jpg",
+      "source_split": "train",
+      "image_sha256": "3b7b686f1d5f9714cb791342519451902adf9c5f557348b538819043a9e15e2a",
+      "label_sha256": "b05559330b90097800be6766a8d939b0d10dfe716cc4dad74c03eb9fe763631a"
+    },
+    {
+      "file": "room_coke_scout1-20261017-171038_0020.jpg",
+      "source_split": "train",
+      "image_sha256": "0b820f24be28d2c5fadf0ffdc5f879195bc43422f869c379e959c699d0681b0a",
+      "label_sha256": "5af744cfe158a2d15a6ef958fd6af0322fb7c3aa85f622b9b5d8c8f1407159cb"
+    },
+    {
+      "file": "room_coke_scout1-20261017-171038_0021.jpg",
+      "source_split": "train",
+      "image_sha256": "4eccce3dc613f2b3318b18764c22fd2bb82dc295e3c2001d62a61e9063fef264",
+      "label_sha256": "1400ff6e8101067c70792199914defdb3a1dda1a7c53020b1f37bdc8070a31a4"
+    },
+    {
+      "file": "room_coke_scout1-20261017-171038_0022.jpg",
+      "source_split": "train",
+      "image_sha256": "75855fe1796620bcaec6d9981f2bd5fab01e29181eeff1abef659d5a2c2c6890",
+      "label_sha256": "d40f00255267135ea5c49d4ab5b9d1560f0b0638610edf9f1712f3b2fecd609b"
+    },
+    {
+      "file": "room_coke_scout1-20261017-171038_0023.jpg",
+      "source_split": "train",
+      "image_sha256": "6582916bfaade6576a0f514a6f396df8374150962db7d667ddd5c233f4e56cf7",
+      "label_sha256": "4b549f46cc0f77e4ec142196a8a24ec5d556c5e6483e4073d5d9adb59e83dbc8"
+    },
+    {
+      "file": "room_coke_scout1-20261017-171038_0024.jpg",
+      "source_split": "train",
+      "image_sha256": "d487336d666c0d3f3ab3cd4616423d5b048c3059746d482a7279695443bdf821",
+      "label_sha256": "260f4b532bee27fa9cf28ac2b75e9206b902014f3a0156f647cf3d207ce0d00e"
+    },
+    {
+      "file": "room_coke_scout1-20261017-171038_0025.jpg",
+      "source_split": "train",
+      "image_sha256": "237f01bf3dcfc59e5880465c6d8eb7cb8be4bf21156528e3aec7c42e7fac0750",
+      "label_sha256": "7c55fbaf1845a812a74ad635e97dc517654c47220a0058d55a607629bbed5813"
+    },
+    {
+      "file": "room_coke_scout1-20261017-171038_0026.jpg",
+      "source_split": "train",
+      "image_sha256": "41588277ba690b5fd2e1d2c11900d31fcddb1bd3a918d941e3f15cf9572d1749",
+      "label_sha256": "0fdbd9bd80096194fb7a7bc845c40e389399e8d098b9ff4c978cc084987242fd"
+    },
+    {
+      "file": "room_coke_scout1-20261017-171038_0027.jpg",
+      "source_split": "train",
+      "image_sha256": "7c811313929af7b57fd205cb1fe341f8e9e88620bd651a1297dc96d7da70be92",
+      "label_sha256": "f38fc86b8028495446909989dabd496e9bd12113bb0249f1335ca49a667874f5"
+    },
+    {
+      "file": "room_coke_scout1-20261017-171117_0000.jpg",
+      "source_split": "train",
+      "image_sha256": "64f8a5f126dbef458a87f0f9a6e42b61c27874d6131a4005cd6a42f82bd9044a",
+      "label_sha256": "670920b85aae2451e975ff0ba48e5efc3ea6403fc9b96d52115fbbad6a68c646"
+    },
+    {
+      "file": "room_coke_scout1-20261017-171117_0001.jpg",
+      "source_split": "train",
+      "image_sha256": "faef73c43b183a51d47652bf7a12065f14509dadd19cbc45a2f6e0df0f63b795",
+      "label_sha256": "812c5933b39b9e0619e2bb0681c2ddd9070e15e5a666aa24cc0974eea5c2051b"
+    },
+    {
+      "file": "room_coke_scout1-20261017-171117_0002.jpg",
+      "source_split": "train",
+      "image_sha256": "b3e9b6445c583955b2a2a32391120d34963daf5f06ae7c274d1bbb8d9ed01d20",
+      "label_sha256": "351632f4a65db2f620609dceafbf046fc9e87a1eeeca89250f9a0bfdcdbf5b18"
+    },
+    {
+      "file": "room_coke_scout1-20261017-171117_0003.jpg",
+      "source_split": "train",
+      "image_sha256": "c2495e6a5934c5720b6dfae4e298b23083b1bd41ea6872b4944aa815d98718ee",
+      "label_sha256": "1c131ddd29a4b4b46ed91c772ba77bb6b01503fca0281d87a60dea346a035c61"
+    },
+    {
+      "file": "room_coke_scout1-20261017-171117_0004.jpg",
+      "source_split": "train",
+      "image_sha256": "23b3a3f1a7f2a7d016b3d663e68b5274480018bc6b5c76dc69fb123dea04ff05",
+      "label_sha256": "453d600756297d6415ca50e5ff876ff9c3d5da3cb3349369a00297145722d3bd"
+    },
+    {
+      "file": "room_coke_scout1-20261017-171117_0005.jpg",
+      "source_split": "train",
+      "image_sha256": "2c997de6812dab4987e2b2c1b6a6116dae13efec6646146568d2bf7d23b31ad7",
+      "label_sha256": "03c00d5bb6312a744fb49640dae80e7114cdb16c13e8d8dcef1f384f07b71bcc"
+    },
+    {
+      "file": "room_coke_scout1-20261017-171117_0006.jpg",
+      "source_split": "train",
+      "image_sha256": "f9cbda90f837f038c2423f10ff8fab6e1f8d60e6f1c4b82c3f8eba13f8f56472",
+      "label_sha256": "5a7e1b0109b7bff7091a66450bbab5db2cfd54535a1e3ba4762dc3709dc76657"
+    },
+    {
+      "file": "room_coke_scout1-20261017-171117_0007.jpg",
+      "source_split": "train",
+      "image_sha256": "460c37afbc926a185a4cdd0d8892c3b3ae3f23580cd1d715db42df9382b4902a",
+      "label_sha256": "1a2e0815f21f3f9e01d05030ef11c5c7f7bc6f32f01daa5e2ea326155cd6ac0a"
+    },
+    {
+      "file": "room_coke_scout1-20261017-171117_0008.jpg",
+      "source_split": "train",
+      "image_sha256": "23be779f9bda6d1257013d4ec001676035b3074f741a78a7e71d4fec083d5f88",
+      "label_sha256": "4808b396dcd3f9a7ecd5fd266e8e7679f2438ff4127e47bceb63e993d9a4dc69"
+    },
+    {
+      "file": "room_coke_scout1-20261017-171117_0009.jpg",
+      "source_split": "train",
+      "image_sha256": "982c2efc9e7a706d583642f7dd6cf8c96108d36151d7119da04acbbf5f51e50e",
+      "label_sha256": "ebd5a1ca1bd29d78ee8a429568dcffd8ffdcec8144d605c3a4a3a55df120dd19"
+    },
+    {
+      "file": "room_coke_scout1-20261017-171117_0010.jpg",
+      "source_split": "train",
+      "image_sha256": "0c32ca1bc6cc110e8ccb2b4c7adce849dd8691ebf9f34dac9a0219ccc8a69347",
+      "label_sha256": "968fddf9b6bea8b7fcd402bbf837888ba5c8ea3c600d6e8f63060175fd31301b"
+    },
+    {
+      "file": "room_coke_scout1-20261017-171117_0011.jpg",
+      "source_split": "train",
+      "image_sha256": "08d13e9a33ac7af21351420ead85a4df054740d12ccef8f3a5fbbee9ad49b002",
+      "label_sha256": "193dca596ee0b46d285d7c55d00d31371391faab1be79adf57f74bcf5a25361b"
+    },
+    {
+      "file": "room_coke_scout1-20261017-171117_0012.jpg",
+      "source_split": "train",
+      "image_sha256": "26308dc3256b70b17ef57203fe4c430e79936fcbafd912c374766748c14db08d",
+      "label_sha256": "e1f77c5ccd2930f567d7c62b6a7617ccd204d7bed162650d5a87f2eadca35c3b"
+    },
+    {
+      "file": "room_coke_scout1-20261017-171117_0013.jpg",
+      "source_split": "train",
+      "image_sha256": "e333fc311238d30d0cb26e32667192e93d447d2b2b4e144ffa9121ea4531141a",
+      "label_sha256": "7e505fa95bfe23520979f3f95dbeb00dd7349faeb37032ca60f63a1f5cfc56e9"
+    },
+    {
+      "file": "room_coke_scout1-20261017-171117_0014.jpg",
+      "source_split": "train",
+      "image_sha256": "e47c7b02e1a1f52efac48ad5f71e006fd958e82133d6e6d6f2db87840a3b796b",
+      "label_sha256": "1b6e8bfd831ebe8d3d704aaf6235fd055457cd86f0d145cd982d88a2d3e70cea"
+    },
+    {
+      "file": "room_coke_scout1-20261017-171117_0015.jpg",
+      "source_split": "train",
+      "image_sha256": "8c9c2fc857644c6cf101b6632e14df2f2f140b7a87b7eda64162019eac2ef892",
+      "label_sha256": "0c362a821100bb0f0c7e92c995fd02178c837ee947f4c5098304680df0443d4c"
+    },
+    {
+      "file": "room_coke_scout1-20261017-171117_0016.jpg",
+      "source_split": "train",
+      "image_sha256": "f9a89993b55c3e5d1862ee6fed6ec316d184d253465e8098c86518b2ab697ce5",
+      "label_sha256": "dd02734433a08d8b74f557b5537afc66d116ab80ca1cb89e519a244fb19f2650"
+    },
+    {
+      "file": "room_coke_scout1-20261017-171117_0017.jpg",
+      "source_split": "train",
+      "image_sha256": "992d9dd576099ef516349473948d8f1d96babc53ae98c146a2bcbe08a5e8a3df",
+      "label_sha256": "b21d22d8593afff213373f6bd52bceec414162f155b0e269064fdc5b144690b2"
+    },
+    {
+      "file": "room_coke_scout1-20261017-171117_0018.jpg",
+      "source_split": "train",
+      "image_sha256": "0b1cbd0d501716a83fde9baf57a91fd9ea77b33ddafd50f5645aa4ec7690a95c",
+      "label_sha256": "4e4284abd6bbd49ea98472ce190c81ae401a232df4f67ee5f6de36419f6aec21"
+    },
+    {
+      "file": "room_coke_scout1-20261017-171117_0019.jpg",
+      "source_split": "train",
+      "image_sha256": "680ef1c790ef62ed811528b98efbc9cf80d57d5768043dc156c8d642636aefe1",
+      "label_sha256": "e2fb68b18b34e7d13583a23ae18dc747230521b7566bf76067abea8d4cf8c62d"
+    },
+    {
+      "file": "room_coke_scout1-20261017-171117_0020.jpg",
+      "source_split": "train",
+      "image_sha256": "8cb9b3ba7d37eac72d84b1594327f6151eaabcf1645f3449f6a220db89294bab",
+      "label_sha256": "9896a42a6de8cdc9482b357bf5521823642be100ccdbe712753ec408009cf13b"
+    },
+    {
+      "file": "room_coke_scout1-20261017-171117_0021.jpg",
+      "source_split": "train",
+      "image_sha256": "6dd1d4ecebba3a3401e6e7c8c16084dfa99492de04424d18b999853a8799adfb",
+      "label_sha256": "219d0211a93c369192a8080ebed8091380d6e84428130de6753d788e2fca1999"
+    },
+    {
+      "file": "room_coke_scout1-20261017-171117_0022.jpg",
+      "source_split": "train",
+      "image_sha256": "daf29ad98f9c4d43a9dacdecf4dedd67dc641fe97b2580423a4389d47ea28464",
+      "label_sha256": "324233c926b7c221423c8c6d3bfa3561370d6bc546907cb7dacf6d481fa8fed3"
+    },
+    {
+      "file": "room_coke_scout1-20261017-171117_0023.jpg",
+      "source_split": "train",
+      "image_sha256": "e4a6031e3075fe85ef7c179a3446e04bddd5ec57a01a8b83d34d7ae8276ebfe3",
+      "label_sha256": "1592fc4e416b21e5dce952df921b7227d1612b9dfc1f1103571b32a46352ca74"
+    },
+    {
+      "file": "room_coke_scout1-20261017-171117_0024.jpg",
+      "source_split": "train",
+      "image_sha256": "a3da4888057e50af1911979790dbbf4630e481113941812069bf9a83f29ac215",
+      "label_sha256": "4282052329b157a689d51e47a4bf5ba611fdc184a20ae5b896311bd7b0648fc5"
+    },
+    {
+      "file": "room_coke_scout1-20261017-171117_0025.jpg",
+      "source_split": "train",
+      "image_sha256": "edbfb5c32dff259dba0e243625a75a11fb3fa4410b0d4fc54336e1cba31e584f",
+      "label_sha256": "ccc47e789ce83d9b43a5b7f8e5c15103c3742b63b5bd6e7d8463a6751042c7c1"
+    },
+    {
+      "file": "room_coke_scout1-20261017-171117_0026.jpg",
+      "source_split": "train",
+      "image_sha256": "78f25a58712a4b80f9f550ee8b46bbd3e1e7593647eb3e20be32ec064a5ace6a",
+      "label_sha256": "26ca09077edede56f92ab0a8600c91a017fc17b78f1530746ee6c6f38ad002b0"
+    },
+    {
+      "file": "room_coke_scout1-20261017-171117_0027.jpg",
+      "source_split": "train",
+      "image_sha256": "4602abf388079bddba22c85ed4b9bd8f6ed29d00e01e203c345ca28d4786225c",
+      "label_sha256": "267f4e5170ba56e1e6200d0a5d6f4d016739d819b792093e6f3edf8d4078e962"
+    },
+    {
+      "file": "room_fedora_hero-20261017-173731_0000.jpg",
+      "source_split": "train",
+      "image_sha256": "16d81f8a9467af1c9fb321e82d85d2135f98b70ce67a341a806423373e52c5ab",
+      "label_sha256": "2eafad474cfe3b3bab34e01060ba3320eeab02833913e50f59007d874802c6c2"
+    },
+    {
+      "file": "room_fedora_hero-20261017-173731_0001.jpg",
+      "source_split": "train",
+      "image_sha256": "8f88f8dac54592f7ec249cbfef10ed41449d6d8369c4f60abad8eca046dfeae5",
+      "label_sha256": "e95828089e3b0519dc41e8ff1d6f572584ff261960761ed4bf71dc5ed41375c2"
+    },
+    {
+      "file": "room_fedora_hero-20261017-173731_0002.jpg",
+      "source_split": "train",
+      "image_sha256": "072b2367a84697073d92dd54dfb707cc4008132c0bd076d5b8a376f3bc898872",
+      "label_sha256": "7f3080fa8f65570e2dac5b7f2dd08b23e774f38c274bedb9ae848638ebc3540a"
+    },
+    {
+      "file": "room_fedora_hero-20261017-173731_0003.jpg",
+      "source_split": "train",
+      "image_sha256": "a69af42643330b9ebe6ece40868788fa274916cca7b753ecd2138f188c87338b",
+      "label_sha256": "7a7e08509acab42db181bbfaf20c062f927935025b8f58afbea9f7e54b160d82"
+    },
+    {
+      "file": "room_fedora_hero-20261017-173731_0004.jpg",
+      "source_split": "train",
+      "image_sha256": "3a78bfa522a4ff01201a48c68f0d00b373f5c2802ce23cee59da574f3d85a80b",
+      "label_sha256": "109ad509d38926e2f28f00c9e97dffcf388cb28755fb9f72bfb51991375c0d4f"
+    },
+    {
+      "file": "room_fedora_hero-20261017-173731_0005.jpg",
+      "source_split": "train",
+      "image_sha256": "5efb43d0d8aab00c4d82bb662c2d9074e3f535822e33b8d4c26a76bc09910aaf",
+      "label_sha256": "25fd724fd241b006e2928eaf92eda38f2da56b8648d43e013b30062e532b083b"
+    },
+    {
+      "file": "room_fedora_hero-20261017-173731_0006.jpg",
+      "source_split": "train",
+      "image_sha256": "b6c37da6127d4d135e6cb4c0478712c06dca95d1bb375277f3150419e7ca8e71",
+      "label_sha256": "a49d84e4b043184b5637ba301dca8ecf856084f0cdb4d216b7d6200d30480234"
+    },
+    {
+      "file": "room_fedora_hero-20261017-173731_0007.jpg",
+      "source_split": "train",
+      "image_sha256": "c14bd264966202eece22fcceae0fd700af4ac5be0aaaa3e0ed6621076fa0d073",
+      "label_sha256": "561aff1c87df8b6a9c624d5687144abeab4dbf2ae837d098906bcb283a6f5c62"
+    },
+    {
+      "file": "room_fedora_hero-20261017-173731_0008.jpg",
+      "source_split": "train",
+      "image_sha256": "30dd8f9f6df4e54ebd7bd762bf6a698177c22cd0cce602eb4be77fa4da97f150",
+      "label_sha256": "c09dc775514420df5c390bea2010a8af54dbd2c303f614c21a4b6f59fc04f374"
+    },
+    {
+      "file": "room_fedora_hero-20261017-173731_0009.jpg",
+      "source_split": "train",
+      "image_sha256": "256a2f573572d992db54f1172657c6be9027ec7573f2dfd67258722e482fd367",
+      "label_sha256": "a3a73fe7b1bf8cfa69db50875ccee3778eb9a9268a50059743782290423cef72"
+    },
+    {
+      "file": "room_fedora_hero-20261017-173731_0010.jpg",
+      "source_split": "train",
+      "image_sha256": "a89333678b89c84cb90fdcc593c70b0a0537163d3963ed8e113f420afd74ee4f",
+      "label_sha256": "ee5c4806990a37f37de6d8775493933a64d3e274d6fe202033545b0efbabd5d1"
+    },
+    {
+      "file": "room_fedora_hero-20261017-173731_0011.jpg",
+      "source_split": "train",
+      "image_sha256": "15eca564fa6023f9981bcbc8934ca341708a0c5755c7338b582cddc3f5a9d866",
+      "label_sha256": "040f6b767922c6f7eb044cc1ed60603b55fd8805b31e693e8ab1637595386a23"
+    },
+    {
+      "file": "room_fedora_hero-20261017-173731_0012.jpg",
+      "source_split": "train",
+      "image_sha256": "9d94c054271b7b7c620b4b6f37fd89530c7f4876abde96f68bc9e1da7aac02d1",
+      "label_sha256": "4911e2778b6108b975aeea6f4775c8adcae519ba1396a7ad81d5b88d7b88507c"
+    },
+    {
+      "file": "room_fedora_hero-20261017-173731_0013.jpg",
+      "source_split": "train",
+      "image_sha256": "dbd5ceca3d0c690db9fd4c6ec78a0c748e9d0490fea62b011c06126c9a9f8499",
+      "label_sha256": "0dea547998470e832bf0c964e17992b6402e1f41ef7ff33b097f5b62d50959ce"
+    },
+    {
+      "file": "room_fedora_hero-20261017-173731_0014.jpg",
+      "source_split": "train",
+      "image_sha256": "37a3f50d73c450215b30face275d2086b6b02ac0cf304c2d59ed72f140ddea6d",
+      "label_sha256": "7095ed1b85657bd445764e5492f14e7d0444fffc88eee9abcd3d9597e30936f0"
+    },
+    {
+      "file": "room_fedora_hero-20261017-173731_0015.jpg",
+      "source_split": "train",
+      "image_sha256": "94db7161a6dc649ca31f96a12b83d77803b00e9de57514cfa9f9cb2e283f7c43",
+      "label_sha256": "39ca13cf4a859b06c2fae7a494740d85453f21953495e461102f51af05b9ceb7"
+    },
+    {
+      "file": "room_fedora_hero-20261017-173731_0016.jpg",
+      "source_split": "train",
+      "image_sha256": "3ede5362a748984f957b99ff782e7aa4493f1ed627a0367ac91ee20c1ed2be05",
+      "label_sha256": "9d3e71a5a3e7ccf0dbc9fd7df5249a8f89f2da70ef8aa7747e3fa06fc60bfbf4"
+    },
+    {
+      "file": "room_fedora_hero-20261017-173731_0017.jpg",
+      "source_split": "train",
+      "image_sha256": "b5c5721d87dfc2b9b520707b1bc3719e4532ea39ed8deba0f918edc9a808857c",
+      "label_sha256": "03f33cf8f4772f453fdc8d3be4f62fda2a260dba579a8f7e315978f9217a70ac"
+    },
+    {
+      "file": "room_fedora_hero-20261017-173731_0018.jpg",
+      "source_split": "train",
+      "image_sha256": "fb9e7418eff7b9a3633fe2e92114e58e3664bf5e485079712e70acee682a2014",
+      "label_sha256": "b774cf32091111077bbe159ada37a73f075ea0c4e12d6736bd71542ac7deaa36"
+    },
+    {
+      "file": "room_fedora_hero-20261017-173731_0019.jpg",
+      "source_split": "train",
+      "image_sha256": "49c06dc584256731de6213b07be565fcf2efebcf068a024131a99ed5ebdb88c9",
+      "label_sha256": "8301f4bd21f07a1b782d750c2dc6513af0c0e6c8ba35569c69debd2f21bc7a9d"
+    },
+    {
+      "file": "room_fedora_hero-20261017-173731_0020.jpg",
+      "source_split": "train",
+      "image_sha256": "3b57a3abdaca19ec9a72e1877de0b4ad9e62ea114bdc69aadfc62bc8d67e84f3",
+      "label_sha256": "d249fe44398c3a2941fb0b6041b3e6094c2e2ebc1f98c16c1a7c0d17a2665ca4"
+    },
+    {
+      "file": "room_fedora_hero-20261017-173731_0021.jpg",
+      "source_split": "train",
+      "image_sha256": "7f570d0423dc3cdd12ade300f10acaa9ef190fab23b2852ccbce3a816938b893",
+      "label_sha256": "d42ad0cc6ed3f5b49420d3c3d2458fa9813cfcda2729ee7f9db76f86d761e571"
+    },
+    {
+      "file": "room_fedora_hero-20261017-173731_0022.jpg",
+      "source_split": "train",
+      "image_sha256": "b526a3c157741280fcb4ee7dda42d0d1902292e3561ecffa4dfc655a2143633e",
+      "label_sha256": "6f6e102b80f535f7076ec4ad6284e00639b937029d2eddaf4c32a9e897aa2781"
+    },
+    {
+      "file": "room_fedora_hero-20261017-173731_0023.jpg",
+      "source_split": "train",
+      "image_sha256": "6a8df6cded6c8d5b4dd94e59f44786a3298a3e58a58e84a263138ec1c549e08d",
+      "label_sha256": "abc7942236948ec9949347ff570cb06e5811ee13a998d414044bee76844923f1"
+    },
+    {
+      "file": "room_fedora_hero-20261017-173731_0024.jpg",
+      "source_split": "train",
+      "image_sha256": "349c18d6c7e055a04e06aeef25ce7bccf98567306ddce45a21d61ddaef1e4da9",
+      "label_sha256": "9e05e4f08b811b9c0d3ab66c631e300167af03353d03766d9dd0d4afe2d04996"
+    },
+    {
+      "file": "room_fedora_hero-20261017-173731_0025.jpg",
+      "source_split": "train",
+      "image_sha256": "47b9bf68db23f81953babf53390b5f8f50f115ef4c9ff9fac525c7d3cd1ac503",
+      "label_sha256": "695da7771d4e76164c4d86ae21daff51d96467704a620b13850e9a6492a79434"
+    },
+    {
+      "file": "room_fedora_hero-20261017-173731_0026.jpg",
+      "source_split": "train",
+      "image_sha256": "c54abb4f20133601296023ddf12b35e73b5129a53c706e5f38650b048b2aca6e",
+      "label_sha256": "fe77cc8e8424c6aea7bf80ea0616d6e16fba4f78f953b96b7c626b8343fccf83"
+    },
+    {
+      "file": "room_fedora_hero-20261017-173731_0027.jpg",
+      "source_split": "train",
+      "image_sha256": "b947cc22c9e204cb1eeeabef045dd0d53a4ca75c181f686359578669b3b7d19d",
+      "label_sha256": "9f8c3e0a0c8f68338101ab767677e768815181fed5ae043e6442a43864be5329"
+    },
+    {
+      "file": "room_fedora_scout1-20261017-170814_0000.jpg",
+      "source_split": "train",
+      "image_sha256": "43b6b556a3e7eff107b1b646052d9895cec7c504cb95522f51cb5e5493b989bb",
+      "label_sha256": "1e5a1f3174e7fb7593033daf57cdd31a6bd09876c1df0c8af7fbf900be86ac52"
+    },
+    {
+      "file": "room_fedora_scout1-20261017-170814_0001.jpg",
+      "source_split": "train",
+      "image_sha256": "12b15eb8b476800b8b3998373a1e38536ee5eefccf9153bc2c47aa3e6aca17b3",
+      "label_sha256": "152e3a777f6a2be6ec238ee4e93b6c9aac81c8d5228a06f0c81265e22f837a35"
+    },
+    {
+      "file": "room_fedora_scout1-20261017-170814_0002.jpg",
+      "source_split": "train",
+      "image_sha256": "5beb97dc193a2ff7d7aa1e8221034c297e2a1af8bd1401230af0dadfd4703939",
+      "label_sha256": "2426f5446e8e21d37640a2c9696b7fd4c369674244719d47ba908d4e48151d92"
+    },
+    {
+      "file": "room_fedora_scout1-20261017-170814_0003.jpg",
+      "source_split": "train",
+      "image_sha256": "0e55015dda9cf57069a07794e359048323a0749174a93c6e9b46a6124848a5a1",
+      "label_sha256": "4e01fb65afcdcd7ad1fdbd7b94fe3e18dc15e4b04f82eed6565b963421777ef1"
+    },
+    {
+      "file": "room_fedora_scout1-20261017-170814_0004.jpg",
+      "source_split": "train",
+      "image_sha256": "79f017f3d2f8d4acdf59214e711d97fbef9d25717b6cbd868e3f8dcce0b5b08d",
+      "label_sha256": "9038d94801dcc1477228b21f09ec3b4eddbada0f95785e87227a3cba293829b9"
+    },
+    {
+      "file": "room_fedora_scout1-20261017-170814_0005.jpg",
+      "source_split": "train",
+      "image_sha256": "3f28441e5cbf521520484fc6589796e9c6c259fb0237008b317044b0eae680d4",
+      "label_sha256": "6f1770b2ce57fbeafb41d93bc10b3271b98efc605d8d7c55db8f0b875a309677"
+    },
+    {
+      "file": "room_fedora_scout1-20261017-170814_0006.jpg",
+      "source_split": "train",
+      "image_sha256": "9163f21aeb2deb6c9f77d1b37565f2de0a06cadb5f42ecb77416b4f229c5e412",
+      "label_sha256": "acd4baaa0e458aba83d4575b9dbb1d1242ba5a06cb2ece3af11efb0157d9b6eb"
+    },
+    {
+      "file": "room_fedora_scout1-20261017-170814_0007.jpg",
+      "source_split": "train",
+      "image_sha256": "8fbed1992cab806699bbc4028041a396c94b5de5a64eb92dd3c7ce14dedb2277",
+      "label_sha256": "c71cd59d27ee5d095321c4f87ecfa09fe3c90ae7cefb101581c109e6c02c34ad"
+    },
+    {
+      "file": "room_fedora_scout1-20261017-170814_0008.jpg",
+      "source_split": "train",
+      "image_sha256": "106a7cdccd3f753aad94eacd0dcee4ea5368041b4d05a784943cdc064204a366",
+      "label_sha256": "876ccec9686c85e8fb3f207bb3f985e3c522b9850542977a6168cb3248d77f96"
+    },
+    {
+      "file": "room_fedora_scout1-20261017-170814_0009.jpg",
+      "source_split": "train",
+      "image_sha256": "e04618304e08165e9db1f616825323c865e62460617583f9bdaa2cfe467b96ef",
+      "label_sha256": "96d80994e9c180a703ccd536e49338e7c731c27ea1b66c36b1934f78e30358e7"
+    },
+    {
+      "file": "room_fedora_scout1-20261017-170814_0010.jpg",
+      "source_split": "train",
+      "image_sha256": "e70292f892875bc10590c16a882cd9afad1ab27d2bddb5d2c9572d9bcb500902",
+      "label_sha256": "4a9598025d59e82205b0c90910d24013336139ed241d5671b770f474750d840e"
+    },
+    {
+      "file": "room_fedora_scout1-20261017-170814_0011.jpg",
+      "source_split": "train",
+      "image_sha256": "395195b9f059e84a7994b2d16cee03d4b53782fabbac7d7f316a74f0ed9355b7",
+      "label_sha256": "6ef7e71ddb7f2f66033a1232c7665e24ac7e56393f9d9c89610742b99ca036de"
+    },
+    {
+      "file": "room_fedora_scout1-20261017-170814_0012.jpg",
+      "source_split": "train",
+      "image_sha256": "5e82b24168a06cf9443c48b865ac1f576963271f196f2627eb47742c2332ba52",
+      "label_sha256": "596f2d8c79f344a4912b9720e1f452f6919f57703332f9cfa8f247005ffab7f4"
+    },
+    {
+      "file": "room_fedora_scout1-20261017-170814_0013.jpg",
+      "source_split": "train",
+      "image_sha256": "e6351a06ec4ebc304fa3b8c1da5cb127141d63caa6a006e971d2afde0b8360b1",
+      "label_sha256": "882fc8392f7762a22b974d28b37169cef3d2ecd2d23875ef67cf3ebe479e4176"
+    },
+    {
+      "file": "room_fedora_scout1-20261017-170814_0014.jpg",
+      "source_split": "train",
+      "image_sha256": "07cab48920acc73a8a0458a9f2e167c0addb9d6b54a813c6c97156be421e3ce7",
+      "label_sha256": "b2213213cd229f9e33f5a1d4f54f6e691050534cdc7759a412b6ce919fabc53a"
+    },
+    {
+      "file": "room_fedora_scout1-20261017-170814_0015.jpg",
+      "source_split": "train",
+      "image_sha256": "0d27d1204f214f270221ef7bc3d6e3bf24ecda7b46d2945881422f219e7dab49",
+      "label_sha256": "c5d021ce98b506fe9a9ce382ad0d693470a99cff7b0f409527e7faa9f86c1910"
+    },
+    {
+      "file": "room_fedora_scout1-20261017-170814_0016.jpg",
+      "source_split": "train",
+      "image_sha256": "41e6a47b84f9330441c5d55efa1372b39372db0969c26268e91935dc44fa3571",
+      "label_sha256": "e6c800f43d01b06c28645bd802c7f83063187f6a3ee0bde4b86820b6e5e8bbba"
+    },
+    {
+      "file": "room_fedora_scout1-20261017-170814_0017.jpg",
+      "source_split": "train",
+      "image_sha256": "48e2f48316b4cf2914d1b9d1115dfdab4bd8a7fd04d9f6e6ec39d8b7472d3bf0",
+      "label_sha256": "962581e000ca49939afb90bd6c4f11f199620efebd76ef2280dc9b6f41b39c8b"
+    },
+    {
+      "file": "room_fedora_scout1-20261017-170814_0018.jpg",
+      "source_split": "train",
+      "image_sha256": "d61cef233cf01397bc2f6a3f6ffaa8f8593344711e15e26555d31ba76f9960fc",
+      "label_sha256": "b67ff0b7f8c72510825befecd6207254d782094e6f703b7cd0b103288e9e4135"
+    },
+    {
+      "file": "room_fedora_scout1-20261017-170814_0019.jpg",
+      "source_split": "train",
+      "image_sha256": "a585b2463e6fbff511c40d9e4d1feceea948c368cca55181fb5e5f6747fcce07",
+      "label_sha256": "6702b839f4eb27191c48b51985ad2bba6dbcfec39801c4c126e7af3a879b58b4"
+    },
+    {
+      "file": "room_fedora_scout1-20261017-170814_0020.jpg",
+      "source_split": "train",
+      "image_sha256": "30d915e0aeec4ef8a14ed5d586ee775deaf9d5eddfadb09b45007e1775decf82",
+      "label_sha256": "c14a3a6b0dfee831c8b2634101a52a41244d9338feec26c0eb57ad0075633f33"
+    },
+    {
+      "file": "room_fedora_scout1-20261017-170814_0021.jpg",
+      "source_split": "train",
+      "image_sha256": "0a84d3b2d38e95a2d1aac202fb43f12f2fafafbce8b2a3a71a134337b344da42",
+      "label_sha256": "2bc0f352d8ec24c3ad0376d0d429bbb974a360f58050ebb6b0ea6d917ba0009d"
+    },
+    {
+      "file": "room_fedora_scout1-20261017-170814_0022.jpg",
+      "source_split": "train",
+      "image_sha256": "52d12fc9e57dd02f5b95645171e95de9feae28c9d69416b74d69afc9c1847252",
+      "label_sha256": "d1e601f41cd8811649a5624face91d72e847631147b02f79ba04ed14eb2e60d1"
+    },
+    {
+      "file": "room_fedora_scout1-20261017-170814_0023.jpg",
+      "source_split": "train",
+      "image_sha256": "0e07d3531e9bba788bd4e81b488dcf54f7afe261122d2be9195b986b03851771",
+      "label_sha256": "50162f2ce137361f93c661ab976c5435d8f5ba77e129e343822caba9237c1618"
+    },
+    {
+      "file": "room_fedora_scout1-20261017-170814_0024.jpg",
+      "source_split": "train",
+      "image_sha256": "ebb2a0110ac4dda31903ec42b25bb4b8e044356779cd690b2c47dd6ca5db56b6",
+      "label_sha256": "bc64562b59412f8cae3943a095bde4c14407119aa74fad25d9c6062d847d3b5e"
+    },
+    {
+      "file": "room_fedora_scout1-20261017-170814_0025.jpg",
+      "source_split": "train",
+      "image_sha256": "41c622f05fbd805b3bab45d77a0dcfbe29747b0ecf525868153158e28afa245a",
+      "label_sha256": "f16f68837299a23e506b72a965b1f4a557914c32ee38565a0bb3c4b67f6ccbb1"
+    },
+    {
+      "file": "room_fedora_scout1-20261017-170814_0026.jpg",
+      "source_split": "train",
+      "image_sha256": "1b4ad8177631eebcab0bb8faac0696f1fa56af17226d8b30625fabb271ad8200",
+      "label_sha256": "3d669756217af1afd380e75bf3b5e91806c5efecfb2f61078e2616fce01b1e1f"
+    },
+    {
+      "file": "room_fedora_scout1-20261017-170814_0027.jpg",
+      "source_split": "train",
+      "image_sha256": "d3aa5114a4e2b65de6c93f6a704fe5e1d82231e24ea0ba00dbec1b39e7589899",
+      "label_sha256": "2b8c130e4bcdc6a9658567c1d795597fc129152aca8884b09cda163227307627"
+    },
+    {
+      "file": "room_fedora_scout1-20261017-170901_0000.jpg",
+      "source_split": "train",
+      "image_sha256": "cb065d831d04308deb16b8721b489b9f767850c828ffbaa45966bbcbfbab0d94",
+      "label_sha256": "bedfeeab3e9871301e6b900cd159b2ac50a3434390efb240235cbaf628caefb3"
+    },
+    {
+      "file": "room_fedora_scout1-20261017-170901_0001.jpg",
+      "source_split": "train",
+      "image_sha256": "a7c0860f44773390b815dcc2318704d853bdad544ee6ec49a858a5f2c415eb8f",
+      "label_sha256": "0b81f0d55b8343943e2f29cf22f462c0542850b972e4f41caec755d870302659"
+    },
+    {
+      "file": "room_fedora_scout1-20261017-170901_0002.jpg",
+      "source_split": "train",
+      "image_sha256": "2cc144ca10406a329f67758229f26b10970514b838a7c92b4ff460c91fbada7c",
+      "label_sha256": "3751977f05e19cf2777dc5be813e7b86fd2aad1a318544a6578928291112ae03"
+    },
+    {
+      "file": "room_fedora_scout1-20261017-170901_0003.jpg",
+      "source_split": "train",
+      "image_sha256": "809e8d9d70a0ba3a7e5aaf9f451751e107a856b3fd421a7bc8940637b6e216b8",
+      "label_sha256": "3dee743604703f03992558bbff9b657639299a26cb56dadd01147702c420dfab"
+    },
+    {
+      "file": "room_fedora_scout1-20261017-170901_0004.jpg",
+      "source_split": "train",
+      "image_sha256": "cd667f420cfffa2f7c7c46c7a58202dbef4cdd46be555f71741b6b8adc197b58",
+      "label_sha256": "fb73a9fecdff65299d15e815400382af0f053ed054d8bc8393704b576d361ed2"
+    },
+    {
+      "file": "room_fedora_scout1-20261017-170901_0005.jpg",
+      "source_split": "train",
+      "image_sha256": "545c8f6b4272299d4a7791ea4500d062d630c5582667f80b1a3069e06d014250",
+      "label_sha256": "bb0771c70c8aa849684ab7f80fc51e9d7ca973046bdc814563d255f10445d1f8"
+    },
+    {
+      "file": "room_fedora_scout1-20261017-170901_0006.jpg",
+      "source_split": "train",
+      "image_sha256": "ce651f70fc0ce181f36cf37d779ff460a80abb278ece70b556042fc8ee1d12dc",
+      "label_sha256": "b36994fbf93bbdb652abb8da296bf9ecf2590624028e10841a3f289339261792"
+    },
+    {
+      "file": "room_fedora_scout1-20261017-170901_0007.jpg",
+      "source_split": "train",
+      "image_sha256": "9038a305e14a853b874c2104896ed5fad879f0e3e9f5d618ada03ccb0d73ab0f",
+      "label_sha256": "27c2c972cf032966cda7d9f64870729abefd3d2122466d0da9fe162340ffce8f"
+    },
+    {
+      "file": "room_fedora_scout1-20261017-170901_0008.jpg",
+      "source_split": "train",
+      "image_sha256": "f0a91a8d501e53b5333d51462d5ab2dbbbb6e4b7688da74b37a2ef71012b2eb2",
+      "label_sha256": "d578607b0d4427fa770805ea7cebcdc130b056fc8a1499203adff888e8154cb2"
+    },
+    {
+      "file": "room_fedora_scout1-20261017-170901_0009.jpg",
+      "source_split": "train",
+      "image_sha256": "e5acd88a5a3304c0057be81fec1ebb23018d5f9f21e52da927f01ee265cb0931",
+      "label_sha256": "9c56b685719632e3dd0c041f283d3c543c1e1641db4c806d58eecf59df323ff5"
+    },
+    {
+      "file": "room_fedora_scout1-20261017-170901_0010.jpg",
+      "source_split": "train",
+      "image_sha256": "6923a3fd4fbea2961919fa4b0faa30d35846b1ab0f54b8045c7e42e9fd65ec03",
+      "label_sha256": "619c53f26bdfc043929d26f106fe7edc3dc9d4ddc90f8c3219188fb825d0af85"
+    },
+    {
+      "file": "room_fedora_scout1-20261017-170901_0011.jpg",
+      "source_split": "train",
+      "image_sha256": "c53080a2ffaa232868f16f087938d3f4e0627f8c0e3065de968b9f8d206c1044",
+      "label_sha256": "44db46a598da52bd0fe2af30dca40011e99bc4e1e8b6a95603ea2447dd5369c6"
+    },
+    {
+      "file": "room_fedora_scout1-20261017-170901_0012.jpg",
+      "source_split": "train",
+      "image_sha256": "941d6e003b8b40b894faf484a5e65d84979507612e7110d634c315627f375ea9",
+      "label_sha256": "84d4f06fe5dec4a864b9dab4c59c07a854e71198b34dca77cb5eb208273bb76f"
+    },
+    {
+      "file": "room_fedora_scout1-20261017-170901_0013.jpg",
+      "source_split": "train",
+      "image_sha256": "b0b13c7412497dfa7358427273647bdca66a723b44572c17ae113fd5ad88cdd6",
+      "label_sha256": "63443d540ca6917170e9b96d8473c32f3f59ec014b161ed8eb32fd4728ff1010"
+    },
+    {
+      "file": "room_fedora_scout1-20261017-170901_0014.jpg",
+      "source_split": "train",
+      "image_sha256": "217d42a8b7ffac87390098fd2b570c2c9e66173ec351592bb5023d85b911cf82",
+      "label_sha256": "b49bf69d00558581e3cf1488c0b7ce61010e96a896a32a1aac3874f1698cfc45"
+    },
+    {
+      "file": "room_fedora_scout1-20261017-170901_0015.jpg",
+      "source_split": "train",
+      "image_sha256": "5ce56e337d55f2fa4135bfd9b2c32049a406937bc816e144fe0cf94cccb8862f",
+      "label_sha256": "4a92a1cf091f09647a5d244562c1c3ef44c2d715dd667b1530f55e8e5300649a"
+    },
+    {
+      "file": "room_fedora_scout1-20261017-170901_0016.jpg",
+      "source_split": "train",
+      "image_sha256": "ccc517652d37884022c4bc4b88de2aefac230da7860e2e4c1fbdaa58c8ae1748",
+      "label_sha256": "01e68d2e3964e8135017cbe90d2c345ccaf60f613b34c4226a8b93b419312013"
+    },
+    {
+      "file": "room_fedora_scout1-20261017-170901_0017.jpg",
+      "source_split": "train",
+      "image_sha256": "21e688b9dda1b7b958f84180659c75554a7a4fc727e5b2d5a4dd70c38be93ba6",
+      "label_sha256": "c72afa06b56acd42b3cef6599cfee4ee1bac5e4938466390c9d04b13c8b939f4"
+    },
+    {
+      "file": "room_fedora_scout1-20261017-170901_0018.jpg",
+      "source_split": "train",
+      "image_sha256": "6c38f680b56638f732e6d4643e64f453e31118de5b7cb8d668867db25628b7c9",
+      "label_sha256": "c70fac9b9d66d6bc18a3ca1d4ed8326fb8c600dcf808dd9dd5e2d4d4943ffb9d"
+    },
+    {
+      "file": "room_fedora_scout1-20261017-170901_0019.jpg",
+      "source_split": "train",
+      "image_sha256": "891d650127b2194b13972c82cbdb7b6733663f93f5ed972eb5eab6b639af76dc",
+      "label_sha256": "b20d59003ed98e6ba6712715c1603a969c382001aa0f9d0b4e7c886b6ae9239f"
+    },
+    {
+      "file": "room_fedora_scout1-20261017-170901_0020.jpg",
+      "source_split": "train",
+      "image_sha256": "17b046461f19a5f79ec171279deb072c2fe85dea3b97b01672747ef794007571",
+      "label_sha256": "cb0f8a6714dba13196f75db14c9d71758beb0734685db0750677e7aedefc1222"
+    },
+    {
+      "file": "room_fedora_scout1-20261017-170901_0021.jpg",
+      "source_split": "train",
+      "image_sha256": "d413ea060de2f68826ec565a7e73dc044ef64c176af8cab582aa9117953f8910",
+      "label_sha256": "49fccec60c2812dc383bc18b34f352a7169d3d1c085e4250984a7bfab87d1b92"
+    },
+    {
+      "file": "room_fedora_scout1-20261017-170901_0022.jpg",
+      "source_split": "train",
+      "image_sha256": "b71638f8e2c99c3a730dcc70fb0ecc3ea252414e282af457d08c908dc57a7b5a",
+      "label_sha256": "495b8b7feb028f840923f1e001374cf3c3a4aa45d5859b83db4f9e8ab96278fe"
+    },
+    {
+      "file": "room_fedora_scout1-20261017-170901_0023.jpg",
+      "source_split": "train",
+      "image_sha256": "5326f9de60b58e89a050fc547c833160bf8e9e6d557e77f069e9c1587c694142",
+      "label_sha256": "9b7397e8be24927c713b169bf5ca7f69a9a370fbed8830db6f2afb9af7fab54c"
+    },
+    {
+      "file": "room_fedora_scout1-20261017-170901_0024.jpg",
+      "source_split": "train",
+      "image_sha256": "db3dfa36c9dcfe067c94340aaa739f7a6fc4e537562c3d2026b7e5bf1b6df53a",
+      "label_sha256": "30e671b28c98c20dc795886054a8f7f6192b2251a003aa7c3366652996f676c9"
+    },
+    {
+      "file": "room_fedora_scout1-20261017-170901_0025.jpg",
+      "source_split": "train",
+      "image_sha256": "d1c1e77034ffd1e92fdbfb21a07a585ab6bb2bcccacaeda13245cbb583ae1566",
+      "label_sha256": "460aa3467c82ad49669217ed8574018b95967aca36d0933bc08aed501de6b70c"
+    },
+    {
+      "file": "room_fedora_scout1-20261017-170901_0026.jpg",
+      "source_split": "train",
+      "image_sha256": "abef104e31d329c5c01422b0276a71a744fddd1b5149c677aa3aa911402229b0",
+      "label_sha256": "46dd17b02be64972ea978645cea022d8481e4c61ac6c8c49760c1e1f82f6a750"
+    },
+    {
+      "file": "room_fedora_scout1-20261017-170901_0027.jpg",
+      "source_split": "train",
+      "image_sha256": "5a292fd36033e63c49a644356d49a1f7234e299985fb5ebb2876e4f3f6de0343",
+      "label_sha256": "c789ac4198038a4dbd2a710c2667503603fc7b54f51b551e2b0db08d20872e1c"
+    },
+    {
+      "file": "room_knife_hero-20261017-173636_0000.jpg",
+      "source_split": "train",
+      "image_sha256": "e9b8b61c11f398d9917bcf5442df4fd6cd80802251a89c3bebf09385d2de2be3",
+      "label_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "file": "room_knife_hero-20261017-173636_0001.jpg",
+      "source_split": "train",
+      "image_sha256": "6ff528d1820372e908d0fcb81b36071600d08d6308a186a87bd63f521f19d3ed",
+      "label_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "file": "room_knife_hero-20261017-173636_0002.jpg",
+      "source_split": "train",
+      "image_sha256": "bba5c8f75445edf0c1c9e454e4bb70de1f3fdeee201223a8423b3451d48bbd3b",
+      "label_sha256": "4ec09d3aa341c568c02bb51358e543cdfb086ded1b0b161297315c9b2e162e3e"
+    },
+    {
+      "file": "room_knife_hero-20261017-173636_0003.jpg",
+      "source_split": "train",
+      "image_sha256": "a12fa2980fbd73e65c57de18c6e02a2da14a9b98e2bd5c6b35a96c97e3f07bb8",
+      "label_sha256": "272e0c9bb75e00debc2b9aabd2666efafe610d49161f283e5546cf211e57da41"
+    },
+    {
+      "file": "room_knife_hero-20261017-173636_0004.jpg",
+      "source_split": "train",
+      "image_sha256": "01e5afeea5f11b6afe3bcfd4526ec3edd219a7189fd3445f39846de051afe9ae",
+      "label_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "file": "room_knife_hero-20261017-173636_0005.jpg",
+      "source_split": "train",
+      "image_sha256": "882d6d48bb1d0b767a9493dcb7194b7136c14a4b3c3aa1cb3740d59ee01a8a42",
+      "label_sha256": "3b27d78831e96d56dd8e12ccf8e0f9f23ea6469cd9c109a13a87a465cd9e3d93"
+    },
+    {
+      "file": "room_knife_hero-20261017-173649_0000.jpg",
+      "source_split": "train",
+      "image_sha256": "6a1992fc1cbbfb5c7289d3957297b80b267c2f4d2754578a313281267af721ad",
+      "label_sha256": "62d06af3ce8a8c536cbfcbd91e7ac5a66cc3f6644b54bc613d10743337a278a3"
+    },
+    {
+      "file": "room_knife_hero-20261017-173649_0001.jpg",
+      "source_split": "train",
+      "image_sha256": "c9ce3a9b5354801f2f4b6aeab0dfd28bcc3ac5894a9ee5d2c9c1aa256e30a272",
+      "label_sha256": "2ddff781ac932e4452a295c470d79d040e1eb0b46668917b891ebcecb1a4ec2d"
+    },
+    {
+      "file": "room_knife_hero-20261017-173649_0002.jpg",
+      "source_split": "train",
+      "image_sha256": "78204806d896f492e104f024e740b10509320f6ca53186cd23a2b50bdf4192d5",
+      "label_sha256": "1ac89aab7a0308fc725512f78d4782213196c7b8d3ce897e4305ef9aca81dced"
+    },
+    {
+      "file": "room_knife_hero-20261017-173649_0003.jpg",
+      "source_split": "train",
+      "image_sha256": "c51f578c85beb0a6f10da5d3415198eb10e3a12bd5adf4da3f928287c9adf5b7",
+      "label_sha256": "1712ba1e8e45c3e6cbc291d02cdf7c64b744fb78f6d3bdf9af1cfcff5e7189e4"
+    },
+    {
+      "file": "room_knife_hero-20261017-173649_0004.jpg",
+      "source_split": "train",
+      "image_sha256": "69c4710538c9367ecd5001115206710be1a4cf23231d03d216c85d5cd7b5270a",
+      "label_sha256": "a6ae506d5c95998737995cbe0388e98f68aa8bad981cfd9a1b0106e4d62cb971"
+    },
+    {
+      "file": "room_knife_hero-20261017-173649_0005.jpg",
+      "source_split": "train",
+      "image_sha256": "46d087a83c91428185ebcf486085019a9f58c4991b6a180901f06f7e6354c1b9",
+      "label_sha256": "46ce820d212fc5ee1caa839014e4064fb75dc2d834fee898789807b9fd173dff"
+    },
+    {
+      "file": "room_knife_hero-20261017-173649_0006.jpg",
+      "source_split": "train",
+      "image_sha256": "69a9b98e71d29fd491c00944f2732b1d5d65d1a198af25a225625c71bd469751",
+      "label_sha256": "5c412d8968c28d0812c82213c6f443fdb253ee1965309a504546e8674b4df827"
+    },
+    {
+      "file": "room_knife_hero-20261017-173649_0007.jpg",
+      "source_split": "train",
+      "image_sha256": "ab1549de1d4644021432af8592bd3089cd97e7f2e359a6b1ccba1ed318df6fef",
+      "label_sha256": "912d837c9db959b6761a54781d84e77fce73c3618e9c065dfb1fcd02dc324d88"
+    },
+    {
+      "file": "room_knife_hero-20261017-173649_0008.jpg",
+      "source_split": "train",
+      "image_sha256": "24cfdde33f9b12f522ec6182170f00011de81f5c06e4430afb7e07d050e545ef",
+      "label_sha256": "1981bfeef6e07bd5092d41a0847277a261801a8b1870003de48ae3a4163a2ed4"
+    },
+    {
+      "file": "room_knife_hero-20261017-173649_0009.jpg",
+      "source_split": "train",
+      "image_sha256": "6671b3c2a67308affad1e034eba56a9082ad1ab705cd6ac8298dd07133397a6b",
+      "label_sha256": "9f49a3dc6c7fbb7d96a5394f55b1cb819202d68bdbda9c722154d73dc17fd2d6"
+    },
+    {
+      "file": "room_knife_hero-20261017-173649_0010.jpg",
+      "source_split": "train",
+      "image_sha256": "8e2ba9f9f84ae4a4453740a366c40d385fef2102cc72c65f100424393ce963e0",
+      "label_sha256": "7936ec8341e7aefdac3f7b66a222f2e7f4167f1a9244dcb29571e14ebbf0d56f"
+    },
+    {
+      "file": "room_knife_hero-20261017-173649_0011.jpg",
+      "source_split": "train",
+      "image_sha256": "8227864fc31f1759b9bb6bd36b4bdb8ca5916455a8773c2c112840c6db0372d1",
+      "label_sha256": "e1e86eccaa40cfdb92d62a4a7b9f7673fd59f406a0d682eabf91d3b9f23976f4"
+    },
+    {
+      "file": "room_knife_hero-20261017-173649_0012.jpg",
+      "source_split": "train",
+      "image_sha256": "b270dae16d837e23934c404f76801e79d4bd37b41d9941958dc76e2404b39266",
+      "label_sha256": "12136ce6a5e1226664af662b659db4b92b3ce4f25742ae8ad3fc2cb130f2cc2f"
+    },
+    {
+      "file": "room_knife_hero-20261017-173649_0013.jpg",
+      "source_split": "train",
+      "image_sha256": "262b29a54a538a72ae0b56116e33af760237d28acacb7ea3b535a6f65f74d785",
+      "label_sha256": "5c9075e64037bb999ae29ac48376a6c95d2a0b8273d1f10133c92eaf407dc97e"
+    },
+    {
+      "file": "room_knife_hero-20261017-173649_0014.jpg",
+      "source_split": "train",
+      "image_sha256": "48746363d06ef9285cfbff41a4073464cd39c40c3b4bc43305489d85172b8f22",
+      "label_sha256": "b8784a5b76465097767056d3743f7d72ab3d566cbec5449156d16d8a915e52fc"
+    },
+    {
+      "file": "room_knife_hero-20261017-173649_0015.jpg",
+      "source_split": "train",
+      "image_sha256": "4934faff637bd4a9aace893e700bebb54ef8a0cfb4f33d120f0667c9af9063a1",
+      "label_sha256": "84ec0513c9a2c0cece70a17331ae7cce1953a9b25c275145bd2a543ec0e11441"
+    },
+    {
+      "file": "room_knife_hero-20261017-173649_0016.jpg",
+      "source_split": "train",
+      "image_sha256": "7b9cc16ab7b77790a2c4ee4d042bbacf09c66f66a53d90c9b2b8c504f9395bf3",
+      "label_sha256": "e12a2dd8758d58e8969e19e77bd96371b7e8c6d4dd90cb6feab70a6194620140"
+    },
+    {
+      "file": "room_knife_hero-20261017-173649_0017.jpg",
+      "source_split": "train",
+      "image_sha256": "5aaa98eb2ef87013e56e2acb3954685a051e39539093afb6bc1eb2f8bdf1784e",
+      "label_sha256": "9fb1b115258bc0dd5308938746e29933a71033fd0a4d3cc602eebeb13bf15861"
+    },
+    {
+      "file": "room_knife_hero-20261017-173649_0018.jpg",
+      "source_split": "train",
+      "image_sha256": "feef61ca079e41a9e022107ed0d550e32e740dc59737e1dd5d3c3d1cae292b1e",
+      "label_sha256": "59662dca09eeae44b97ba89d05180ae9656191312c382844251b70df366f7efc"
+    },
+    {
+      "file": "room_knife_hero-20261017-173649_0019.jpg",
+      "source_split": "train",
+      "image_sha256": "0791e4b7d8079bafd1b0f407ee197d20ced964ae29b1dbecbfd58bbfab5668af",
+      "label_sha256": "bcdcd8dc5b113d3c2055848c882ec7e58a477511190c6d511cf2ab9a940be2e1"
+    },
+    {
+      "file": "room_knife_hero-20261017-173649_0020.jpg",
+      "source_split": "train",
+      "image_sha256": "5853942c90dee84a0fb2a4ef92383090fd5e77140e9c42a5fa3d3ce33798dca5",
+      "label_sha256": "e45961522798b28875e8f9f0fbd48c132d02ef82b909eb22cab9fb895b6020e6"
+    },
+    {
+      "file": "room_knife_hero-20261017-173649_0021.jpg",
+      "source_split": "train",
+      "image_sha256": "8ba168390a4564d5c790d830a4425251cfdc85dd7f70e76fba310fee1ca23742",
+      "label_sha256": "c574097c39b5ad2d5e84c9d79edde9da7c61634a8db4f8930b014ad7cb17524b"
+    },
+    {
+      "file": "room_knife_hero-20261017-173649_0022.jpg",
+      "source_split": "train",
+      "image_sha256": "03029c03c92e591e20cbcd8599680cd861a9c4503ab24614d28521e314cdab6d",
+      "label_sha256": "76f774c64ee2647884ea86313246eff59e17758066fca9f36a4d8af1e96510d0"
+    },
+    {
+      "file": "room_knife_hero-20261017-173649_0023.jpg",
+      "source_split": "train",
+      "image_sha256": "8b96d6cefec1be504a663cd7f9b37f215e740d060a828bf4ab8d37a82405a4e8",
+      "label_sha256": "d18171b690d334830e8accc7a19784f428f49fa6ab3cd2b5288686d46e55198f"
+    },
+    {
+      "file": "room_knife_hero-20261017-173649_0024.jpg",
+      "source_split": "train",
+      "image_sha256": "8eb4fc6c1079dc1a41431d50dbab6d7c045a32c20d418d9cb3c9af795da8c29b",
+      "label_sha256": "eb45615ec3632cd0a141a7e5e4563efee60ae0c73b434750cbc855a293c4757c"
+    },
+    {
+      "file": "room_knife_hero-20261017-173649_0025.jpg",
+      "source_split": "train",
+      "image_sha256": "01de67dec13f79b041d2b316b779fd688db2702e76cc46a89e764817af550092",
+      "label_sha256": "864ee4bde08c4b2e2bbbd4b56483d09cd6044204258110556ae7ffea2f820900"
+    },
+    {
+      "file": "room_knife_hero-20261017-173649_0026.jpg",
+      "source_split": "train",
+      "image_sha256": "a063c42aa7c853595b80545bf4413fdeddf66126c02e0073ee383933e5510bfb",
+      "label_sha256": "4741d361bb23d50fbf973a2168737eeebc6072fa917dd0f8dca022b3ef32874c"
+    },
+    {
+      "file": "room_knife_hero-20261017-173649_0027.jpg",
+      "source_split": "train",
+      "image_sha256": "281c826a12bdce1a449165ca96e0a3dc0eb2de77259653198ef7cdf0a52a09e3",
+      "label_sha256": "d348c6a0fea0ee6004dae7040bb39f6f287663be095c7d0e71591e141e9b46c4"
+    },
+    {
+      "file": "room_knife_hero-20261017-184411_0000.jpg",
+      "source_split": "train",
+      "image_sha256": "4ea11e023cd1500b6c3ad6d89faa93c818172f5654776b934b5283f594cde9ca",
+      "label_sha256": "8ced65883dcdc2896f3e9d986f304be28ee71c8ac101dd186635b7711d54e9c7"
+    },
+    {
+      "file": "room_knife_hero-20261017-184411_0001.jpg",
+      "source_split": "train",
+      "image_sha256": "90b22e2585fe0850a86e00aaff6dba6066d1d9310cc60bc36a9f2d3fe0d4d253",
+      "label_sha256": "aa1ebaaad6a18f5551747c74835cca094323f4259049b82cc219be2f1a30fcb7"
+    },
+    {
+      "file": "room_knife_hero-20261017-184411_0002.jpg",
+      "source_split": "train",
+      "image_sha256": "12f4245a13fc16154a603fa216f8a725a304af2aaa5f1eb05a9c056c50e5397d",
+      "label_sha256": "d48bd212fae1a2c86f572455dac462f73c6f42fe972f45bc2d6791bf978e5905"
+    },
+    {
+      "file": "room_knife_hero-20261017-184411_0003.jpg",
+      "source_split": "train",
+      "image_sha256": "f424b9f1a67a8b64000085bfe3b3525d9beb7fa823f6e6441a604fe57e52a2cd",
+      "label_sha256": "df2bb15101791f5e6899cb7d12d7f52b82ad8a5e8c3f208b5926eb527a6973c2"
+    },
+    {
+      "file": "room_knife_hero-20261017-184411_0004.jpg",
+      "source_split": "train",
+      "image_sha256": "5343c5cdc21825fe6318428263b3aa53822cbdaf3f3e3c21c15d62c69c5575aa",
+      "label_sha256": "61e49d769b5fbc01a1b882ee4b91826b70533bab680e0da10c524437bff7d63c"
+    },
+    {
+      "file": "room_knife_hero-20261017-184411_0005.jpg",
+      "source_split": "train",
+      "image_sha256": "e0cbfc4a41a8ac9e1fbc742371f50ca2f79ad73842a01cbd99ee067116e1d475",
+      "label_sha256": "6f663efe99283d2da94dd4eab970494ca704ee58b492a3a83b3675e85294077b"
+    },
+    {
+      "file": "room_knife_hero-20261017-184411_0006.jpg",
+      "source_split": "train",
+      "image_sha256": "57636956c900cc6e664a45f62c67acd3223c89dc43a9cb8f99385b99e27880bc",
+      "label_sha256": "7960e0386e08e124cd43fd1853f9af3309c34739382ebb64eb26e59bda8475ce"
+    },
+    {
+      "file": "room_knife_hero-20261017-184411_0007.jpg",
+      "source_split": "train",
+      "image_sha256": "e96bf1352c4057a085b01851e5308de86adf11bb40cd2f42a97d535c82917396",
+      "label_sha256": "ddb1dcd2ab16c3855d5b328c784cb66dfaf79e0c359a3b688e1d9b4cbc28b5d7"
+    },
+    {
+      "file": "room_knife_hero-20261017-184411_0008.jpg",
+      "source_split": "train",
+      "image_sha256": "c0b0a26e12d17617933f07627770ebbdbb8478341b2982c678ddd19bbf76cfa0",
+      "label_sha256": "b9e5eaa288c80f1b139ef6b6263ed42b898b8aaf6457c81363882977158584eb"
+    },
+    {
+      "file": "room_knife_hero-20261017-184411_0009.jpg",
+      "source_split": "train",
+      "image_sha256": "d2523c7778a30ad724df2ace74caed476987509dbf1e918f0db9f6b774d46206",
+      "label_sha256": "ee9288bf6e476addce4162f4141c3aa5b19e5d251c162b2b07e9eb2e9eb07d51"
+    },
+    {
+      "file": "room_knife_hero-20261017-184411_0010.jpg",
+      "source_split": "train",
+      "image_sha256": "92bd2df79f78d8072027e55cb5dc59243689828bde3972a2bfdaa4c693592d7f",
+      "label_sha256": "8395ed2e095e4e2dde7660d308b66ed0f50bb0020af6a247a90d3c72700f21ba"
+    },
+    {
+      "file": "room_knife_hero-20261017-184411_0011.jpg",
+      "source_split": "train",
+      "image_sha256": "b28f9ece34357ec5d4f5ab29e3358a50ed95dddd7cc7611b3ad8b3a45095762e",
+      "label_sha256": "ad5a49afcb72815e43963b48a2d5fd320cf0a7c93329f0c57bf42115920a5de9"
+    },
+    {
+      "file": "room_knife_hero-20261017-184411_0012.jpg",
+      "source_split": "train",
+      "image_sha256": "c1aabbfe56992d0ff7d97df93d8b807b1d19156ed6412fe09c028af2a113469d",
+      "label_sha256": "f99721032d7479b890025dd7f57b018030bc71a51008dfc817c35cddf0169b5c"
+    },
+    {
+      "file": "room_knife_hero-20261017-184411_0013.jpg",
+      "source_split": "train",
+      "image_sha256": "25c9f21e9bfbf876e09653aa45ad0c8f4c535bbed0598fd9011dd71a2197e807",
+      "label_sha256": "d921a84be295417298e583287c51b4285dfa7bc08889dbccebbf705edd01c4be"
+    },
+    {
+      "file": "room_knife_hero-20261017-184411_0014.jpg",
+      "source_split": "train",
+      "image_sha256": "cb8dcfb490d23aa577656b2e9a880a5d30105c4586cbf2898c8dbadb35e6e948",
+      "label_sha256": "173a21bce5719bc6f4d2207cc249c0f1b135beb138f0678ddf180df0b854cafb"
+    },
+    {
+      "file": "room_knife_hero-20261017-184411_0015.jpg",
+      "source_split": "train",
+      "image_sha256": "b460d42ebf2e3bef88149db9183101a2741b164e392e76a7ca669bb41bdafb52",
+      "label_sha256": "eff114a6e96a7fc2e430ce61c1d2ad31da1883ff1ca9e84909a19942fa9cf8c7"
+    },
+    {
+      "file": "room_knife_hero-20261017-184411_0016.jpg",
+      "source_split": "train",
+      "image_sha256": "7feebef5b6d585f6680c08dbd1b0f61e58f37952f1b1f88a42b9020553498ee7",
+      "label_sha256": "7916577c6c16626d217a1a9c449338b21877d033b44bdae1cf9a91233f653811"
+    },
+    {
+      "file": "room_knife_hero-20261017-184411_0017.jpg",
+      "source_split": "train",
+      "image_sha256": "ced3e489c3034cb10db02a2db5326f3e3329b954ec6e02558684aab781fa2e8f",
+      "label_sha256": "9276cc9053e028957f13feec6444c7bf7c29689ab530f895f73fb1a49e55d33e"
+    },
+    {
+      "file": "room_knife_hero-20261017-184411_0018.jpg",
+      "source_split": "train",
+      "image_sha256": "e0cd4614c470f194cc07e7a5094872c9b3220c07d9bd604980cb13d97c17341a",
+      "label_sha256": "7b14121356c0a22ac9897f94ca22c23321ed1ddef18f95f0315474f4d630a8f2"
+    },
+    {
+      "file": "room_knife_hero-20261017-184411_0019.jpg",
+      "source_split": "train",
+      "image_sha256": "803d89052a94dc4afd9baa4f17e2701ad52a6136588d3977255896304433df17",
+      "label_sha256": "360bc7ac32ded77995c992395ade9b0cf60baeac4a3949cb8acaebc4af1dabf2"
+    },
+    {
+      "file": "room_knife_hero-20261017-184411_0020.jpg",
+      "source_split": "train",
+      "image_sha256": "9163c79e44c70071f70a0cf539489e9c65baf9a89756b4dda7954d6d45355ab7",
+      "label_sha256": "9bc30d8fe73f7a20a5435ddae0c5dded457c162accd76d9fa18d0dd05521f3ea"
+    },
+    {
+      "file": "room_knife_hero-20261017-184411_0021.jpg",
+      "source_split": "train",
+      "image_sha256": "e50e6c5d296e3a511345b10c251561112f0c1af3d8680680b32eedb33ce8aa33",
+      "label_sha256": "dc60e4ef42b75b289e056bafb9a7643c84826ec8a9bdd1bcfcf80a8b992f0ff1"
+    },
+    {
+      "file": "room_knife_hero-20261017-184411_0022.jpg",
+      "source_split": "train",
+      "image_sha256": "7e27b7c941419fbe5ab0d717e55ace918b4217db8352bdf7031ac18ee336a826",
+      "label_sha256": "c74cdba7fb8a946260f4de61d5415cae4a0e6b8e082344a599f71d10960bee14"
+    },
+    {
+      "file": "room_knife_hero-20261017-184411_0023.jpg",
+      "source_split": "train",
+      "image_sha256": "32562b389f84d712dbff432baa118d0f77b05f25ab6a529866d82fc8221c1479",
+      "label_sha256": "f9e75664a1d2cc2385e0b0cda17f4a0fdad3931b86b1ee54e1698b774e901d40"
+    },
+    {
+      "file": "room_knife_hero-20261017-184411_0024.jpg",
+      "source_split": "train",
+      "image_sha256": "f09291e9a9ce23a23d2326b3c74aa9bf366ec5f3d85f5c77cdd669c7723ab1c3",
+      "label_sha256": "93b6e7aade8bf4df49bc967550e9963faf583c6ee44e64cc31467e7fc8c8b284"
+    },
+    {
+      "file": "room_knife_hero-20261017-184411_0025.jpg",
+      "source_split": "train",
+      "image_sha256": "14ed3804d5dc583433bf19afed5798ed2fb4d30d208acdde76c3dbdc6eff3ff3",
+      "label_sha256": "89c358b712b25f89d3f171b78fc6d403cea1333838becac05ef831e6862663b4"
+    },
+    {
+      "file": "room_knife_hero-20261017-184411_0026.jpg",
+      "source_split": "train",
+      "image_sha256": "d0be7a58857c7d39fc67dbe4812da9118433efd0767bdd956430f52a1fb8a25a",
+      "label_sha256": "815588c8972e9b5f281f3aed7778f0cf5f8ff8f147f7e370dc517e428b1f24c7"
+    },
+    {
+      "file": "room_knife_hero-20261017-184411_0027.jpg",
+      "source_split": "train",
+      "image_sha256": "a5c2cc17dd5d681041e536755a2808effea43a65bf9720e281475356db320f4d",
+      "label_sha256": "a950e167837f2cd072bc5e18e8d325aafcc843c54a6c2e313349b031351e3412"
+    },
+    {
+      "file": "room_knife_hero-20261017-184449_0000.jpg",
+      "source_split": "train",
+      "image_sha256": "5a30ad6ec12787f9ffcfe10846b4d1a1be45de6dbcbe0e78d266aec7ae5f1a22",
+      "label_sha256": "5b023ab374832c9d78126de222537e759080b07cff246ddcbb6eb8f8c2509de0"
+    },
+    {
+      "file": "room_knife_hero-20261017-184449_0001.jpg",
+      "source_split": "train",
+      "image_sha256": "b785520e2ed7220144690b7d8308c5c178272eb5392ba8634d3a7b9e34fa946b",
+      "label_sha256": "258f30604662b4797074e5ba67b7fb0883ecb7ef164c8dc3f8727815eaa43a9a"
+    },
+    {
+      "file": "room_knife_hero-20261017-184449_0002.jpg",
+      "source_split": "train",
+      "image_sha256": "41ae2db133eb1c351bfacd5bd40f1b45e49b135b3420b62b79f14b5d62c263db",
+      "label_sha256": "9930b746746d4b9ff64c7b9e374c59870389ef7e14d99c0d3e6c574e2f6b33ff"
+    },
+    {
+      "file": "room_knife_hero-20261017-184449_0003.jpg",
+      "source_split": "train",
+      "image_sha256": "6b9c701da1fb5fc4e129aa227ca88ba73a000a02b28e852c3245b286a6524c45",
+      "label_sha256": "cfa16d9d40b83d08f3fd5a00be285716ed3b7423032d742d8a2d38ae20bf2ffe"
+    },
+    {
+      "file": "room_knife_hero-20261017-184449_0004.jpg",
+      "source_split": "train",
+      "image_sha256": "cdb15cb364d5bc819ede85bcdb42c1d41939d4a52c4eaaef7ae0f18fbc79619e",
+      "label_sha256": "847e959e5ef4e5d70a0051e850dd0c6acf26d95cb3bf2f83f0b95288c7589cb8"
+    },
+    {
+      "file": "room_knife_hero-20261017-184449_0005.jpg",
+      "source_split": "train",
+      "image_sha256": "eaa9565738c3be0001ad0b839bb240a64aab4c2b76dca0500b0085f57f04afd0",
+      "label_sha256": "7996ebf982b73d8d9d39d5b8c8aaf0171eba582569b38f7eb4498d392189daa3"
+    },
+    {
+      "file": "room_knife_hero-20261017-184449_0006.jpg",
+      "source_split": "train",
+      "image_sha256": "800c2409d67a9e8b1398ce276c52dad06a2fa3c0471dcffbf60abca8c9fd0739",
+      "label_sha256": "10ccf7b08cce9d8571576c3216a485dc39571b5bdf37bde4dbda57aecb7a32e7"
+    },
+    {
+      "file": "room_knife_hero-20261017-184449_0007.jpg",
+      "source_split": "train",
+      "image_sha256": "ee56f14c006f974145a791f315089bcc0a4ae63c916296b2369dc0a45c0f6393",
+      "label_sha256": "1b140f2c9123cc7c0d5a278e6d368a0f0cb660fed4ecab7c477f49d8593ec95d"
+    },
+    {
+      "file": "room_knife_hero-20261017-184449_0008.jpg",
+      "source_split": "train",
+      "image_sha256": "f3045640696f398b7bfa2415c2d8e943ce9fe8c22540d5cd4feae8274ce51db8",
+      "label_sha256": "ccee3042d0d5e27bcd3a27a9aa46cb69090074bc09370ce0a0965ed2850b3fd1"
+    },
+    {
+      "file": "room_knife_hero-20261017-184449_0009.jpg",
+      "source_split": "train",
+      "image_sha256": "27111f5097f1bfa6b25b8cc3003b6847ece39233ddfba600d7c644b505fb1bd6",
+      "label_sha256": "d66948ec6794431bbe4c6e2c2684e4461902391e2ef96bfa47d5e0fda42bb2a3"
+    },
+    {
+      "file": "room_knife_hero-20261017-184449_0010.jpg",
+      "source_split": "train",
+      "image_sha256": "26d9e46b98d275127dc5c4b58264f44cfa6b928e6f04b5b7e1fb506071c7156f",
+      "label_sha256": "103e2efdbe68fbdfea0f311700880a0fca3ff6bf598b1d261964c8c6431d979d"
+    },
+    {
+      "file": "room_knife_hero-20261017-184449_0011.jpg",
+      "source_split": "train",
+      "image_sha256": "bdeebf99ff3e8c16340a0c97d3695180e1bcc7eba4673b571f92330d92fa1528",
+      "label_sha256": "7da5dca9595b6bb3ed513b59859f643e5e883c47d4a2744d5d61f6bf4588470a"
+    },
+    {
+      "file": "room_knife_hero-20261017-184449_0012.jpg",
+      "source_split": "train",
+      "image_sha256": "ac2d7e62347cddf3248a36f5636d4ec9ac10912ab157ebce3a75f95ebfbe06c7",
+      "label_sha256": "fab447379d338c2f277966ccc7a3b1427cf0c9ea91f0cf7d0b6b966adc8422c8"
+    },
+    {
+      "file": "room_knife_hero-20261017-184449_0013.jpg",
+      "source_split": "train",
+      "image_sha256": "cceec18e4a85a56803a49fda5185eac0285b23eeccc3fb59bc83d59df5b7e235",
+      "label_sha256": "68f6ddd525dc31c3e283d7c65d8b6bfbe6070140ff22ed6d8363b5c3c4a54153"
+    },
+    {
+      "file": "room_knife_hero-20261017-184449_0014.jpg",
+      "source_split": "train",
+      "image_sha256": "21a7bc3115e2c4c885403e04d62c6ef935b9265c0f23f34e956e8b56c8561c6e",
+      "label_sha256": "4225e715550027898cc0aa23a30bce3d78992204e181afdf56a7b92d36c238f3"
+    },
+    {
+      "file": "room_knife_hero-20261017-184449_0015.jpg",
+      "source_split": "train",
+      "image_sha256": "49f1d6048401d8df9a5b5f71b3d5479c26a9cc06068393385c938a18612dde60",
+      "label_sha256": "1c71b3c57757958c33c0e14856b5f8dc14a23f663401071549630ec0f95a5d79"
+    },
+    {
+      "file": "room_knife_hero-20261017-184449_0016.jpg",
+      "source_split": "train",
+      "image_sha256": "7d748f6ee60a8d04aded29ee0a3e89a88f014076ae41d797353f8b85a5363bf2",
+      "label_sha256": "610ceaf1fc333b357c381e3094896d78b259a8add38b8ee5770d5688839f9f5e"
+    },
+    {
+      "file": "room_knife_hero-20261017-184449_0017.jpg",
+      "source_split": "train",
+      "image_sha256": "df3e356735dd545a22ca80db85dabf6808a51b295640d60368ccf7ccc149ec3b",
+      "label_sha256": "e97fa177724f5e1fef5f7dc18f677f7648f02d72c5768efac497c537098fcb09"
+    },
+    {
+      "file": "room_knife_hero-20261017-184449_0018.jpg",
+      "source_split": "train",
+      "image_sha256": "085978f8d4085bd4a089c9f91e70778f92906f732e1527bf492ac088dbc3cf0b",
+      "label_sha256": "fc09c00821b55e2b6dee03613886b6e8bfbfda9c2941f12f55c70e85b8fa55a7"
+    },
+    {
+      "file": "room_knife_hero-20261017-184449_0019.jpg",
+      "source_split": "train",
+      "image_sha256": "de32fe7c4b4ff061dcda3cdf58421607fb4cbdb8e54ee9ee85327c331baffc67",
+      "label_sha256": "80435658023c23c212b3cb8e9169573001f94e0f0c0813c026db9c0fbe441307"
+    },
+    {
+      "file": "room_knife_hero-20261017-184449_0020.jpg",
+      "source_split": "train",
+      "image_sha256": "acb3927689dd39c78daa67012fd14374afff3a87c1ac3e75eb8181b7eecce765",
+      "label_sha256": "d307b6c96502ac90f20430851b90c110caba91f7438895f8b9e5f58aba713069"
+    },
+    {
+      "file": "room_knife_hero-20261017-184449_0021.jpg",
+      "source_split": "train",
+      "image_sha256": "933e4cf32bfd3b41a5167e7a950f154bc8155f8187cb0160edf31da747432a2e",
+      "label_sha256": "98e93aa003e47e24847e94f22961016da1b78ac80e54bf9e192e39882701ac31"
+    },
+    {
+      "file": "room_knife_hero-20261017-184449_0022.jpg",
+      "source_split": "train",
+      "image_sha256": "36b704725d17a652e207278fb0c33f02b786c70916448524eccbd0468b57550b",
+      "label_sha256": "21628929e568f157dd97fc6560226e19911c00d07ac2f854c50a049db0a894fd"
+    },
+    {
+      "file": "room_knife_hero-20261017-184449_0023.jpg",
+      "source_split": "train",
+      "image_sha256": "eb512d3cc1d2d9ac68678843a51c02bbe7adf5f20d9091ae8191ffc477a0c5d7",
+      "label_sha256": "45bfaa1d254d6532a01f39a8860d2e88855ffee456bef8167c36079d828f6afc"
+    },
+    {
+      "file": "room_knife_hero-20261017-184449_0024.jpg",
+      "source_split": "train",
+      "image_sha256": "794a122c7b9ab240eb321824b1e06ea2f1129df7749d0e4e61ef3cd52fb6229b",
+      "label_sha256": "9ee6548aa7412f16957c00997f4381d957373bbebe04a8e7ec9d76917bc22157"
+    },
+    {
+      "file": "room_knife_hero-20261017-184449_0025.jpg",
+      "source_split": "train",
+      "image_sha256": "50eac555e29ff8cac679ba2dfd088ce0ee52f2112620b87876320e2a422e3971",
+      "label_sha256": "95b82b2c9239b677cd2af40eb2bad76b4b687ae5cd95ec31975b1e97e71a31ee"
+    },
+    {
+      "file": "room_knife_hero-20261017-184449_0026.jpg",
+      "source_split": "train",
+      "image_sha256": "926d2fdf788d74666bfa2111850366e4c3729080e5c97df8b5fbdb3362027deb",
+      "label_sha256": "c17ea6b11f26cb42eb0f3ff76a7b2a844125dc3648c87783937a9d44afe1eb83"
+    },
+    {
+      "file": "room_knife_hero-20261017-184449_0027.jpg",
+      "source_split": "train",
+      "image_sha256": "f702edada45a982f32985f898a11e388ee2c62264aac94f6b1588d7ecf898364",
+      "label_sha256": "21e8e570297a57c7e5a6f3991c7220a4dbce05da45da9da0b080d422df26e93a"
+    },
+    {
+      "file": "room_knife_hero-20261017-193342_0000.jpg",
+      "source_split": "train",
+      "image_sha256": "7b973e524b953b525fb6408007ff51f07c80f57c200c0a147dcaef53d2c7eb2f",
+      "label_sha256": "e3a277322a7e4b0b74cec22d58e8ce4172376eae39b4eb20ac51c87934ea9701"
+    },
+    {
+      "file": "room_knife_hero-20261017-193342_0001.jpg",
+      "source_split": "train",
+      "image_sha256": "55d5f7248f6a7a7414a87540f7b73dec907462e43dda2564e91963e6860213ef",
+      "label_sha256": "f375a9168ba696c562ee85f47e50a3f5a3ad7a8c90097cec1737b18d3eafc21d"
+    },
+    {
+      "file": "room_knife_hero-20261017-193342_0002.jpg",
+      "source_split": "train",
+      "image_sha256": "e9d2996da24c19a6ba3a0f97e728b125ca500675f9bc0504fedadf17ee2bd677",
+      "label_sha256": "e2c64b008dcdfa308dcd423ceae7b373e0505a6b3ddad953944e3d95e7b631a9"
+    },
+    {
+      "file": "room_knife_hero-20261017-193342_0003.jpg",
+      "source_split": "train",
+      "image_sha256": "b376fa5cc4a03ab43acf6ab77e32290b7a13a4da64e9040dd315eebc0584ee97",
+      "label_sha256": "67e87a67d45f9f21bf2954764db553b1daaf1210af60b0bcebfc745271978a25"
+    },
+    {
+      "file": "room_knife_hero-20261017-193342_0004.jpg",
+      "source_split": "train",
+      "image_sha256": "575b8e0ee6e0e266c635ed224fca3f6cd67668be0dc8d33d6f44133db36083cb",
+      "label_sha256": "326d6b70389dff5bc25fd9150e4c211f2ba8fcc9c35abebdc54916a5b19059f7"
+    },
+    {
+      "file": "room_knife_hero-20261017-193342_0005.jpg",
+      "source_split": "train",
+      "image_sha256": "573492fa2bdba68f665bb2ad8d7de980bcccdd2ad418393a27303ee38099f37c",
+      "label_sha256": "dd217d3799aa6caa49ed60146dc406ef137782dfcb99e084d183a117e8ff07eb"
+    },
+    {
+      "file": "room_knife_hero-20261017-193342_0006.jpg",
+      "source_split": "train",
+      "image_sha256": "e99a865f3d1aecdf7a34ea22ca931794a7d90a50d4683945231404a43b8b5e68",
+      "label_sha256": "2566a796fe1fbf15f33a76045cc362c1fb05c7f6f740107f4de9a821791f9b76"
+    },
+    {
+      "file": "room_knife_hero-20261017-193342_0007.jpg",
+      "source_split": "train",
+      "image_sha256": "dee6a0d9317a44b2eaad4fb64ec5909009506d25e4fbc19370705dadfc7711ba",
+      "label_sha256": "77f137f654e1e9889daf0cda597562c94808315cbbc295bd1e600fa043ce4229"
+    },
+    {
+      "file": "room_knife_hero-20261017-193342_0008.jpg",
+      "source_split": "train",
+      "image_sha256": "cc5f3455365fcb412e3129c72680503f14b0887970a81c3511d4bbf6ff7d23c5",
+      "label_sha256": "22bdb7acbdbc60d0470ac914dd6d2ee60403487c1b6bd03a7a4d88364cac5f05"
+    },
+    {
+      "file": "room_knife_hero-20261017-193342_0009.jpg",
+      "source_split": "train",
+      "image_sha256": "3a989ef3c9dcaeb549c939fc2def425e6bd097afd04e9a62d773d6a35a4c4e2f",
+      "label_sha256": "e829f19d1b20b95b48414e0227f488b5f4c943d71f4a96cc8c0f1e5de1bd4c16"
+    },
+    {
+      "file": "room_knife_hero-20261017-193342_0010.jpg",
+      "source_split": "train",
+      "image_sha256": "d1f76f8b074ad09e57c3e797f3466c5c566ffe235be3aebecdaae24b14523035",
+      "label_sha256": "7228e70932fd216f1c1ca22bac6ecc06edc93df53cc9891da1e97a259baf7d45"
+    },
+    {
+      "file": "room_knife_hero-20261017-193342_0011.jpg",
+      "source_split": "train",
+      "image_sha256": "ccff86f31224eaf515dafdae13c7e0d9a6bf9846f80e478403b1d5a2a980987d",
+      "label_sha256": "b659bfde5728312ae612ad673487d77da4209790b669bd374d2f49574e8d5058"
+    },
+    {
+      "file": "room_knife_hero-20261017-193342_0012.jpg",
+      "source_split": "train",
+      "image_sha256": "8d15f085af10d22c064a5b48d5109f97d1ff02cf2b751562279b5e3884373cb7",
+      "label_sha256": "7c29ebe95ff4d6bc18269e33046eda8055924756aa15349a567c6ca538d108f9"
+    },
+    {
+      "file": "room_knife_hero-20261017-193342_0013.jpg",
+      "source_split": "train",
+      "image_sha256": "24430269592360e970dc0aaf37a38e518412ed5b1def12c5de68b367e6443ad1",
+      "label_sha256": "f8f4a9b583a4066f229fe0ed2c2c7b46268b34c680f9dc1e82910742f242aaaf"
+    },
+    {
+      "file": "room_knife_hero-20261017-193342_0014.jpg",
+      "source_split": "train",
+      "image_sha256": "99b23680e96a9d505a1126d6b03907b8fd70acf5ee1ea7c819e2b40614c2f30b",
+      "label_sha256": "2e734ab5d712989d4dbc34b2687477e3a5ae63f318b5f1b9991cf93e57d747dd"
+    },
+    {
+      "file": "room_knife_hero-20261017-193342_0015.jpg",
+      "source_split": "train",
+      "image_sha256": "23db59b98354c42e5d775e9684686a26b24ea86f3b95c54682fec8ccce7383eb",
+      "label_sha256": "3cd2bb9529731cf1625bc7665db496201b4c1dbfd172139f5353f1a9dfee4756"
+    },
+    {
+      "file": "room_knife_hero-20261017-193342_0016.jpg",
+      "source_split": "train",
+      "image_sha256": "aee3033dd30e5ac72661cc47bc93028d3139a9c6190960782af67aad2f9e6582",
+      "label_sha256": "e25760d4772d656a0b2c806a409ec282d9a5f5814886c1ae9619e8d128762406"
+    },
+    {
+      "file": "room_knife_hero-20261017-193342_0017.jpg",
+      "source_split": "train",
+      "image_sha256": "92a515a6c228d4961d35167ad506c06e8e804d3c57b64c3981492fc24e8674d5",
+      "label_sha256": "3d216c3e64133de262d4442814598fde87a693f567be7f82ff090c1e3a4a4a7b"
+    },
+    {
+      "file": "room_knife_hero-20261017-193342_0018.jpg",
+      "source_split": "train",
+      "image_sha256": "2de178ff7665a84b2cbc668e03cbe2e85ab818cd0737f4d976ea8cb697a16673",
+      "label_sha256": "804cb5abea99bf9da7b7bb7f2c664bc1b65e9e7439e2e74804e683e64bbc1de7"
+    },
+    {
+      "file": "room_knife_hero-20261017-193342_0019.jpg",
+      "source_split": "train",
+      "image_sha256": "43dcca9d84e91937db9820f86cbb2a306c9d9eb3a790097c3892bb88fa3fd294",
+      "label_sha256": "c2b80a3d737e094511982071e31d0f66b8440c67da18149b6999fb52fdbc1c70"
+    },
+    {
+      "file": "room_knife_hero-20261017-193342_0020.jpg",
+      "source_split": "train",
+      "image_sha256": "5308e9bd98e30ae94d83a3fba2fc8e86bdb799edb527cf6207ee33f32f2681ef",
+      "label_sha256": "608b252bf006e2f7880e10850f4cc4446cfc68d3375159602776a69233b2e2f7"
+    },
+    {
+      "file": "room_knife_hero-20261017-193342_0021.jpg",
+      "source_split": "train",
+      "image_sha256": "7c9bfbeb2d73f1d2899933236ce188f505f47684db4280f59faaf571017580b7",
+      "label_sha256": "3ce0100ae487c858dd12dbce9e2ef4155f561e4734030e6b95d08bd240afb784"
+    },
+    {
+      "file": "room_knife_hero-20261017-193342_0022.jpg",
+      "source_split": "train",
+      "image_sha256": "25545af542bdcbbcfca2a32e59ed5a17417605f816ec32442a519cc0f5ba7c99",
+      "label_sha256": "a4d5088da39e776a294ea693a8e8c54cdde80bca0ab740d058ee60378a39b641"
+    },
+    {
+      "file": "room_knife_hero-20261017-193342_0023.jpg",
+      "source_split": "train",
+      "image_sha256": "4b911de73feccba2ebc7a7c0d77064e0e505a7999c52617dea4bec9bd4ec9f0e",
+      "label_sha256": "08a6c6edf59ffba97138a9fc0089f0458cb52c48f1ebcff7fa63c49c24294011"
+    },
+    {
+      "file": "room_knife_hero-20261017-193342_0024.jpg",
+      "source_split": "train",
+      "image_sha256": "d1c74942b526214698250a8f0d6e6b4f802d0b30f7a516b0132b8755c5b7ed5f",
+      "label_sha256": "65cf9bd3c8198733b30b3bf1f2203edcbef8459c381f3dda91784fb4dbacea65"
+    },
+    {
+      "file": "room_knife_hero-20261017-193342_0025.jpg",
+      "source_split": "train",
+      "image_sha256": "fcff38a88501bfcf3c4d8ad1020a205cb45835f19fb3a10e0eeb64582cd3d1bb",
+      "label_sha256": "484b98856fca00535caae98c77c55a98b1a4df68119e3898535b46602bf4ccb0"
+    },
+    {
+      "file": "room_knife_hero-20261017-193342_0026.jpg",
+      "source_split": "train",
+      "image_sha256": "048967c1301052c95e206d82862037baba944656060f90803ac74e3ad398272b",
+      "label_sha256": "43f56f008ede966e846b19014a00ce8636beca56a63c26f14fb5bc56740f52a1"
+    },
+    {
+      "file": "room_knife_hero-20261017-193342_0027.jpg",
+      "source_split": "train",
+      "image_sha256": "daa4d006fd6e5158071760cf0664d0a8b521f7ab8e7e518b9f68844c16095ae1",
+      "label_sha256": "3f01f9fdc97abcf94f22d3fd8b61f515f1b0a60364c4ec376732afc33c663aa5"
+    },
+    {
+      "file": "room_knife_hero-20261017-193421_0000.jpg",
+      "source_split": "train",
+      "image_sha256": "9111778fca1f930ef3a1667ee8d1136d9082b3661032bd55c7575311d299a328",
+      "label_sha256": "147fa40daee7d3da2f064a904528c61b49cae0cbb3e0ef3691a5423b5a134e06"
+    },
+    {
+      "file": "room_knife_hero-20261017-193421_0001.jpg",
+      "source_split": "train",
+      "image_sha256": "7806567667efdfd6ff4615a3f29d549d9d627a5a001aa1703887c8a82a7c470c",
+      "label_sha256": "ab46d416104aabb2a3c6640aec3b490a3d0291b016dfdb490222f63949377a89"
+    },
+    {
+      "file": "room_knife_hero-20261017-193421_0002.jpg",
+      "source_split": "train",
+      "image_sha256": "d8b85f399cd599a25cf194daff888356809ff1a5e9401d4423a99bd401789697",
+      "label_sha256": "4c984c436cf392e116b9fd74585a30a6f67e9c91dbc1bdb4601196132b1e6baa"
+    },
+    {
+      "file": "room_knife_hero-20261017-193421_0003.jpg",
+      "source_split": "train",
+      "image_sha256": "c5d17a4dd1a47e49b3dfda67323bcad26fbe46c7585f9d23b817272f807a1cea",
+      "label_sha256": "7ad5196b2cb68595cb53382f238b0d131135eb917629d5d31d8f03abb13c0dcf"
+    },
+    {
+      "file": "room_knife_hero-20261017-193421_0004.jpg",
+      "source_split": "train",
+      "image_sha256": "7769ac22b149480ef6ae5615caad3cb3b9d60724289699c72522898ed989bd46",
+      "label_sha256": "b5f628ed2f20e1fda95d846a3f743c5f7ef08ff705ce312963d0b32455cb4944"
+    },
+    {
+      "file": "room_knife_hero-20261017-193421_0005.jpg",
+      "source_split": "train",
+      "image_sha256": "69ef8cdad1fed8017285cd47050635da1c9d83f4db88a9dfeeaa87db73f4426d",
+      "label_sha256": "2297b6f66ef9ed72bc5e9689304a05e7bdde5b5eae35e2fadaaff6f4dad4ac05"
+    },
+    {
+      "file": "room_knife_hero-20261017-193421_0006.jpg",
+      "source_split": "train",
+      "image_sha256": "f02f958b160232f715e2d875be7732d58b0a20f1a33ff1dff636e3560154fe11",
+      "label_sha256": "ae4deb866a3214ced7ab4f320895a90635353618e7bc5604259bd47a993ceb23"
+    },
+    {
+      "file": "room_knife_hero-20261017-193421_0007.jpg",
+      "source_split": "train",
+      "image_sha256": "66198623340c4276c681dfb3fb9ce2f82485bbba366cb424243b33d0f5287c74",
+      "label_sha256": "4b68f5a9b173d895bf74584e33564c1cb576705b605a12bcaa2e89c16e750fdd"
+    },
+    {
+      "file": "room_knife_hero-20261017-193421_0008.jpg",
+      "source_split": "train",
+      "image_sha256": "9232cf21fdcd0bacc0f6e901688c21648d6707ec62c8b875d09d5b53ed0e7321",
+      "label_sha256": "514a179a7e5ad790e98088053e29ea4cc511fe9ccc33ccfa663d9eed21665e95"
+    },
+    {
+      "file": "room_knife_hero-20261017-193421_0009.jpg",
+      "source_split": "train",
+      "image_sha256": "2fb65462220bc38014c17bc906ff106c13d86524a016ba74d516b45e2af755b7",
+      "label_sha256": "b90078df47bed50f4e01235d7ddffa566f282d3134ae7117b352da97d4059ac5"
+    },
+    {
+      "file": "room_knife_hero-20261017-193421_0010.jpg",
+      "source_split": "train",
+      "image_sha256": "810ae894d298c672b42d1347d0e8978b0d161321b5984f8c2dd98a8b034f5a16",
+      "label_sha256": "ece95e8a94a2d369a57d886aee0bb745b50570c584608c1770af7d2e18f006cd"
+    },
+    {
+      "file": "room_knife_hero-20261017-193421_0011.jpg",
+      "source_split": "train",
+      "image_sha256": "a14c71b9768ea301cdf25bff30e5e1382602a2dd39433ef5203c1ddf3db5a259",
+      "label_sha256": "a8e402688908aa1348b0b882eba9f96f906477f65bc0572f90147b0c099c766e"
+    },
+    {
+      "file": "room_knife_hero-20261017-193421_0012.jpg",
+      "source_split": "train",
+      "image_sha256": "e1575fe8f200c55df166307133db38fc685870df64da7f8c1ad87656bbb637de",
+      "label_sha256": "61290253d707ffbe8f7d0d6b736ab76c67c6681f434c401556c393b615e6ac0a"
+    },
+    {
+      "file": "room_knife_hero-20261017-193421_0013.jpg",
+      "source_split": "train",
+      "image_sha256": "5c4024c1e7f5d50ee4971040c07cef6d13313c14b541f1d07b2a8a5257450834",
+      "label_sha256": "8910d7c6baa0b31cb08fc4cbbbfeee5f948ca7573b4f4ada0e825440721e33d4"
+    },
+    {
+      "file": "room_knife_hero-20261017-193421_0014.jpg",
+      "source_split": "train",
+      "image_sha256": "0f6059e4d34b109bd76a7880143009f6e0fb32ae3afc424a80ec15f0327c3ac9",
+      "label_sha256": "c2535aef5816c445aa04358d22e90ed6c5eb328b343f28cef1e7fbbad4185c3b"
+    },
+    {
+      "file": "room_knife_hero-20261017-193421_0015.jpg",
+      "source_split": "train",
+      "image_sha256": "e6d12b97b50e33da27c9f374bd032acd100853ad48147bbd13b1ea71bd3de8b0",
+      "label_sha256": "6f3a58b47471a819858a13b378e6514e5b31f098d04fd2ac4943520ad2c67dae"
+    },
+    {
+      "file": "room_knife_hero-20261017-193421_0016.jpg",
+      "source_split": "train",
+      "image_sha256": "285b7e05a8a440a1e7d129089a08f6bf3d1cac26b426d5489aad935c882eb331",
+      "label_sha256": "90d565c689567e33e2cdcfec7fd80b83c220d185e2cd68845d85189093ffb057"
+    },
+    {
+      "file": "room_knife_hero-20261017-193421_0017.jpg",
+      "source_split": "train",
+      "image_sha256": "252397109ec8b5b673206c2a9077881b71bb98463c63e5ebf6f4c14ce57d3a49",
+      "label_sha256": "d4c1e84fa073ab404cf7ca6783ba633ae22de250c756812c797da0a948064f28"
+    },
+    {
+      "file": "room_knife_hero-20261017-193421_0018.jpg",
+      "source_split": "train",
+      "image_sha256": "311188db4706014473310b1c5692bd312d228407a1e4a685b63e8c26f7b7e518",
+      "label_sha256": "b1095501cf610482ad1d3e4005c38b0c906a76b74ca36ec6645613e46f9daebb"
+    },
+    {
+      "file": "room_knife_hero-20261017-193421_0019.jpg",
+      "source_split": "train",
+      "image_sha256": "eda03160b3863612e1a1732a614861f499a0508639b58a6f10287e6757c0c3fd",
+      "label_sha256": "7d1e8fa26ac413cc5f7f2adf33af5be53850ee65c3934d468b7f90f628052bc0"
+    },
+    {
+      "file": "room_knife_hero-20261017-193421_0020.jpg",
+      "source_split": "train",
+      "image_sha256": "e3233f86a8ed96527d05387ec526b67d2beed0a020190379a508cb8257d38562",
+      "label_sha256": "59cce9aec7e2a970dbbf4d6b9b132898aad9b2d54314539f6d2dcf64f535e882"
+    },
+    {
+      "file": "room_knife_hero-20261017-193421_0021.jpg",
+      "source_split": "train",
+      "image_sha256": "b0a835d380444b9ad93d437fb66b745248b5abbf910320b72c83e0fcd6178138",
+      "label_sha256": "132a4b78c322ac29519c5ee3d6204a57f7d54f2bfc08a88274685f3fc769d046"
+    },
+    {
+      "file": "room_knife_hero-20261017-193421_0022.jpg",
+      "source_split": "train",
+      "image_sha256": "e7454450332a7f957ebad88c13aba41935227122021bb7c0a0ca39ad760e7266",
+      "label_sha256": "b05baefbb5c3852bbce87fcfffa8b904a59284a782acaf0e06afe1b8622addb3"
+    },
+    {
+      "file": "room_knife_hero-20261017-193421_0023.jpg",
+      "source_split": "train",
+      "image_sha256": "84d0b7e0f08964c221a596c7ba4dac8d9d991acdab539d8f76fcc00321846cfb",
+      "label_sha256": "897a5e763ba7459f7ea3bf5cb1044187e529653fd4cb48c1d96ee506f7136c7d"
+    },
+    {
+      "file": "room_knife_hero-20261017-193421_0024.jpg",
+      "source_split": "train",
+      "image_sha256": "60a4a9be5dd8eed28e251e66ad138f564d96a7956536f27281a91c4e1dc222ec",
+      "label_sha256": "0d56ce0a4d6f9266872ec0e81c1aa9c34a17107a578e2d68ec677cf74e24ef4d"
+    },
+    {
+      "file": "room_knife_hero-20261017-193421_0025.jpg",
+      "source_split": "train",
+      "image_sha256": "32f88a6f3e17be4a02e6f285890122e0f96a81004c91079aa81408fc8b4589ca",
+      "label_sha256": "4d92bb5a6240e9bb4c7429081762ecffe2a236525ac930df657f90d877f7c8f3"
+    },
+    {
+      "file": "room_knife_hero-20261017-193421_0026.jpg",
+      "source_split": "train",
+      "image_sha256": "f04cce15fafd9997b999e5c85c477720eb990bf415a47905348fee83b17ef3ba",
+      "label_sha256": "9fc4cf09dae235ee5992c30967aaaf82b1fbce79127f10fbd17ce33d68901f4b"
+    },
+    {
+      "file": "room_knife_hero-20261017-193421_0027.jpg",
+      "source_split": "train",
+      "image_sha256": "06441b856db3f585e904db29e21a5a1f519e69345d70a8ca66c963b15e9a3c3d",
+      "label_sha256": "ff12f65049546ea7cbe17acf02b22c78a3d6abcfba535768d96e5ef58ac927b5"
+    },
+    {
+      "file": "room_none_hero-20261017-173934_0000.jpg",
+      "source_split": "train",
+      "image_sha256": "56f905aecfae97482cc2d3a0426034ac158a3f694b436ad3f3a21b33619eae39",
+      "label_sha256": "58afa251b722b14c4d284825d72b1398bcabfa74be8aa178cee2989c817cbfc7"
+    },
+    {
+      "file": "room_none_hero-20261017-173934_0001.jpg",
+      "source_split": "train",
+      "image_sha256": "6d943ff87b63188036022aae0079c8798cd8631fe1d7bd7301dca12eab09f03a",
+      "label_sha256": "b41f6f0b210f9e7661a86f56cc82f29604fa253a7580ce9db64b681ed891d7fc"
+    },
+    {
+      "file": "room_none_hero-20261017-173934_0002.jpg",
+      "source_split": "train",
+      "image_sha256": "e76aa7297fc0ff39089349e07f1ff90e83f5882362860e179ba8b343ee23e553",
+      "label_sha256": "6cef47535ccf9460df199c55365a0c6a2aebe92f2f2c73c0b8238a7f62b0a349"
+    },
+    {
+      "file": "room_none_hero-20261017-173934_0003.jpg",
+      "source_split": "train",
+      "image_sha256": "32e19f4ff1d27b3d83cfae1dffd9a0160455d4fdfaffa0b473a3767647b47b18",
+      "label_sha256": "719d96ffee6e7d1b10c4375ba9a5ca79565ade34044686563d3c5977dd6eda76"
+    },
+    {
+      "file": "room_none_hero-20261017-173934_0004.jpg",
+      "source_split": "train",
+      "image_sha256": "7dcf2c8dc8d819985008ebd87eaa4c9ec8f6a6c651c645c8a5e11bea31495db4",
+      "label_sha256": "169f7c94daf86f89c00a78c13d86cbbc496ec7e4d368a9097840c96fefaa3d2a"
+    },
+    {
+      "file": "room_none_hero-20261017-173934_0005.jpg",
+      "source_split": "train",
+      "image_sha256": "5f9589e90c25f8c45f3f765af6a150aa76eabc203a7064fdd64865a313feef16",
+      "label_sha256": "edec938bf7615401371465c2546aea2bb5d0fcf4b24dcaa1b6edcbab85a580cc"
+    },
+    {
+      "file": "room_none_hero-20261017-173934_0006.jpg",
+      "source_split": "train",
+      "image_sha256": "9c5bbe83a79373ef525628ae7b6a7e141fc87347da7ce3929f9165ba711c8704",
+      "label_sha256": "f0795e45e8bfea94e4d424e0986d39d85689ff9891119caf042f57e2af7e110b"
+    },
+    {
+      "file": "room_none_hero-20261017-173934_0007.jpg",
+      "source_split": "train",
+      "image_sha256": "5e3359505fa7651011c3a368ba6fe9759e6ffa8717fafb226e940173b18635a9",
+      "label_sha256": "3a7d82df808ec3553f85b87eb7aa39716ff55a5e5b11ddf97713bba8d2e4c651"
+    },
+    {
+      "file": "room_none_hero-20261017-173934_0008.jpg",
+      "source_split": "train",
+      "image_sha256": "51e31a9b354ea0114f211da0792cbbcbe4124f0ad80663a14c227986b20e5714",
+      "label_sha256": "6192ca0d0a406ea9cd8f41ea640c46c10cfa0b4ddb8e7be80c9f740e85d4d276"
+    },
+    {
+      "file": "room_none_hero-20261017-173934_0009.jpg",
+      "source_split": "train",
+      "image_sha256": "f92112b1c6d971e453541cd6bb1828384080549c0e87c8d039836f466d88e34b",
+      "label_sha256": "6d00cbcccacc0ad7b9d21effaca93a2aedba53e866780a4d98483df9e3b735cd"
+    },
+    {
+      "file": "room_none_hero-20261017-173934_0010.jpg",
+      "source_split": "train",
+      "image_sha256": "7a998a32c7171efe1d0e7dd37ea7aedd0af74c2bcbcbcb0594b8c138378f534c",
+      "label_sha256": "35e572c65a7761fc7d1adbf353d571583fce681545a69af0f09ee7dc25687405"
+    },
+    {
+      "file": "room_none_hero-20261017-173934_0011.jpg",
+      "source_split": "train",
+      "image_sha256": "5e2cb93c2d11114b91ed06db02b48fe7cd90fc22e096663964e5287ad66309b1",
+      "label_sha256": "92b1064fb724ae83730fb5e8f1cede5e3f72ef98a2ff1aaae14477159aac3c85"
+    },
+    {
+      "file": "room_none_hero-20261017-173934_0012.jpg",
+      "source_split": "train",
+      "image_sha256": "a0cbb4bff50857098c7896fde7a4e3e8de483551ecb0e5b0d97e0226d2e52f86",
+      "label_sha256": "26d2454285f1b0c1f5589995d97b7d9383e64de97d3d3022fd6541405c86d9e9"
+    },
+    {
+      "file": "room_none_hero-20261017-173934_0013.jpg",
+      "source_split": "train",
+      "image_sha256": "5d08616d17d0f8fe876de38784fd020032b588a35c3373d19572d2a1c0eef27c",
+      "label_sha256": "bfc61e8923f0121b9a2b6dde27606b903ef80129a4e698236e8b8ef27a728e6d"
+    },
+    {
+      "file": "room_none_hero-20261017-173934_0014.jpg",
+      "source_split": "train",
+      "image_sha256": "ac3cc8a4ebf41876cd07577f404050daeb35f62c39cf918928e70b2f97f04daa",
+      "label_sha256": "aa02e836a49c249f710ed9079478033164889c29d87e5f8fb02688386ce95d8b"
+    },
+    {
+      "file": "room_none_hero-20261017-173934_0015.jpg",
+      "source_split": "train",
+      "image_sha256": "8f69457f247453771e2629cd2a77ce55ddf3aad29747c717e7dc34f05aa64caf",
+      "label_sha256": "de13c074ec45b334bbd18ab105cc820cbdc0456c33bed888cf6d31cb785f149e"
+    },
+    {
+      "file": "room_none_hero-20261017-173934_0016.jpg",
+      "source_split": "train",
+      "image_sha256": "cefed8c717d6cab4fb783446a94a774c81c364a97b422b272c1083c7d7798db4",
+      "label_sha256": "a3d4878b6952807dce000a08b7edcb1a57c7b8d16df8fa809053fc8f4225936a"
+    },
+    {
+      "file": "room_none_hero-20261017-173934_0017.jpg",
+      "source_split": "train",
+      "image_sha256": "8f32d92392e7e995c0c59afe17faa4334c27d1e6521a5570d71fd12b250968db",
+      "label_sha256": "c5dae51285e4b66d3e85965c1388d7888a57932cf7609571ab9b5ede7ede27bb"
+    },
+    {
+      "file": "room_none_hero-20261017-173934_0018.jpg",
+      "source_split": "train",
+      "image_sha256": "49007b22e32053bb3aa58e1f7800d565aa4e3190cdf960fecc537d0b103fe945",
+      "label_sha256": "81d3e0ccc99196145fb91d5dd47e0f6fd1666dd555aa061413eecbe0b67f7c6d"
+    },
+    {
+      "file": "room_none_hero-20261017-173934_0019.jpg",
+      "source_split": "train",
+      "image_sha256": "5773dd61b52c142acf0f7149d9a06a528068829bbdf88f79b0ac1b0095695569",
+      "label_sha256": "996918edeb019312526806e8aef15bad0eb262a09184035817a173b67f048ad9"
+    },
+    {
+      "file": "room_none_hero-20261017-173934_0020.jpg",
+      "source_split": "train",
+      "image_sha256": "30da2a7cea00c9824dcc4c1afb6c13578ecbad321e29d0c872c24dcd6d07b073",
+      "label_sha256": "596c36577da7754523b6c2e66899a12fefa4e269ee4aec629983e64f7718627c"
+    },
+    {
+      "file": "room_none_hero-20261017-173934_0021.jpg",
+      "source_split": "train",
+      "image_sha256": "b69914fc3a96f0cdb09ef6b0ab9ea2b91883cd988b0fcb25ded6a37a1cf90099",
+      "label_sha256": "c9d674b2efcbd85cf24e6caa1f752f11bb3d4d18f35682d3fa31861c35139afe"
+    },
+    {
+      "file": "room_none_hero-20261017-173934_0022.jpg",
+      "source_split": "train",
+      "image_sha256": "845626ce37667f8711141a576eacf9f5f3ec3b01a9e6be738509d3b7c2bed9c2",
+      "label_sha256": "93a32eafe6b23dbacb04845c82e84b372326ad9ca628a2254a7a6484b34944ad"
+    },
+    {
+      "file": "room_none_hero-20261017-173934_0023.jpg",
+      "source_split": "train",
+      "image_sha256": "3b26b77dc122991a23b53480ba5c2a86815a13d1a55209a8f92062d5801eca09",
+      "label_sha256": "ad629061e4d62d14e6af200a66ed03807c7fbd0e54d59358c04f3580a9bf86d9"
+    },
+    {
+      "file": "room_none_hero-20261017-173934_0024.jpg",
+      "source_split": "train",
+      "image_sha256": "ef80bbfd9898ad4c6c2e1ab0847349d449cf27c5d0081fca71ec43decec5e0c1",
+      "label_sha256": "dccc306d334f016429033227556c4f31f2c689616c572e15b1d15a5a68703418"
+    },
+    {
+      "file": "room_none_hero-20261017-173934_0025.jpg",
+      "source_split": "train",
+      "image_sha256": "fe77437893e00960dc4e85496a45164ccfa262a93587f2d8ff5a6ec516beff5b",
+      "label_sha256": "65fd417a10626c0faef1e9956f5b06836b2d030b606193718109a09688a44c9b"
+    },
+    {
+      "file": "room_none_hero-20261017-173934_0026.jpg",
+      "source_split": "train",
+      "image_sha256": "29fa4368bc0803be697c62cdf1501c927b59add111659900d33db5149a75bbcd",
+      "label_sha256": "0634733827ef549ff6f518cdb7b01fd4d81c026df84d577990aa19793fe422a2"
+    },
+    {
+      "file": "room_none_hero-20261017-173934_0027.jpg",
+      "source_split": "train",
+      "image_sha256": "70c34d8c7702c43f8162d7b04345369b7edd42d16558500d2380af2f132449dd",
+      "label_sha256": "d448f1b3f5a8b2b27e5efe42738dfd15d46445a55a887e483b3d4ce1638e7fa4"
+    },
+    {
+      "file": "room_none_scout1-20261017-171153_0000.jpg",
+      "source_split": "train",
+      "image_sha256": "ef8c3b2c5a187dfc2eac8b5e33532d9cbea6aa63463642a620c9e4549c89c0a5",
+      "label_sha256": "18c688e491a438c75e7e64301024404c867f6f01f867b237ae5331a1dbb8866f"
+    },
+    {
+      "file": "room_none_scout1-20261017-171153_0001.jpg",
+      "source_split": "train",
+      "image_sha256": "dbc760110afddcf04b810beaa595d7d5a579bd17e9656513e8235bb460d2ec55",
+      "label_sha256": "f16986044690053810faa155f56f316aacad53444ca55592d80b1907e2c5a497"
+    },
+    {
+      "file": "room_none_scout1-20261017-171153_0002.jpg",
+      "source_split": "train",
+      "image_sha256": "ba3e820cdac997cfd889786c94ab759bcd20d297471d0db571dcdae09c4bf368",
+      "label_sha256": "5eddc79ba73b6867affb866ba8d28eb1a67e470e255f08edbfd1a1798456fcd9"
+    },
+    {
+      "file": "room_none_scout1-20261017-171153_0003.jpg",
+      "source_split": "train",
+      "image_sha256": "26a95355323ea992ec956e9b7591040ce2564b8bf7948623c5882371147018eb",
+      "label_sha256": "fd98f71b3b3e55a2915627c918a5f74c0b1c4390dbff9b53ea27c421925d39f7"
+    },
+    {
+      "file": "room_none_scout1-20261017-171153_0004.jpg",
+      "source_split": "train",
+      "image_sha256": "1db53f6a74c3a5a37fecc8178d7f5d9ab1f24682d7329734364b23f4ac190bea",
+      "label_sha256": "f4c5861f8fe2c696d228ea6deeda38482c40037c8800446675281615d9c8132a"
+    },
+    {
+      "file": "room_none_scout1-20261017-171153_0005.jpg",
+      "source_split": "train",
+      "image_sha256": "288f58f4e4996bb92214dd016b1a4119e348abd53210e046a427ff7fca7f9f87",
+      "label_sha256": "5a27064dbb5f95958dd09e3f110cda4ddc514f70112d078ed08a60bdde5faeed"
+    },
+    {
+      "file": "room_none_scout1-20261017-171153_0006.jpg",
+      "source_split": "train",
+      "image_sha256": "d1b2786909f8f7327b125e45ec31504a3920d1ea83ef1fbd1a71268ad4a85386",
+      "label_sha256": "f0dba5d4ff5453f794303d3b662bf585c7a8f8a29bea6c12f74542d1b0026d63"
+    },
+    {
+      "file": "room_none_scout1-20261017-171153_0007.jpg",
+      "source_split": "train",
+      "image_sha256": "b86d651f86105db901e5efb78e0c45cdc09ac651eee0a90d19b0b3fe9b0801ae",
+      "label_sha256": "8950200d1936707a00c60358dadb72f490c6ea041d8048020e88999bc01439d8"
+    },
+    {
+      "file": "room_none_scout1-20261017-171153_0008.jpg",
+      "source_split": "train",
+      "image_sha256": "d0fe6185276adab2084fdea8063f23b45e67875277c1902f6dd419679fdf01f8",
+      "label_sha256": "877bda7f115cc0b9997cd59aa8d5542b39e47272708493b70cc49014b3adf8b3"
+    },
+    {
+      "file": "room_none_scout1-20261017-171153_0009.jpg",
+      "source_split": "train",
+      "image_sha256": "62824be96acbbd1c5880a160bf505fc72ac415d215bc5604e060ab14c4bbf25c",
+      "label_sha256": "e218898411d183885ea1a7b14edaafe15140774a1ecc8f144c4651c1bcf50bbf"
+    },
+    {
+      "file": "room_none_scout1-20261017-171153_0010.jpg",
+      "source_split": "train",
+      "image_sha256": "b20f9c514b3afb47ee508f2670739adcfbe9061ea16c683eb01db792f4b2356c",
+      "label_sha256": "5393c5891b2e3e03ee60f05e63b59da6916f38870d136201cfd84e297e782068"
+    },
+    {
+      "file": "room_none_scout1-20261017-171153_0011.jpg",
+      "source_split": "train",
+      "image_sha256": "29b939260eb7be67320dfacbaba6874af97c81534ef490474ee03c66f253741c",
+      "label_sha256": "3bdbd21f14afdd4721ee53d8b1986a37eb9c2ee650a4763bdd9dd8b3e1340690"
+    },
+    {
+      "file": "room_none_scout1-20261017-171153_0012.jpg",
+      "source_split": "train",
+      "image_sha256": "fcab7837d4c26135070dc0fb7eb7bd35c2eabd4fbf94136756b6752339a493db",
+      "label_sha256": "1d573ca9ccffce529d542db5f37ac94ca0377bf3957c7b8faf37f1f3ff8ab94d"
+    },
+    {
+      "file": "room_none_scout1-20261017-171153_0013.jpg",
+      "source_split": "train",
+      "image_sha256": "b7acd7948bdddacfc44da35f6f4a266d50c5a49c4567b53fec5db2f9d44b1ad2",
+      "label_sha256": "82cfd307fbb2c080ea377f15a2417c90cc9629df84c64016eaf85e7786ccaf6e"
+    },
+    {
+      "file": "room_none_scout1-20261017-171153_0014.jpg",
+      "source_split": "train",
+      "image_sha256": "0bcde7a5934e80d7f1f33b99273488b27042d9fba457267b697882daf5397cfd",
+      "label_sha256": "df675ea2a7b05527c0430cc7e63da47924394cc7a5cc3255bf5db06e81e64bb2"
+    },
+    {
+      "file": "room_none_scout1-20261017-171153_0015.jpg",
+      "source_split": "train",
+      "image_sha256": "d87c49885febfc9a7b9cfa5c81c0a4379bfd7aa55b502cd21ae98c84501d3a22",
+      "label_sha256": "cf73d1eecde301cecbcdc2b05e0027ea7a160c70b91da177ddb7bbeb12894737"
+    },
+    {
+      "file": "room_none_scout1-20261017-171153_0016.jpg",
+      "source_split": "train",
+      "image_sha256": "80f860faca18eb3df2af1c03c3d575ee593f70d999032e3c50118d29d499372c",
+      "label_sha256": "01d501448f0e82e20aad662b6311b677a3dcfc3ebfbabfaa3cf14f43ded17c03"
+    },
+    {
+      "file": "room_none_scout1-20261017-171153_0017.jpg",
+      "source_split": "train",
+      "image_sha256": "e32ad237153a55f9179e954f1f0abdcbeb10ac0bb67f71f682500f10f4a1c69b",
+      "label_sha256": "d00252c61cab52c76a60374e29ed912662704a2f410a4d80cf47f35bc01241d8"
+    },
+    {
+      "file": "room_none_scout1-20261017-171153_0018.jpg",
+      "source_split": "train",
+      "image_sha256": "daffb88a21fbefde4aae4f71602b5348fe980e002ef9a8375210c1d8d43b73c9",
+      "label_sha256": "ff894d8bd5d398b66bceffdc96771aa1f86efbe6407bcce6ba2adeb16e57b95b"
+    },
+    {
+      "file": "room_none_scout1-20261017-171153_0019.jpg",
+      "source_split": "train",
+      "image_sha256": "2486fb217b7cb32c3de14d872921a4759a7f3d538986f65e6834d99b5e8d24e6",
+      "label_sha256": "3c04d1576ff50d4c2e4580edfd4028aea36de43669f9f15fb372a683e87b9cb2"
+    },
+    {
+      "file": "room_none_scout1-20261017-171153_0020.jpg",
+      "source_split": "train",
+      "image_sha256": "560b3ecb478972f09982fd95fe2d3e9d7103f3162fa85cbdf95ff64594563966",
+      "label_sha256": "a8a6b92d84f8da495ae5267af17edcc9053bc6dca7a546cbedfb52942ac5184d"
+    },
+    {
+      "file": "room_none_scout1-20261017-171153_0021.jpg",
+      "source_split": "train",
+      "image_sha256": "e97692ae5ad885e77ea20552aef36dfa670651bf9e8e0a2c23ce7565f8c50619",
+      "label_sha256": "a4da90d682b1080f016f5a9238d3b9e2c03149e2a861d04249ddb8beb3c19ded"
+    },
+    {
+      "file": "room_none_scout1-20261017-171153_0022.jpg",
+      "source_split": "train",
+      "image_sha256": "4706fef4771a3868010ef7c66c669f1e9c34068785af7d0e18bb4c2542ddd15d",
+      "label_sha256": "27bcfaf6f3da58cd52e61b0d363fa089ddbc8ff1cfcbd158b416397bfa233617"
+    },
+    {
+      "file": "room_none_scout1-20261017-171153_0023.jpg",
+      "source_split": "train",
+      "image_sha256": "c1daa22f24246bd0e97ead664a450178c6422ba16975144b785cfba7d65558e4",
+      "label_sha256": "96c9312c3247eef9d1b80c1d56b5e2cdacf0b94465c5b3768d32466ac2d5919e"
+    },
+    {
+      "file": "room_none_scout1-20261017-171153_0024.jpg",
+      "source_split": "train",
+      "image_sha256": "c02e321aa95e0ef6a1777dcaa5f414f94f697b64cdac9a5d2a7817b4b85ad8f5",
+      "label_sha256": "aede85602ccc29ac070790c524e91a0657b2b550299280174f4256afa0340d7c"
+    },
+    {
+      "file": "room_none_scout1-20261017-171153_0025.jpg",
+      "source_split": "train",
+      "image_sha256": "3d8d09cb3f18f058d6d5646cd115faeb3e0bdae6f553a396ea6c1d9310136255",
+      "label_sha256": "f02cc6043703b7edc7375d6d14cb47b130dc16ea82a62e972ba3f92e18bfb133"
+    },
+    {
+      "file": "room_none_scout1-20261017-171153_0026.jpg",
+      "source_split": "train",
+      "image_sha256": "14e60638ce19bc6ea26887a5122153a63cc978b9e936892a4b3007e5e8e873b9",
+      "label_sha256": "444ada98e58e5a62d9aa448b4c650ab12eef14d20fbd9b40d0a88ea3ee2bbf35"
+    },
+    {
+      "file": "room_none_scout1-20261017-171153_0027.jpg",
+      "source_split": "train",
+      "image_sha256": "2cbe1a86e65e9afd17df6e5cd8e3f4d1eeafaa2ddb9aacc80586e12e6bc7f1d1",
+      "label_sha256": "bbf755cfa021671009e332710f2096512af9ce6fb71b8d393622e4f6f6058815"
+    },
+    {
+      "file": "room_cap_hero-20261017-173819_0028.jpg",
+      "source_split": "val",
+      "image_sha256": "f58baaad6ea4484f68f855a4ba87c5c1635908212b4ac74bc0d55552d8be7947",
+      "label_sha256": "c55ed4196e9a169f511a2d794197366a32668305cc36e44ac320af34eca76705"
+    },
+    {
+      "file": "room_cap_hero-20261017-173819_0029.jpg",
+      "source_split": "val",
+      "image_sha256": "57236135c636f286eda5b8acb55dd6af3cc7aa0a2050cdfe3ae1acd43166348d",
+      "label_sha256": "13ab7f915aaf8ad574e378cd6d94dd2e2876090f7b1ebe00a4c8db241bd202e7"
+    },
+    {
+      "file": "room_cap_hero-20261017-173819_0030.jpg",
+      "source_split": "val",
+      "image_sha256": "44b1b8f5d21b231f0ca0f6e3a056824e7e69a76586c98263ac1c5ce7fd0960a1",
+      "label_sha256": "c7c385afb50b4cc96e28613dab2793cf2cc75cb2050b0e2625dfb1ee0f2dbc14"
+    },
+    {
+      "file": "room_cap_hero-20261017-173819_0031.jpg",
+      "source_split": "val",
+      "image_sha256": "e2a5e5a19798966e84386ed7fe6c021d902afcbcf90ba15167f5a6a65fb55c66",
+      "label_sha256": "8eb05972f1637413065ef0991a951b55cd3dcf04d55318512b39bf8949bc96e9"
+    },
+    {
+      "file": "room_cap_scout1-20261017-170942_0028.jpg",
+      "source_split": "val",
+      "image_sha256": "9fcf3fe188c869e280c8039fe7091be8df35837e5a49d29e9cd5ae7cca7bbcfd",
+      "label_sha256": "d260ff9363e3a6e992765aeb0030589209e39ab2c84c472bade1e6df9cc0833a"
+    },
+    {
+      "file": "room_cap_scout1-20261017-170942_0029.jpg",
+      "source_split": "val",
+      "image_sha256": "e444b3565cd8e42141544101c3f1cb1cc11b4e03c7034dd4c0e37dcb6f0e6953",
+      "label_sha256": "ab3ed1e69ca77dda0b66f9e2bda88a6e714a8d32fdb091645a69d30ddc20ca7d"
+    },
+    {
+      "file": "room_cap_scout1-20261017-170942_0030.jpg",
+      "source_split": "val",
+      "image_sha256": "8a7af6c2c2ea800335d4d3cf7f275ae0a7da7358e98ef31ed68353916cbdc727",
+      "label_sha256": "194a9ce216470e2252400d16aa489f7d2168f478eb9bfb4670fd446e5faf69b1"
+    },
+    {
+      "file": "room_cap_scout1-20261017-170942_0031.jpg",
+      "source_split": "val",
+      "image_sha256": "5487f24d9710d42cf54bb4a1cd4be50587ee4f40c4d0b14b7bbfcc7e4841ed8f",
+      "label_sha256": "3fdc2e36b1fc0284221a5c1ffe8b349cb0ea9adc6dfcf183b1e2d898e2898b56"
+    },
+    {
+      "file": "room_coke_hero-20261017-173858_0028.jpg",
+      "source_split": "val",
+      "image_sha256": "43ea669c62d0b8c5cd8429af647eaf2b87050e594b3e6c4cb4f4543b0173df34",
+      "label_sha256": "26c620678c9f1fbf63cc011cec72f6f7d0322a0d6eb1b1f91993941aa1614cf3"
+    },
+    {
+      "file": "room_coke_hero-20261017-173858_0029.jpg",
+      "source_split": "val",
+      "image_sha256": "da0e7c23d584fede3811d78d4b72fe35473446e772d7ee8d4794fba3f6ec5507",
+      "label_sha256": "9ffe0ef145c8906d68cc44b6d681b62abbb258587bd4d58f644a5fb417079191"
+    },
+    {
+      "file": "room_coke_hero-20261017-173858_0030.jpg",
+      "source_split": "val",
+      "image_sha256": "6d6afa192b289c42d988a946ac2f2e95c95c0308c02d00fcdd538916cc0b819e",
+      "label_sha256": "8a8fbd4d7a7f3e9a80604d165463a71f242000a89a99ddc5ec4e95e650bab10a"
+    },
+    {
+      "file": "room_coke_hero-20261017-173858_0031.jpg",
+      "source_split": "val",
+      "image_sha256": "f1ea47892618f0d59e090c5aa4736a0c8223e5740c7cd402728b8cf02d32599c",
+      "label_sha256": "8b23b760b8d6a556aefa5e1e21c3f0a63842aafffc24debacee8f2168d7c152c"
+    },
+    {
+      "file": "room_coke_scout1-20261017-171038_0028.jpg",
+      "source_split": "val",
+      "image_sha256": "b0aea0fc0f0f28ea2773d2acb06e97b599734d71c9fc86a43cc57c9a51309b1d",
+      "label_sha256": "ba6573ba6bbbda36d3345bbb361280f726c285281aaf49639c3b8cf4ea472bd8"
+    },
+    {
+      "file": "room_coke_scout1-20261017-171038_0029.jpg",
+      "source_split": "val",
+      "image_sha256": "ba69d611a06078b802eb2987707edcd9e73f87cb14402d2dad3dfb9d25dc2e92",
+      "label_sha256": "b2a1069b1f4bfd4e3712f4f4439a0ff4219278b96d8b53fa959ff5b9b20bab1d"
+    },
+    {
+      "file": "room_coke_scout1-20261017-171038_0030.jpg",
+      "source_split": "val",
+      "image_sha256": "16940c54cb3dc7639715813bdda894754b85201a41ed83bb50c250dbb21ca937",
+      "label_sha256": "94543d5f61ecff083c4f937004cb46f87b61d66c07d52b8ed2cd51ad76b38195"
+    },
+    {
+      "file": "room_coke_scout1-20261017-171038_0031.jpg",
+      "source_split": "val",
+      "image_sha256": "c52778f9c7c8f99fa76e78dc286f90a48f1a58cf01f005ea3fa1f07a059019b3",
+      "label_sha256": "603e665cc9d05ae784363dd0d749d9e7282de6d2af6e5c0b1b8f9218524064fb"
+    },
+    {
+      "file": "room_coke_scout1-20261017-171117_0028.jpg",
+      "source_split": "val",
+      "image_sha256": "98c97b8c0c65d7b6bdfc723cb5a74f1b2b43e0fab6bf4a1cf02f1b666d7b9969",
+      "label_sha256": "51600b9fb2aa20a9ad70d835129bb20081a8d4ca9ea371d2dd3429a70c0147a2"
+    },
+    {
+      "file": "room_coke_scout1-20261017-171117_0029.jpg",
+      "source_split": "val",
+      "image_sha256": "86543fc1dbd9789d29745d6c47da4e7df2ef06707645905c1a2eeb7a74bc9f31",
+      "label_sha256": "fb26055013eda126d694f19143cf0f19786b195f74d4e02be258ba0711d68096"
+    },
+    {
+      "file": "room_coke_scout1-20261017-171117_0030.jpg",
+      "source_split": "val",
+      "image_sha256": "498073bbc2aed548a4c40b085b320fcd30c215d40e1dbb3b415945d6cf4e29e3",
+      "label_sha256": "e7819b1c97afa7ef9e649335099fabd3ebd08857da974dea330f89a8456f6c19"
+    },
+    {
+      "file": "room_coke_scout1-20261017-171117_0031.jpg",
+      "source_split": "val",
+      "image_sha256": "c8810c39852be5a224c26c470f79661503c08be194ed0f3f0f11e62c3d0f1fc8",
+      "label_sha256": "de94fd7627e8e39f7ebf86c10502e26bd470df3ac97f6dfaa2a31742da6b754c"
+    },
+    {
+      "file": "room_fedora_hero-20261017-173731_0028.jpg",
+      "source_split": "val",
+      "image_sha256": "5f966c57528c371342fe7c10744772d3e213f30e2122e1b9858e4136844946eb",
+      "label_sha256": "ce8c559f7b702f24248792b0ed454e26c199d83fa9581da5c2b1a4e4882a99f4"
+    },
+    {
+      "file": "room_fedora_hero-20261017-173731_0029.jpg",
+      "source_split": "val",
+      "image_sha256": "63092f8d1d35c168b9a73680366cdc3ca05d7dbacd69efc83b5dd22dcab13f83",
+      "label_sha256": "d59214c352d7def44c6617eb733749b3f57dbc68fee5e4940e036490374789ec"
+    },
+    {
+      "file": "room_fedora_hero-20261017-173731_0030.jpg",
+      "source_split": "val",
+      "image_sha256": "04d1f31caf84c7e0bda2ce45b0a154552e76678832206bdc2fb741e512086dee",
+      "label_sha256": "6d7ab8b8538d83f4d26c84d3121bcf0171e52ebb5641c506db9ba3f95ffa283e"
+    },
+    {
+      "file": "room_fedora_hero-20261017-173731_0031.jpg",
+      "source_split": "val",
+      "image_sha256": "4e3ee45873f0ee23dea8752a32f591e9420e05b3c92befe41509130fe05038a0",
+      "label_sha256": "9b90d79bd85e37b58c6489179b5d753af02218e57d0358f0504d71827efe9fb0"
+    },
+    {
+      "file": "room_fedora_scout1-20261017-170814_0028.jpg",
+      "source_split": "val",
+      "image_sha256": "42ccd2b4bd95c375a1a5b4b857a7d163b97a7b2eb0e22c6b38408f3a03db7a2a",
+      "label_sha256": "aadabb7e6bd813ef36cf76dba65158d019027e4a74748f7d4ecd3170f586baf5"
+    },
+    {
+      "file": "room_fedora_scout1-20261017-170814_0029.jpg",
+      "source_split": "val",
+      "image_sha256": "d6ee4b98fcb003054bf80107a3202e2165847767bf14b2b264d756aab77b90f0",
+      "label_sha256": "14272e1c04ff277aebef7120b77b4a53bd64b404763aee703cc899eaff392a09"
+    },
+    {
+      "file": "room_fedora_scout1-20261017-170814_0030.jpg",
+      "source_split": "val",
+      "image_sha256": "9c41d85616232dea911e72b818f346c5cb5bc0f69abfcc7537a9b4fb7a8c828e",
+      "label_sha256": "e553d07061ddd5d333081e5d452e5d96fb23b98734ae50f3bb4f3d1d9f4cfc17"
+    },
+    {
+      "file": "room_fedora_scout1-20261017-170814_0031.jpg",
+      "source_split": "val",
+      "image_sha256": "eb0ee47e6dcb0006bed290f4292656c498c1fbd1473a136eb48c8779f5019b91",
+      "label_sha256": "b01801e68c7c6ec78f00533a95a9768d2d8b6c55069adee4f52b7a32d4bfb122"
+    },
+    {
+      "file": "room_fedora_scout1-20261017-170901_0028.jpg",
+      "source_split": "val",
+      "image_sha256": "dd69d478f2acf4a11620eb9fc16486c11e2252877a28635844c96ceaa3989058",
+      "label_sha256": "9c958175bd2f2be1fd87481e49d59333a9dacf1afbccd4fc27ac3b2d1fb9a53a"
+    },
+    {
+      "file": "room_fedora_scout1-20261017-170901_0029.jpg",
+      "source_split": "val",
+      "image_sha256": "0f678e53c086e7a182ffb5a8c0054b16931313be6f3aad2cdb7afb4817a499df",
+      "label_sha256": "cd525728236103013ac22a3e58fca8b1313a751e1e12fd5fd54f8b6b6258f7fa"
+    },
+    {
+      "file": "room_fedora_scout1-20261017-170901_0030.jpg",
+      "source_split": "val",
+      "image_sha256": "967d90b7fa24b2f14514ce228311ee4e4f3d1c60505f99b2c5edf74985d6a4d4",
+      "label_sha256": "539d0aaa2e3339b42736805077ad1ab17dd43f438033bf90e40911f7ca37110d"
+    },
+    {
+      "file": "room_fedora_scout1-20261017-170901_0031.jpg",
+      "source_split": "val",
+      "image_sha256": "c6f49e837ee4aa75ae51ba776940d9202761a0f7f08c4a363f172281114b5947",
+      "label_sha256": "becdb213f111bb60fb3f2b9799052d5ed3420d50499d6f7d8b130bc63bef8d91"
+    },
+    {
+      "file": "room_knife_hero-20261017-173649_0028.jpg",
+      "source_split": "val",
+      "image_sha256": "b850186c30a9de4d946d02861bca1ee9b457d13a106457ebafee29e1437d4c23",
+      "label_sha256": "fd2453230515d48ab6776a2a8c00bc07fe6ccc14d0b768f7e3dbc8454241050b"
+    },
+    {
+      "file": "room_knife_hero-20261017-173649_0029.jpg",
+      "source_split": "val",
+      "image_sha256": "714694ec1003e6e196d6aa89ad73e86cdb11954b888b0e774bbbc7eae593436b",
+      "label_sha256": "25483e128bacd1498c28c70dba3b4c5b996abc6a3c7e4aaa0dab6e206dbd74d7"
+    },
+    {
+      "file": "room_knife_hero-20261017-173649_0030.jpg",
+      "source_split": "val",
+      "image_sha256": "0561653912dbe162c85043b44d6eb33b301839b2969d5498493b3eae8611abb0",
+      "label_sha256": "4ee6b99f370484a7704a828208fc6ce76428878a88427b3bb497c50689b7010b"
+    },
+    {
+      "file": "room_knife_hero-20261017-173649_0031.jpg",
+      "source_split": "val",
+      "image_sha256": "69bc6db5b218efd090117a521d894823a38a226df2f64bc1aa6d1ff8a5eb484f",
+      "label_sha256": "5431ed7c0929b3414316f5fee83a667aeb45ad6a141d1d2bff6a20bdb15fa2c1"
+    },
+    {
+      "file": "room_knife_hero-20261017-184411_0028.jpg",
+      "source_split": "val",
+      "image_sha256": "29ac3d09f02475c021a986fed602656b7c1f08ece9d2ed36f9f5a4e6c17faf85",
+      "label_sha256": "82c93fca7b0d0bbc5016fd397ea9168200886ba2bd742bffe4375cf735c87775"
+    },
+    {
+      "file": "room_knife_hero-20261017-184411_0029.jpg",
+      "source_split": "val",
+      "image_sha256": "c51dc07a0b2a0d7c24cfe6139463eccf6c557717ff80feebec3bf85e4a891ee7",
+      "label_sha256": "1a1bdaaa7bb42662753bca33e8f72f7e8bad0c866ec4ca2993a2aebb3c6dc1fe"
+    },
+    {
+      "file": "room_knife_hero-20261017-184411_0030.jpg",
+      "source_split": "val",
+      "image_sha256": "af782648dbea4c67a06271439075f41689f6a10bc2e98cdf7cd8328d8981a56e",
+      "label_sha256": "62860c6c8f014b1415da511fd358ece5b094c004fb5fed90733f6ff35aabf42c"
+    },
+    {
+      "file": "room_knife_hero-20261017-184411_0031.jpg",
+      "source_split": "val",
+      "image_sha256": "08a38a1e4a1f1ddf5e0bc051cc4819172e3a5e9f2159e564fc62bc665556920c",
+      "label_sha256": "796d7b8789d90e2bed4f48310320ce95eab45a28c6cb1ee87a5d301bd8a3ddee"
+    },
+    {
+      "file": "room_knife_hero-20261017-184449_0028.jpg",
+      "source_split": "val",
+      "image_sha256": "1163bcdb368fdee04404c8807038fa07c2747c125e3b4551c8e06803aeae3fab",
+      "label_sha256": "287e4be2c92ecfa4263bc5237e569aabec8bd870c8da792d59a6f8dc9910ccc5"
+    },
+    {
+      "file": "room_knife_hero-20261017-184449_0029.jpg",
+      "source_split": "val",
+      "image_sha256": "0f3097eedac8163cf61e44098b7001ca44942c45f884c333b0d27dbdb0f87e65",
+      "label_sha256": "424bf77afa72fe2d3632b2205e0d6f3dacbf96f6bd7a518d09d3755a799924e1"
+    },
+    {
+      "file": "room_knife_hero-20261017-184449_0030.jpg",
+      "source_split": "val",
+      "image_sha256": "3fc5ae7bef8bf2f80110f18e47010985abbf9722254977939f126e37750c5fd2",
+      "label_sha256": "f6e0ce4133c8dcc5890cf2c6e9ff67013491b5529f73a0c95b116bb00cb26c2f"
+    },
+    {
+      "file": "room_knife_hero-20261017-184449_0031.jpg",
+      "source_split": "val",
+      "image_sha256": "a96dfe11cf4419e2164d1845e6ebffb9f61bd2c72da2f81f3f08ab3f676b56b7",
+      "label_sha256": "e658c5d24e61337f80752653488464e7edbf773fd7ba81b89c410df3499cc5bf"
+    },
+    {
+      "file": "room_knife_hero-20261017-193342_0028.jpg",
+      "source_split": "val",
+      "image_sha256": "a7fc18a393f45eea49ce95613510815b9a34c38068e108247fad609725b6878c",
+      "label_sha256": "632befacdb426ee8effa20cba24365f8ce2bf06a433e7be1a82b9074aceb7fd9"
+    },
+    {
+      "file": "room_knife_hero-20261017-193342_0029.jpg",
+      "source_split": "val",
+      "image_sha256": "409de11facc48a54170b847a54f3447611be416f1db4cffcbc5a0454dc736830",
+      "label_sha256": "9126c2e762a4ca63ce77f75bec78ad208b259d8037a9de77a301f29b48d63039"
+    },
+    {
+      "file": "room_knife_hero-20261017-193342_0030.jpg",
+      "source_split": "val",
+      "image_sha256": "e0bd6253b6fd245edd2bcab4c1b3698bde600e99ddd72229b4e0cb8cedf4d084",
+      "label_sha256": "5a10283cd1ecf970246f0e2c55a96d314bc9f0c1ce1f7ffd649c761e94820881"
+    },
+    {
+      "file": "room_knife_hero-20261017-193342_0031.jpg",
+      "source_split": "val",
+      "image_sha256": "767a80c5171544d8205fd8e1888cb1464807999ce2d133b572738b43a27349ff",
+      "label_sha256": "6fb48accaf03aa3a6192a8543418485e70185fcaf591eb33f78f5b99135549d1"
+    },
+    {
+      "file": "room_knife_hero-20261017-193421_0028.jpg",
+      "source_split": "val",
+      "image_sha256": "15c8c466cd9bd04b689e61f01f23a736ba1c08af99fcf9e450b0018cd9164d37",
+      "label_sha256": "5df921543879597a48cfd7e64cc941c6a287e88d211eff2cb9185902594f10bf"
+    },
+    {
+      "file": "room_knife_hero-20261017-193421_0029.jpg",
+      "source_split": "val",
+      "image_sha256": "85efd3aef4eb79a23581378934451adcbe944040d97fec677e747714362009e8",
+      "label_sha256": "ea8bdf15ffaf3ee9b6b165c376582600505f656ebfea4c8c447339797a43d59c"
+    },
+    {
+      "file": "room_knife_hero-20261017-193421_0030.jpg",
+      "source_split": "val",
+      "image_sha256": "7e42f02f4c0fdfd16e7b7e11298a60af58241849d3d738f43c92648959b9c835",
+      "label_sha256": "5266f8898dee8bdec33c6c2532edec6b244d472e3ab597d76cacedd4d46a176f"
+    },
+    {
+      "file": "room_knife_hero-20261017-193421_0031.jpg",
+      "source_split": "val",
+      "image_sha256": "a330c266b3e4bfe3312828274a612366b7e792599c3fc17bf2fd859ad92e5e0d",
+      "label_sha256": "4c64e58b8e37904f92348b7ba5f78eee3926cc84aec1e2b354f4494727a7a844"
+    },
+    {
+      "file": "room_none_hero-20261017-173934_0028.jpg",
+      "source_split": "val",
+      "image_sha256": "1b3fd7ae0cf2179702ee613e39098e1da988cf8ad3cd3843f39901132b744ed8",
+      "label_sha256": "b6147fc3e37eef6b49eb343ac535ded0e85625c28f4904b1dee43e6897e9bf92"
+    },
+    {
+      "file": "room_none_hero-20261017-173934_0029.jpg",
+      "source_split": "val",
+      "image_sha256": "87f5df915fec67a6d8ecf19674a6f38ccb932bfe663698a646931f72d2475fcc",
+      "label_sha256": "1b70e1fbec107bd3f1396b5ac92ff8cb64a95f49d7e14ac80069ec86f2c55b49"
+    },
+    {
+      "file": "room_none_hero-20261017-173934_0030.jpg",
+      "source_split": "val",
+      "image_sha256": "cb16fbb5928d09b7673136e35617a4ec8eaa19d0453a3ef5d4390c0af9a79101",
+      "label_sha256": "b37b2a5fa79eef5e60b8f408f5b68b8017027d8228fb767a505324720c9bfd93"
+    },
+    {
+      "file": "room_none_hero-20261017-173934_0031.jpg",
+      "source_split": "val",
+      "image_sha256": "154f654a2cd1a62a3f63825c3e4e4c1f32b04fd9423ddde604bd867d7f598181",
+      "label_sha256": "912d837c9db959b6761a54781d84e77fce73c3618e9c065dfb1fcd02dc324d88"
+    },
+    {
+      "file": "room_none_scout1-20261017-171153_0028.jpg",
+      "source_split": "val",
+      "image_sha256": "34db71ccc7aad11f44b839977a57848f2955fe9ba69b791e545be32a29ec2ba8",
+      "label_sha256": "1c988b154d2a0ca4c674187c30be342025fb74f866c2d8bba93663d02d2d52a4"
+    },
+    {
+      "file": "room_none_scout1-20261017-171153_0029.jpg",
+      "source_split": "val",
+      "image_sha256": "3e8e4555109f51b3e4b7b10d13f188024f05e123c1b28e8cda0b5f421bd61f24",
+      "label_sha256": "37b51f69ea1f874cc82a5009ed9a1d56fed735c06d2b9248db6716d7aaf69aaa"
+    },
+    {
+      "file": "room_none_scout1-20261017-171153_0030.jpg",
+      "source_split": "val",
+      "image_sha256": "c722c7738677f04717addc89872234cef778e2fe0d32fda583984f1764daa3fd",
+      "label_sha256": "d6f69e4cb095eb38fd0d25ab015f259231be8638e4ef8edf912f84162a0ca199"
+    },
+    {
+      "file": "room_none_scout1-20261017-171153_0031.jpg",
+      "source_split": "val",
+      "image_sha256": "70b76f1be4400ecb12f886dc9138a4d51db4c88c50837a92207d4a70a78a9b4f",
+      "label_sha256": "63b0ecf4975817e2a33726f855427dda06a1ef38668a0869c118887b8c86a8a3"
+    },
+    {
+      "file": "room_cap_hero-20261017-173819_0032.jpg",
+      "source_split": "test",
+      "image_sha256": "8ea46375525cc590fbd032594ce5c25670e665c4109e796404c3cf8cf333c339",
+      "label_sha256": "5ff8a00e258c242b7e0655228dbd19f37a42970a48cbf66c28f0a8a62e48d2dd"
+    },
+    {
+      "file": "room_cap_hero-20261017-173819_0033.jpg",
+      "source_split": "test",
+      "image_sha256": "705c26f63147a8003fe7ae0c43fec63166a4f0a62441c6087a1f8a20ef71a581",
+      "label_sha256": "525f2abb7523344275f55ac37018f59049a4fa667ed8b108437eb063636fceeb"
+    },
+    {
+      "file": "room_cap_hero-20261017-173819_0034.jpg",
+      "source_split": "test",
+      "image_sha256": "b34869911b23c455595befcadaf2e9a8b3ba19fbd281ded12aa4a0255b05e76a",
+      "label_sha256": "3194e2d1c52c781bb5ec23598c680b967934789ed922847b778103e63a89044e"
+    },
+    {
+      "file": "room_cap_hero-20261017-173819_0035.jpg",
+      "source_split": "test",
+      "image_sha256": "c0c00531b7f994b589da8d75520701ba0f1c4c6a3b8fb66aa34fc136d17a7662",
+      "label_sha256": "adab4c3a9895b5c3c7037e8dafb40802056aa6c76c219eed14e69b1708e3308e"
+    },
+    {
+      "file": "room_cap_hero-20261017-173819_0036.jpg",
+      "source_split": "test",
+      "image_sha256": "9707831cd2005607c1bc988fdd17151c85b4cfa1ca736703b59b633c9f6cfa46",
+      "label_sha256": "98f4be2c5ee65f3cfb92faa68a56c3dd46beac5a2ed86120ef45df0ae36f277d"
+    },
+    {
+      "file": "room_cap_hero-20261017-173819_0037.jpg",
+      "source_split": "test",
+      "image_sha256": "e3e39a495676d2fab057787e400b0359794929f84b456e0ca79182a1009755bc",
+      "label_sha256": "c19df294e49bdd860335ee6f8bfd9c5b378122d485a616e486b57da09614860d"
+    },
+    {
+      "file": "room_cap_hero-20261017-173819_0038.jpg",
+      "source_split": "test",
+      "image_sha256": "722f9a3ebac1394bba5806b91a78e90bb9ac4e342c42d47777acc77e4adf74bb",
+      "label_sha256": "2561eb01e1bf5648b030caaeaae60eb1b44a2d1362a70dfdd6f63ae690c07a7f"
+    },
+    {
+      "file": "room_cap_hero-20261017-173819_0039.jpg",
+      "source_split": "test",
+      "image_sha256": "009501eb092c60a791f8aa2b47ff67a2d742cef47ac81e428cb27ebb8f4de7bb",
+      "label_sha256": "e4bd3df59366d58fe8161793631d44198c31670ce58360c9817a9eb864fb13d6"
+    },
+    {
+      "file": "room_cap_scout1-20261017-170942_0032.jpg",
+      "source_split": "test",
+      "image_sha256": "16038eb1526d3ec1b0fec80dbd76ca475ef639351534e250a8da83c55e8b9856",
+      "label_sha256": "cd6fdca1ced6c3dcccf3ef133976b4417ad8b48c875239d09eeaf8d2029eb245"
+    },
+    {
+      "file": "room_cap_scout1-20261017-170942_0033.jpg",
+      "source_split": "test",
+      "image_sha256": "5f04b2d521999bcad937756992ee6f42ffad444712736f0834ef5475a3c98fc6",
+      "label_sha256": "c44ce274febfefac343f0d825c3f0a9eeb8f6ae41b5acef4b8b87b1e87eefc00"
+    },
+    {
+      "file": "room_cap_scout1-20261017-170942_0034.jpg",
+      "source_split": "test",
+      "image_sha256": "39d0d5b75a09e2858c6c408cd492d8b1a56059163410f14e6b08005bb1a4a6ee",
+      "label_sha256": "7d963eaa7000fe6a0589a831e6b84bce260b23e809d50055bcb91c89d7f7e11a"
+    },
+    {
+      "file": "room_cap_scout1-20261017-170942_0035.jpg",
+      "source_split": "test",
+      "image_sha256": "a25fa3ff53dc2e9b426faf9a0ce85093295d154b995c44d4d4969ce7cefb9d79",
+      "label_sha256": "afb9cc6ee1bc9590189e0172aca303e966ceb2c0b064b2542a2fd41bdabc72fc"
+    },
+    {
+      "file": "room_cap_scout1-20261017-170942_0036.jpg",
+      "source_split": "test",
+      "image_sha256": "29ab97fdbc75481775970b6678e31a8f00b9e01e8fb6e05e60bb8a7d2f3a2c72",
+      "label_sha256": "d7dcbf8b1bb6758ca48807f650304236c03addcf0acd9b32773a834c3a66b01d"
+    },
+    {
+      "file": "room_cap_scout1-20261017-170942_0037.jpg",
+      "source_split": "test",
+      "image_sha256": "b5f6f76f85688387126aa6b980a732ce1e82650cde4ea325430e66cf80129d2b",
+      "label_sha256": "7b09a833caeb7da221a9a09e201c7ea81ec4e4ebc3ce77e357d9c8485e05d5d4"
+    },
+    {
+      "file": "room_cap_scout1-20261017-170942_0038.jpg",
+      "source_split": "test",
+      "image_sha256": "a225c9a53c61a72094880e694aeb4527493f19c8600e0f12c41129c91382d51d",
+      "label_sha256": "8e4ca28583def9182718d7b384608ee085913532ded4f679546f2289b058a2db"
+    },
+    {
+      "file": "room_cap_scout1-20261017-170942_0039.jpg",
+      "source_split": "test",
+      "image_sha256": "647bef3bd3a19fb395532ad81a6a1d032d1b8da989b3c0e2022c92f9ba935728",
+      "label_sha256": "5bc12b421a952c2a056d7ef80d820e29041717b8d88cac7b17ca8aa1495380a2"
+    },
+    {
+      "file": "room_coke_hero-20261017-173858_0032.jpg",
+      "source_split": "test",
+      "image_sha256": "8ccdcda407d823482ab06ea20d0023fd262cc17a5b6bccec15ed17f8e5b32ae1",
+      "label_sha256": "dae716a7e0322a0fcfeaa143e118adf82e24d635e31437f65d045c4e997764fc"
+    },
+    {
+      "file": "room_coke_hero-20261017-173858_0033.jpg",
+      "source_split": "test",
+      "image_sha256": "6d92c6f634f6e6551cbf47ce1b66db6771d9183e6dcb7b196f7b40086edd8f43",
+      "label_sha256": "818152e0feb24ec5823a263f562941928d00a9f4732c2b8b2946a05d9b6bc825"
+    },
+    {
+      "file": "room_coke_hero-20261017-173858_0034.jpg",
+      "source_split": "test",
+      "image_sha256": "9543849385b81dc952f411c17b2948621f8203a9d25ce12b37f262e3d3c0b1ea",
+      "label_sha256": "c91850609480377880d94d235198e3db3c43d935721daf72673e6d7db7699f4e"
+    },
+    {
+      "file": "room_coke_hero-20261017-173858_0035.jpg",
+      "source_split": "test",
+      "image_sha256": "8fa04b82855a3045e45ead2313cf745e118ab0f73f44f8f5102261c57d74d67d",
+      "label_sha256": "2b39bb78b66b1d30e7f610ddf823aa9066b3fa8c88c0162123e0cafefdf9ec4b"
+    },
+    {
+      "file": "room_coke_hero-20261017-173858_0036.jpg",
+      "source_split": "test",
+      "image_sha256": "81d8842daea911fab5a4adef1f1af89658ea2898a1d697dcf92a1fa09a4d5879",
+      "label_sha256": "c9e89ed898e64dc9fa5125a5044c786f74c3db44fd453713d17e564b6136e380"
+    },
+    {
+      "file": "room_coke_hero-20261017-173858_0037.jpg",
+      "source_split": "test",
+      "image_sha256": "8e89d0ac320b2ca89652d46e53499fe1ded0d585d1897ac9a766b6a4644016ae",
+      "label_sha256": "de612bd146cd6d8d54c780ce93719535b57aa131e9c46302dd2379faaddb3e0b"
+    },
+    {
+      "file": "room_coke_hero-20261017-173858_0038.jpg",
+      "source_split": "test",
+      "image_sha256": "d438af80a7fbb0ccbe59b199069d377c52055124a7e33eeaebb98af10d581b62",
+      "label_sha256": "f3c78506710b6fac5a2793b31b40275648ec517781f8af36d7b3ad529e021c5b"
+    },
+    {
+      "file": "room_coke_hero-20261017-173858_0039.jpg",
+      "source_split": "test",
+      "image_sha256": "32007436bf14309c70300a1de83ec6cd620b8b06b8453a38a6989977057450ba",
+      "label_sha256": "f13c1322fdfe94cd6d8d7a5e3047f54f306b8bcbece298799d4aa121005972bc"
+    },
+    {
+      "file": "room_coke_scout1-20261017-171038_0032.jpg",
+      "source_split": "test",
+      "image_sha256": "877f4509b14aa734046f6c36ed940a37808030325ad4334bc9d1436e4ca021b3",
+      "label_sha256": "78049eee9fa3637625afe572203973497cd42b200235b8ac75a76046b1b9b091"
+    },
+    {
+      "file": "room_coke_scout1-20261017-171038_0033.jpg",
+      "source_split": "test",
+      "image_sha256": "fbd8a6edb13fc8c3955030f3e87d80c63de7e99dac0f88193327bf38343aafe4",
+      "label_sha256": "7dbc4287b5afd4189424ffa88dc88581b5126f3003502d19e7df2b31085e4506"
+    },
+    {
+      "file": "room_coke_scout1-20261017-171038_0034.jpg",
+      "source_split": "test",
+      "image_sha256": "a1a1c3ed730723e14a2d766362dabec43400b86ec9bc2ea9fc6074628fb66482",
+      "label_sha256": "e15f1650b7141b0e364432679a8d02275f2f75e9d151c9c30cb0ad6ebe7a45b6"
+    },
+    {
+      "file": "room_coke_scout1-20261017-171038_0035.jpg",
+      "source_split": "test",
+      "image_sha256": "49142afc2ef9f81f5e6904477dce2af18b0cd3c9e3adcdf3e8bff77eb119edc8",
+      "label_sha256": "8114c5d4d22cb8587e079e87fc5a323b28442aa59f79f2db8f93afba527fc52d"
+    },
+    {
+      "file": "room_coke_scout1-20261017-171038_0036.jpg",
+      "source_split": "test",
+      "image_sha256": "30435aa34708b67e802ea6bd4cea0a0735836554b1d4594f2404be6f71fd118b",
+      "label_sha256": "ab24d3000dfe1d945fccdbcad84bfbefbb6d71baa9847476220f10c1a7aca801"
+    },
+    {
+      "file": "room_coke_scout1-20261017-171038_0037.jpg",
+      "source_split": "test",
+      "image_sha256": "9ef290e2d871f8ab63666c134b2e0a92bad82f1606363b8809e22d8b14e193dc",
+      "label_sha256": "925dfcaa0073753ad21166885c62f352afda52b273563910dfe7f8be267ead8e"
+    },
+    {
+      "file": "room_coke_scout1-20261017-171038_0038.jpg",
+      "source_split": "test",
+      "image_sha256": "c533a580cc9928996a1aef43b6979eaa798210456baf1be68ebb3d861b45f44b",
+      "label_sha256": "6685db2fbd2eceb117661fdf68b6936d1205ac8e459578eb1c8738b518de1277"
+    },
+    {
+      "file": "room_coke_scout1-20261017-171038_0039.jpg",
+      "source_split": "test",
+      "image_sha256": "513826d6dc00f054913f660c29aa32beffb3b080d0a35a86bf23ac27e67ebc14",
+      "label_sha256": "a1952545c8ed9ef24ae328e15305a5e92d7dafec85230a7c1be95ddfdb3ae4d2"
+    },
+    {
+      "file": "room_coke_scout1-20261017-171117_0032.jpg",
+      "source_split": "test",
+      "image_sha256": "dc179cc7adf9ed37c2e65ce2d461275a214078a1373baab4b3b98bb530fa41a0",
+      "label_sha256": "72df7492da66cbd818f7a640a827206cc344db0e98d3af69230ec6f5c55796f1"
+    },
+    {
+      "file": "room_coke_scout1-20261017-171117_0033.jpg",
+      "source_split": "test",
+      "image_sha256": "5a172eb4bd715b4a8f083a50b30c06fa07bb767ff3ea1ebb0be662fd85fb663b",
+      "label_sha256": "53405b7e6014cd754534345c0f5a3570be1fabf9632100967f934857a005928a"
+    },
+    {
+      "file": "room_coke_scout1-20261017-171117_0034.jpg",
+      "source_split": "test",
+      "image_sha256": "8911c31cb24749068a5b13818b201c1f79ad48745af612b9e51ebda3590294df",
+      "label_sha256": "333517f8d8539f73e79dc524884734371a51b3a9e5e330ab7c9579273412132d"
+    },
+    {
+      "file": "room_coke_scout1-20261017-171117_0035.jpg",
+      "source_split": "test",
+      "image_sha256": "fb19d997ab5b48e2c5ab4a978c77662b6db3c0df019e43d6a2746e244c5190af",
+      "label_sha256": "a08147f6b934ade0560db08ac033d7561e3d64031b572fb9717df18041817a5f"
+    },
+    {
+      "file": "room_coke_scout1-20261017-171117_0036.jpg",
+      "source_split": "test",
+      "image_sha256": "1f9b5ee67db9798b9afda57221385048cf83f592dd6dba14d6a825faeff1fbca",
+      "label_sha256": "45712e95dbdeaec4da3a688f80dc603c693506b634c0e7146609ee6c57d6d4cf"
+    },
+    {
+      "file": "room_coke_scout1-20261017-171117_0037.jpg",
+      "source_split": "test",
+      "image_sha256": "401ef067d8a962c679963e9718445417e89e61ed3ea494a4f0bb8d26344ad6f8",
+      "label_sha256": "5ca6d7bba721963122b1189d993b5eb02b5236ff34f9df604c8319badc6e617d"
+    },
+    {
+      "file": "room_coke_scout1-20261017-171117_0038.jpg",
+      "source_split": "test",
+      "image_sha256": "30fb49f88350ef1511878341bc466cb83b2d26d515c67d0072dc3d0a6d6e11fb",
+      "label_sha256": "aaddeec9c84dff2a080a6e38a930ffa88e57ec238cf3eec067ad71e930f6fa44"
+    },
+    {
+      "file": "room_coke_scout1-20261017-171117_0039.jpg",
+      "source_split": "test",
+      "image_sha256": "e9588ceb0cdb68654d0b988a7b3cf84efac8378d76c26c3681e749a8154bcb17",
+      "label_sha256": "346f78ee693fa77c02233c583e692f86b233ae478625a06c46a76caa05b0c03a"
+    },
+    {
+      "file": "room_fedora_hero-20261017-173731_0032.jpg",
+      "source_split": "test",
+      "image_sha256": "141e4a61caa566c380cde91e6a0f56ea8fb40cb7096e2d997973bd7c220cbb88",
+      "label_sha256": "b560f2643772511efb644792a59e79807807213c9ff6c4c0621e8f1194c33d63"
+    },
+    {
+      "file": "room_fedora_hero-20261017-173731_0033.jpg",
+      "source_split": "test",
+      "image_sha256": "a3f8ed99a6a80d9547980277090974e92cb0bbf4872f2fd22f51fdfa996ceb93",
+      "label_sha256": "5cf10d0bee153d1758e7af17c724c9ebf6b6fa6e011789e93e50737275244e48"
+    },
+    {
+      "file": "room_fedora_hero-20261017-173731_0034.jpg",
+      "source_split": "test",
+      "image_sha256": "b60db15dc5059ef4a2b9562dcf1f10b78ad70ed98974e0417f2cd140acffa202",
+      "label_sha256": "d86b25cab17436f3918f8cd7cb4722febce02e9701213be436e1bdb02e346b5e"
+    },
+    {
+      "file": "room_fedora_hero-20261017-173731_0035.jpg",
+      "source_split": "test",
+      "image_sha256": "fbd982596774d5254a698f3ac0efde8c82d157cd77383d6c9418ed0f90c8503a",
+      "label_sha256": "a9ab5d42cc06247679c98f808f5be960805fbba814e589da1b69a443407dd1ec"
+    },
+    {
+      "file": "room_fedora_hero-20261017-173731_0036.jpg",
+      "source_split": "test",
+      "image_sha256": "b4210da908b3a3a03d373db815bcb823be8c9a392b1e54d302d3176f794f59c6",
+      "label_sha256": "3636f4f03cdb1cb34c93393d60681eb07fd469c943f79d617b3ac50a84995a3c"
+    },
+    {
+      "file": "room_fedora_hero-20261017-173731_0037.jpg",
+      "source_split": "test",
+      "image_sha256": "abd0c4411569d4fdec3dee6cd04e03a1d69b04fbb0b21fdd97e62ac7eafaa129",
+      "label_sha256": "7d5461b19dd8e154747804a4cb79002edbd7da27e500c2fe3fbd2a6235d7bbdf"
+    },
+    {
+      "file": "room_fedora_hero-20261017-173731_0038.jpg",
+      "source_split": "test",
+      "image_sha256": "768273dacbb8a2db44b1d6260a33dd1301c4ace2957ced038e439bf2f9bf864a",
+      "label_sha256": "4b44803bd64b79901fdb462a6ac509726a8b7de1c2ec574d133d68bab7054a27"
+    },
+    {
+      "file": "room_fedora_hero-20261017-173731_0039.jpg",
+      "source_split": "test",
+      "image_sha256": "d0eb7e1977812c3a459d3c9b6375cfb18a5c55e400912f4556d3661cc551a113",
+      "label_sha256": "d020f926d3218dbb49d9d775ad1a14a7eef4e5905821bb5a9478cba107c4f6c9"
+    },
+    {
+      "file": "room_fedora_scout1-20261017-170814_0032.jpg",
+      "source_split": "test",
+      "image_sha256": "07e84815a5cd06a623c375b373cfda30b13e902fbff4bbf34a63ebc0d4f0a614",
+      "label_sha256": "eb49e09e8529cb7c513136ab9c0eee05dac8687f70b10543f787f9d9890f7d54"
+    },
+    {
+      "file": "room_fedora_scout1-20261017-170814_0033.jpg",
+      "source_split": "test",
+      "image_sha256": "2159a05f22ed0f8af15c0955c116e0a7ba23a528f65e605b09856013600a4fa4",
+      "label_sha256": "e1f87ee1537e25d1e643f3fb7968d6f1d68ed05ff755a16386662b8710d60016"
+    },
+    {
+      "file": "room_fedora_scout1-20261017-170814_0034.jpg",
+      "source_split": "test",
+      "image_sha256": "d814a6dd9932e89f9a7cfb4629d97f0f935a8c8ef5e7cd5a89104d6c50014bb1",
+      "label_sha256": "294e8fb0c9a4f735538c650556cb6b07da70a0bfa74e7bdf322e89d8c78186de"
+    },
+    {
+      "file": "room_fedora_scout1-20261017-170814_0035.jpg",
+      "source_split": "test",
+      "image_sha256": "23638745ed909c8fd1b944d1c2a4d6563d3dc6ae743c92e181c082c0690af257",
+      "label_sha256": "301b0242f708b835332d5a9a499c1a86cfa93c390b041fc819ead57feae68190"
+    },
+    {
+      "file": "room_fedora_scout1-20261017-170814_0036.jpg",
+      "source_split": "test",
+      "image_sha256": "0a79f6127cdc0a33e61d46103c64da7a1491f67016fc25906d915685af3a8a04",
+      "label_sha256": "7002cc9b5e25ce10ae4b8f1bc033d8dd3a2c316f0fa720548cadb56c5e5e9cb5"
+    },
+    {
+      "file": "room_fedora_scout1-20261017-170814_0037.jpg",
+      "source_split": "test",
+      "image_sha256": "3cfe1c66f80152bc468f86e8f7d300357d9b264f07a4096431f89acad40f0bda",
+      "label_sha256": "2b4857e208c57e1063fbaed52765672b5bee796b2f810b23377883eb89fd91c6"
+    },
+    {
+      "file": "room_fedora_scout1-20261017-170814_0038.jpg",
+      "source_split": "test",
+      "image_sha256": "7775fadd5079fc99e1a613d3253da0a598e3ad7fc2d834f409ae8bc243795f8f",
+      "label_sha256": "079929b51f185dccecd8444003721400438ebda42cbe3ad2236e71794bc6cf55"
+    },
+    {
+      "file": "room_fedora_scout1-20261017-170814_0039.jpg",
+      "source_split": "test",
+      "image_sha256": "64526c5a641364063e3ded54860e1001813877a0db389bd1314c9ff6f59ff3d7",
+      "label_sha256": "86f22de86faefebffc1534435439fb59fd57bb7fa55d20e6993092a3c5dc3700"
+    },
+    {
+      "file": "room_fedora_scout1-20261017-170901_0032.jpg",
+      "source_split": "test",
+      "image_sha256": "edb19315321954b5b088dd80b50bf4dec10abbf00ef5d8172b31a8e28d95d774",
+      "label_sha256": "33ef49080ca25bb6b4ef94f34bed96eded756c1abf7b3bec92330cf9c39ebc99"
+    },
+    {
+      "file": "room_fedora_scout1-20261017-170901_0033.jpg",
+      "source_split": "test",
+      "image_sha256": "87a419c56e1ac34f7f7a8b2bdce17b11ef39ab0c012b3f0c80720dacbce7e7bc",
+      "label_sha256": "f3dc9ff3b043a0dcbb2b0985fb5934046f0eb6900ed60480f1097bbdc9e5d227"
+    },
+    {
+      "file": "room_fedora_scout1-20261017-170901_0034.jpg",
+      "source_split": "test",
+      "image_sha256": "e720d0bcf963bcf56bd726d1bf9ec2d0cb6123ea6969b2230ff81e77d4cec170",
+      "label_sha256": "1a35306b086d31affdb54d5dbdc7dbd3149886df1f5be0eb6e50803955f589c9"
+    },
+    {
+      "file": "room_fedora_scout1-20261017-170901_0035.jpg",
+      "source_split": "test",
+      "image_sha256": "63ab8af836d28e45d85499f647a100beb64892cfa08f8cc620b9bcc643fb3d36",
+      "label_sha256": "70e8ebd86f327cbdb4482a4dd7241c5b0139430049c2b9e1d89cbe3f7a3bd20c"
+    },
+    {
+      "file": "room_fedora_scout1-20261017-170901_0036.jpg",
+      "source_split": "test",
+      "image_sha256": "eb7304d822854ecb1aac022026fa9171b843d0099f1bd38381b39c4929bc4e20",
+      "label_sha256": "d25fc5e300f023cd8ed6888b1dcf21b414ae4ac05d611e8b9d285dac4ecb7c51"
+    },
+    {
+      "file": "room_fedora_scout1-20261017-170901_0037.jpg",
+      "source_split": "test",
+      "image_sha256": "a31438707fd4de511eb7ebee287c896fd2e9c369c5b16a715a03a5da058705d6",
+      "label_sha256": "d5551a48b42878b2eaf5233a8f6e5f40832a1cbf8b93806b0e6827adc4f80489"
+    },
+    {
+      "file": "room_fedora_scout1-20261017-170901_0038.jpg",
+      "source_split": "test",
+      "image_sha256": "8c444637ed6206ac826f00dbb88e5fae9a42ef9ad0b1cc2787231f11d3303456",
+      "label_sha256": "322e1c779045f6885986c8e7ab544bb1b1de8024f5df4a5f8cb6fed8696c2f7a"
+    },
+    {
+      "file": "room_fedora_scout1-20261017-170901_0039.jpg",
+      "source_split": "test",
+      "image_sha256": "486a12e9f0112818046d26d2ca3977372d37f033abb38eaf72d21d22f7fd1f89",
+      "label_sha256": "09dd6fdef36274ffeea4a0d0f552675beaf2e8d835a799f60b29153620bef05f"
+    },
+    {
+      "file": "room_knife_hero-20261017-173636_0006.jpg",
+      "source_split": "test",
+      "image_sha256": "09b97675e0558a17a491b723bffbf0c801753c257511378cd58ca57fd8890172",
+      "label_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "file": "room_knife_hero-20261017-173636_0007.jpg",
+      "source_split": "test",
+      "image_sha256": "dc8501367ef5681649d0f5a2803e00c0a5fa2d86b22e5b2c0397dc777674c498",
+      "label_sha256": "bb61f2d1c066400cccc70885b72d50ccdc99755363aa61f17d4bf2b7e240da11"
+    },
+    {
+      "file": "room_knife_hero-20261017-173649_0032.jpg",
+      "source_split": "test",
+      "image_sha256": "d411de7f33b91cf74e0b368ec76899c1ca5de1720ce7a63505a448304e1f68d3",
+      "label_sha256": "72d9ca320e100256fc034dcff4940d4cd332e3908dc28bd646321cb3b8c6555d"
+    },
+    {
+      "file": "room_knife_hero-20261017-173649_0033.jpg",
+      "source_split": "test",
+      "image_sha256": "9aadff8e5f0771ce5c532d9640ca620a0bca525fb8b24048d07b712b0a6512b1",
+      "label_sha256": "308da094f74c77ff39a025630fd559ae2ae82549948c0dccdea6bf0aa4894467"
+    },
+    {
+      "file": "room_knife_hero-20261017-173649_0034.jpg",
+      "source_split": "test",
+      "image_sha256": "949ddccf26911410128eec8c12153b17226bf4d3d93c9daefee3df6a2ea51107",
+      "label_sha256": "63241e1142194fdf341f274cf329f7ae8d106320c7be24a2160d990533debe1f"
+    },
+    {
+      "file": "room_knife_hero-20261017-173649_0035.jpg",
+      "source_split": "test",
+      "image_sha256": "1fdd40354999574fc86ae01e30ca72bce53342ccfd331583b4ce4c1b589fca4e",
+      "label_sha256": "e6c65b2f807446aa8e89f670bfe3105afcfbc72a4ffed783173a94d34a8b2108"
+    },
+    {
+      "file": "room_knife_hero-20261017-173649_0036.jpg",
+      "source_split": "test",
+      "image_sha256": "6f8068f666aedb84096fc746620a28c055d927b643b1c5b1ce0daae2002b62d9",
+      "label_sha256": "199f2bac57314cc9216a22b72ef5771ff34abb617939d5747810d28b04ae5af4"
+    },
+    {
+      "file": "room_knife_hero-20261017-173649_0037.jpg",
+      "source_split": "test",
+      "image_sha256": "b7e8459ff21cef2cfdc39d5e69f8de6b36ddb0c1f23a4087d3494f66d1f9d33d",
+      "label_sha256": "bb25602e36d16b77b2eddd1e964a16cbcec98891be8ccd54fc225f146945ff6c"
+    },
+    {
+      "file": "room_knife_hero-20261017-173649_0038.jpg",
+      "source_split": "test",
+      "image_sha256": "b9d61ed75277c87fbebf85fe010669066b0571968cbfa70f760ef581074cacba",
+      "label_sha256": "075539e74aff54440759fbe5c09cf9fdd5257c44f386f2c1e2eb98358342065a"
+    },
+    {
+      "file": "room_knife_hero-20261017-173649_0039.jpg",
+      "source_split": "test",
+      "image_sha256": "7b36b5ad001914d870150833459b5b9afbe2c8ec3726907b1f3d6a883ad5854a",
+      "label_sha256": "b7cda2c72f9bfadd6c7b48d45285200aa5d967ab6a9cb2465621e88424f17f21"
+    },
+    {
+      "file": "room_knife_hero-20261017-184411_0032.jpg",
+      "source_split": "test",
+      "image_sha256": "bb8bd2e110745e97e8cd41d1a4df2ce7c73230cb387974cebe21cf3c6f33ba0b",
+      "label_sha256": "b5e790f8cdc92d470c402cebf0e7c2f245489ae1ca751cf6c50c4f8edee0ed6c"
+    },
+    {
+      "file": "room_knife_hero-20261017-184411_0033.jpg",
+      "source_split": "test",
+      "image_sha256": "9beae8b4d2683b3765c517b203f679455cc81f3fd9207592d9cec742bee141ba",
+      "label_sha256": "63776c94f15547875ada1fa3e132de72598599e9fa7a6ce8273cd4aead1fc946"
+    },
+    {
+      "file": "room_knife_hero-20261017-184411_0034.jpg",
+      "source_split": "test",
+      "image_sha256": "20d322c6bbca28d2f70668cbcd2faa5299166ed71c408e5b8b2462ff1095e90e",
+      "label_sha256": "67050171779eb719172e4cb97bce344a5800702d59d5e7f9c5a1572ea265bd8c"
+    },
+    {
+      "file": "room_knife_hero-20261017-184411_0035.jpg",
+      "source_split": "test",
+      "image_sha256": "07a6772eb5d69d448901e3e46c4254d69f42531dc4193d58af39dce253fd6fae",
+      "label_sha256": "1fc2f8fa739613dbdc7db957ceedce079f642f5a1b5afff9919b41453b0f4663"
+    },
+    {
+      "file": "room_knife_hero-20261017-184411_0036.jpg",
+      "source_split": "test",
+      "image_sha256": "45ebeb3dd4be60914d545d202a6e649e214ba1fef2739b54b231c237f9cfe848",
+      "label_sha256": "e69f0d6907d8df59a9d5775bc816653341119ecadcccf3375d12c9c012959815"
+    },
+    {
+      "file": "room_knife_hero-20261017-184411_0037.jpg",
+      "source_split": "test",
+      "image_sha256": "9afdde1a47e0cfe12bc4e2e89b9661846d8a6d444cbd6d9356ab61ff2f0d1a2d",
+      "label_sha256": "0cb66534b7eebae4f3e8e0417c50a3d80c203f92fdde872ce67d3c3ce835dc18"
+    },
+    {
+      "file": "room_knife_hero-20261017-184411_0038.jpg",
+      "source_split": "test",
+      "image_sha256": "957453b9a9bb23bd3d7901d6a82b5796aaf00b3193a374884b3848e702086926",
+      "label_sha256": "f94a9029c080ed8d211ab6a13e4b7a156537b5c1cd7dde0e57abfa2d87e2a8c4"
+    },
+    {
+      "file": "room_knife_hero-20261017-184411_0039.jpg",
+      "source_split": "test",
+      "image_sha256": "e6ee2b6c60fce846615e51dcfaad1cd59d78b452dc90360ed4ce9f31c35808bf",
+      "label_sha256": "4171977e414cd41da13300a9444c769165ca66f8e4834a788604bc7bc121a1dc"
+    },
+    {
+      "file": "room_knife_hero-20261017-184449_0032.jpg",
+      "source_split": "test",
+      "image_sha256": "c7d1744338c328f9ae677634423b900153921857cc6e7969b1abf04fcb3945d0",
+      "label_sha256": "69b52155156719c5aaf40f0216aab78b25c345fe9d0023fef0e91b0c7d60f483"
+    },
+    {
+      "file": "room_knife_hero-20261017-184449_0033.jpg",
+      "source_split": "test",
+      "image_sha256": "10bf258700e9b2cf18d85589086a7497f424b65261131267a2971853f440b3af",
+      "label_sha256": "9b8750bfa9c6161031de16536a733c519d828dc7fcbd7fc4e989e3c128bc3230"
+    },
+    {
+      "file": "room_knife_hero-20261017-184449_0034.jpg",
+      "source_split": "test",
+      "image_sha256": "c11c1ea59720cf323ef2f1791aae009088fa7b1ad18f89926a75b6a0ebe85b1d",
+      "label_sha256": "e3f033e0da1d3b7c7f153eb1b510b09551125c86f0b96f54a53477e6a769f274"
+    },
+    {
+      "file": "room_knife_hero-20261017-184449_0035.jpg",
+      "source_split": "test",
+      "image_sha256": "aaa29250f33c4a2fc1a395a40caef58b57fac0c3d3f99d0e9dab962f6f2290ba",
+      "label_sha256": "32e06165b252ccaf8fdf29ddebf364a3f6537dfd145828b013ad3d09e401f524"
+    },
+    {
+      "file": "room_knife_hero-20261017-184449_0036.jpg",
+      "source_split": "test",
+      "image_sha256": "1f7dafdbca1a5942d86d284372b50151e0285e5fad01fe638589e8883579b586",
+      "label_sha256": "31699d405745a6e2fcc61fe07933c60bd285d214e94b9949622e209e7ec3c63f"
+    },
+    {
+      "file": "room_knife_hero-20261017-184449_0037.jpg",
+      "source_split": "test",
+      "image_sha256": "65402b91218ae7e65df9c5becdb8de0ea934e64e7b6d61f21bc545ee0fe0835b",
+      "label_sha256": "ea732845c1fa16d8b4af67c204d4fde4a56a50fc80c3f60917cba61331019658"
+    },
+    {
+      "file": "room_knife_hero-20261017-184449_0038.jpg",
+      "source_split": "test",
+      "image_sha256": "0fe6eb6979573b9fb594720f4197c92bdc9ee8561540c2c0b1011ed85081aac3",
+      "label_sha256": "4df0db08a3824c070c72eab44c002786946f4a71e500041e7600991cd110d594"
+    },
+    {
+      "file": "room_knife_hero-20261017-184449_0039.jpg",
+      "source_split": "test",
+      "image_sha256": "78cf1c9c1cdbaab69953cffcbb6a94ab365d06d92b5244a6d152a3ebb8342baf",
+      "label_sha256": "1579354da66e56e30831577d7a5da2bcfc460a071b46299fdde8ae078120d95d"
+    },
+    {
+      "file": "room_knife_hero-20261017-193342_0032.jpg",
+      "source_split": "test",
+      "image_sha256": "cb3f71ad195371ffaf5440528ddd80d3350728011557cac31d0f72c660065fd8",
+      "label_sha256": "b9e35d4116a161fbbd44bbc5baf518a8b26c5db3682e43e840db00f7ff27c78b"
+    },
+    {
+      "file": "room_knife_hero-20261017-193342_0033.jpg",
+      "source_split": "test",
+      "image_sha256": "84c9a43b275f21a35c98f9d63dbe1dbc56ed519fcc4b0fdcf8242cd760e6ef51",
+      "label_sha256": "a0fbc6140cd56e0b0334611d8dd2ce117a10001e68a526230e99aa0f364c2063"
+    },
+    {
+      "file": "room_knife_hero-20261017-193342_0034.jpg",
+      "source_split": "test",
+      "image_sha256": "1b25dbc05c73225b846304fc98eb7bb18ddaf7800e68bab329dffe593ced34ca",
+      "label_sha256": "876650a4aeb1f6194fbb54d67b15ff18a06745f798169afd033cca8b4f027426"
+    },
+    {
+      "file": "room_knife_hero-20261017-193342_0035.jpg",
+      "source_split": "test",
+      "image_sha256": "7f31b051d14a8ae0c007d4388546a4d6251adde0b8a5b17c19d250b4828536f0",
+      "label_sha256": "2d8ad6efd408f7030b1e4dc29c1e6f591879d3a7271192656250ef67b9acff3a"
+    },
+    {
+      "file": "room_knife_hero-20261017-193342_0036.jpg",
+      "source_split": "test",
+      "image_sha256": "f6dee3377334deb9c38ff79ac37621fbfd96531cf831a0e3a43ff3ca412287de",
+      "label_sha256": "d96eab2e75bb19c9e6d1be835ae1cddaa3475230bd949e7307ee2edf3b64b3fa"
+    },
+    {
+      "file": "room_knife_hero-20261017-193342_0037.jpg",
+      "source_split": "test",
+      "image_sha256": "9db432f3cce23f57c0a971f1303b50bf2c82acf5bbf2d8eeec4602e1f82b659f",
+      "label_sha256": "01006a9281583c6ad2645a935cac01b6e55e4eb8f215156c13d644ed1492ca34"
+    },
+    {
+      "file": "room_knife_hero-20261017-193342_0038.jpg",
+      "source_split": "test",
+      "image_sha256": "ae81b6bbf2cbedf08f301ce99510ad4e95e64d45207edd19510fc0352cc38efe",
+      "label_sha256": "d24aeadb552786eaeaac6e63f843a56fdb64886e8243ee05139725f0c6ffa9d2"
+    },
+    {
+      "file": "room_knife_hero-20261017-193342_0039.jpg",
+      "source_split": "test",
+      "image_sha256": "63d0be84c99d87710b712ae89b14e17b2b008c286c89a37ba24131e24cc45fb8",
+      "label_sha256": "a26ce6e3cb52234ce2712d4569404e5d811f66d9e11d54469832409cd33564e8"
+    },
+    {
+      "file": "room_knife_hero-20261017-193421_0032.jpg",
+      "source_split": "test",
+      "image_sha256": "f24564a7227f4a418d915bfe80fef37820d919e3ce23c54257c70824147aefee",
+      "label_sha256": "20a22a300abae22fe7d5fb2e7b5f42693992e171cada431d2b28728157d54357"
+    },
+    {
+      "file": "room_knife_hero-20261017-193421_0033.jpg",
+      "source_split": "test",
+      "image_sha256": "2db53e8071bd98a565833a49cf7fcd905f7c7e778ac30a99cbd6fbf5ddd2b6ea",
+      "label_sha256": "9faf7f5060f20149f51f72e72f8587f47324e9aadc44f7d3d2e9b6bdaa39ad04"
+    },
+    {
+      "file": "room_knife_hero-20261017-193421_0034.jpg",
+      "source_split": "test",
+      "image_sha256": "289f453fa3a9be185a228d6b9650be0a3b8132602e4623e79e171e1064318e4b",
+      "label_sha256": "e5e4afce3ce9e291e203c8aed1d6670be006d3b6676040eae9234b43d3871025"
+    },
+    {
+      "file": "room_knife_hero-20261017-193421_0035.jpg",
+      "source_split": "test",
+      "image_sha256": "27b13166a6b1148331e26788131906f7dc23dd9db29b1612e5138b2e8aa98aba",
+      "label_sha256": "eb06148b6eb3660e5983c33d9ffc484b8916126e9956fa582be24dd4e8a73a12"
+    },
+    {
+      "file": "room_knife_hero-20261017-193421_0036.jpg",
+      "source_split": "test",
+      "image_sha256": "074cac3eaea898cdc404b67f76fefb8c75da1e9d20425e7eddac4c7281703f4e",
+      "label_sha256": "b8771fc0ddb952aa155f7c22f290d33962cc5154a045eedab8600e9ffbbd618a"
+    },
+    {
+      "file": "room_knife_hero-20261017-193421_0037.jpg",
+      "source_split": "test",
+      "image_sha256": "f3a612cf985bbba9d33e6bd71ef510a175014969c03fa268ddfc29af752d8913",
+      "label_sha256": "0578df5a32e369ddd5d47a95a94468f8067b245bcc6e7839293d7c3fb3241e55"
+    },
+    {
+      "file": "room_knife_hero-20261017-193421_0038.jpg",
+      "source_split": "test",
+      "image_sha256": "9bc014cd99d2d300c3c0fb3d674cd00ee6d6777b6a9fe91a4d60a98d367f5262",
+      "label_sha256": "340e5daa8486806e47ed0601176518929f0a6d33476828fc4410034ef5d66595"
+    },
+    {
+      "file": "room_knife_hero-20261017-193421_0039.jpg",
+      "source_split": "test",
+      "image_sha256": "203f4df38b26f670d7768e7fddd78b4b4e45cf8656eb987ff37be8f9e12c694a",
+      "label_sha256": "f039692c32aae0869251b34e203b3b8a3ece4b960e8138d9e61669ede3f5fa6b"
+    },
+    {
+      "file": "room_none_hero-20261017-173934_0032.jpg",
+      "source_split": "test",
+      "image_sha256": "6d0eac1795579e37cf95de8adfc4ae4bb0364ba6cb7b0ab729d750628d887381",
+      "label_sha256": "737f2d863ddc4627cb509a022a483b9d0f83cc1f11341a3a5eb9cc5dad568be8"
+    },
+    {
+      "file": "room_none_hero-20261017-173934_0033.jpg",
+      "source_split": "test",
+      "image_sha256": "98b02f1ec26624ef2093a2d76953322916cb7b99336b05a6ae9423cee653dc54",
+      "label_sha256": "100df24d03e846db23c65d4976b9e5350b9b29230114de559c6069269c78fb78"
+    },
+    {
+      "file": "room_none_hero-20261017-173934_0034.jpg",
+      "source_split": "test",
+      "image_sha256": "00455c142cae17075fc45ed6b9d0f44ef6f741d08365c644b069cfbd05561923",
+      "label_sha256": "7b05b16d138638052227eae4df177b3c3afbd91bb26a5aecf68916b7dbd007aa"
+    },
+    {
+      "file": "room_none_hero-20261017-173934_0035.jpg",
+      "source_split": "test",
+      "image_sha256": "9a2917674ffd7ec36b7b66f03c4551548937f77ab28caa17a2e39ba40aafde06",
+      "label_sha256": "9c97bd516843123e63e63746511c4d50c91719b3d2d6d63a895b14f56e0deccd"
+    },
+    {
+      "file": "room_none_hero-20261017-173934_0036.jpg",
+      "source_split": "test",
+      "image_sha256": "0d085ae4cc190b08d670a0bb71a5d73d7907f96caf7d481ae35fda3d983ae2cb",
+      "label_sha256": "4f97ffe6ca043116447ea7a7ee7690d7b0bd073e898d55eb13f1bc6578a2bd7e"
+    },
+    {
+      "file": "room_none_hero-20261017-173934_0037.jpg",
+      "source_split": "test",
+      "image_sha256": "0dab6cfd5436e5faf77650d77667e6276f036451acb334eed878009373fb28f4",
+      "label_sha256": "6befe0806305d5565d0582d9ef91c321efa605af9a283091169e6b82c23ac0c7"
+    },
+    {
+      "file": "room_none_hero-20261017-173934_0038.jpg",
+      "source_split": "test",
+      "image_sha256": "6378911bd867c6a3a65c91b170cc343b361d4d2dfad154eb5214628bb81594df",
+      "label_sha256": "4b3c582c0df584ae55eaf54301f948cf619c0fae9d7c2270721e7ee1696e7ac4"
+    },
+    {
+      "file": "room_none_hero-20261017-173934_0039.jpg",
+      "source_split": "test",
+      "image_sha256": "305e3b95ce1139eae84eae3a2841f9baefef8af491e18cbbb0c88341b5603a22",
+      "label_sha256": "3b8da24ad1d1c38791de3340aa43b3f355de7a6c2b899bed3b056758a770dd42"
+    },
+    {
+      "file": "room_none_scout1-20261017-171153_0032.jpg",
+      "source_split": "test",
+      "image_sha256": "aa823c800e147e39cd25d642ca2f8a7b01a528f62019e1fc4db9e1382ac4ab19",
+      "label_sha256": "1f74dc78240dde29b09c97ae99e0948311364028ead78819d0886ee468a6f9a4"
+    },
+    {
+      "file": "room_none_scout1-20261017-171153_0033.jpg",
+      "source_split": "test",
+      "image_sha256": "18bbe40df11825b8910c1f37f5aad5f138e67f64ec428216bfa0460934d8aaf0",
+      "label_sha256": "69264eeef797e5ee9612e000da4081d0de54fda5fd557be7d977601448a2d2ad"
+    },
+    {
+      "file": "room_none_scout1-20261017-171153_0034.jpg",
+      "source_split": "test",
+      "image_sha256": "70eab1719edf23bb744638624ea02e078070b814dc60771cb24a2e388e0c79b5",
+      "label_sha256": "81aa61fe6eb2bec1912d1a19f5114a614adb7fd0705f910998eebb0c75edccb0"
+    },
+    {
+      "file": "room_none_scout1-20261017-171153_0035.jpg",
+      "source_split": "test",
+      "image_sha256": "c0d1c1e730b7abf35ab06488995f225ad0cfb885f72de334598029bdb8988364",
+      "label_sha256": "c6468efbad060e0feb693f35be6e1a00d6dd550efe521044cbf534c33b1849fd"
+    },
+    {
+      "file": "room_none_scout1-20261017-171153_0036.jpg",
+      "source_split": "test",
+      "image_sha256": "2cfbb866c7e3a5b2936ccc750e3eb47bd3df191140f9e5e88f0a0e2b58a86ce2",
+      "label_sha256": "877a579f0784f0318e2a0b0280abb411ea28536cdef8050dfbb80c92bc0eb5b9"
+    },
+    {
+      "file": "room_none_scout1-20261017-171153_0037.jpg",
+      "source_split": "test",
+      "image_sha256": "cd750046a5158ee4054534e6ebf849bffa4f9356c1e58be12413dc12de9e8f0d",
+      "label_sha256": "85b144a802cd938af90850f4ad52ce86587987e623a7293c7d238fca3ed594cd"
+    },
+    {
+      "file": "room_none_scout1-20261017-171153_0038.jpg",
+      "source_split": "test",
+      "image_sha256": "abf107510c6a02a67e44aabc4f2c0fb1e3dd5216ee9af5dad6915eec1c96e0b8",
+      "label_sha256": "a6a4540df2b4cc1e2ec882550fda1ba70ee97818e89555e95e4768a7e5f914c2"
+    },
+    {
+      "file": "room_none_scout1-20261017-171153_0039.jpg",
+      "source_split": "test",
+      "image_sha256": "7f1e3a9b54298bb8c7f9b9f30554eeac5ca0147499e5771abd17b0b64c080b67",
+      "label_sha256": "1206a8a734920a8f5f90d183da7071cb1a483672450ec7ddc65840d340481a42"
+    }
+  ],
+  "count": 608,
+  "source": "data/scout",
+  "limitation": "all-room includes training and validation; test shares capture sessions"
+}

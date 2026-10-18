@@ -1,0 +1,70 @@
+# E1, laptop: every dashboard event, metadata only, batched to the core.
+# The orchestrator's sink (sherlock/sherlock/edge.py) POSTs each event here.
+# If the core is unreachable, events spool to disk on the laptop instead of
+# backing up into the camera loop.
+name: sherlock-telemetry
+type: pipeline
+labels:
+  demo: sherlock
+  stage: telemetry
+
+selector:
+  match_labels:
+    role: sherlock-edge
+
+config:
+  input:
+    label: events
+    http_server:
+      address: "${SHERLOCK_E1_LISTEN:127.0.0.1:23111}"
+      path: /events
+      allowed_verbs: ["POST"]
+      timeout: 10s
+
+  pipeline:
+    processors:
+      # The sink sends small batches as a JSON array; one event per message.
+      - label: split_batches
+        switch:
+          - check: this.type() == "array"
+            processors:
+              - unarchive:
+                  format: json_array
+
+      # Enforced here, not trusted from the sender: telemetry carries no pixels. Drop the
+      # dashboard's preview thumbnails (`image`, a face on evidence_preview), *_b64 fields
+      # and any data URL, so no face or frame reaches the core this way.
+      - label: metadata_only
+        mapping: |
+          root = this
+          root.data = this.data.or({}).filter(kv -> !kv.key.has_suffix("_b64") && kv.key != "image" && !(if kv.value.type() == "string" { kv.value.has_prefix("data:") } else { false }))
+
+      - label: provenance
+        mutation: |
+          root.edge = {
+            "node": env("EDGE_NODE_NAME").or(hostname()),
+            "pipeline": "sherlock-telemetry",
+            "received_at": now()
+          }
+
+  output:
+    label: to_core
+    fallback:
+      - http_client:
+          url: "${SHERLOCK_CORE_URL:http://127.0.0.1:23121}/telemetry"
+          verb: POST
+          headers:
+            Content-Type: application/json
+          timeout: 5s
+          retries: 2
+          max_in_flight: 4
+          batching:
+            count: 100
+            period: 1s
+            processors:
+              - archive:
+                  format: json_array
+      - label: spool
+        file:
+          path: "${SHERLOCK_SPOOL_DIR:/tmp/sherlock-spool}/telemetry.jsonl"
+          codec: lines

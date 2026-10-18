@@ -1,0 +1,67 @@
+# E3, laptop: hard examples for the next Scout fine-tune. Object or weapon
+# crops the Verifier did not confirm. Never faces. The orchestrator only sends
+# these when SHERLOCK_EDGE_EXAMPLES=1, because room photos show real people.
+name: sherlock-examples
+type: pipeline
+labels:
+  demo: sherlock
+  stage: examples
+
+selector:
+  match_labels:
+    role: sherlock-edge
+
+config:
+  input:
+    label: examples
+    http_server:
+      address: "${SHERLOCK_E3_LISTEN:127.0.0.1:23113}"
+      path: /example
+      allowed_verbs: ["POST"]
+      timeout: 10s
+
+  pipeline:
+    processors:
+      - label: object_crops_only
+        mapping: |
+          root = if !["weapon_crop", "object_crop"].contains(this.crop.or("")) {
+            throw("example rejected: only weapon or object crops, never faces")
+          } else if this.b64.or("") == "" {
+            throw("example rejected: no image")
+          } else { this }
+
+      - label: provenance
+        mutation: |
+          root.sha256_edge = this.b64.decode("base64").hash("sha256").encode("hex")
+          root.edge = {
+            "node": env("EDGE_NODE_NAME").or(hostname()),
+            "pipeline": "sherlock-examples",
+            "received_at": now()
+          }
+
+      # Log and keep the error: `catch` would clear it and let the message
+      # through. reject_errored on the output then refuses it, so the sender
+      # gets an error response instead of a silent pass.
+      - label: report_failure
+        switch:
+          - check: errored()
+            processors:
+              - log:
+                  level: WARN
+                  message: "${! error() }"
+
+  output:
+    label: to_core
+    reject_errored:
+      fallback:
+        - http_client:
+            url: "${SHERLOCK_CORE_URL:http://127.0.0.1:23121}/example"
+            verb: POST
+            headers:
+              Content-Type: application/json
+            timeout: 10s
+            retries: 2
+            max_in_flight: 1
+        - file:
+            path: "${SHERLOCK_SPOOL_DIR:/tmp/sherlock-spool}/examples.jsonl"
+            codec: lines

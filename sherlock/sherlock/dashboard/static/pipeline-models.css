@@ -1,0 +1,51 @@
+/* The annotated data-flow board: model identity first, input held beside its role. */
+.board { grid-template-columns: minmax(0, 25fr) minmax(0, 17fr) minmax(0, 31fr) minmax(0, 16fr); column-gap: clamp(24px, 3vw, 50px); }
+.col, .stage, .model-copy { min-width: 0; }
+.models { gap: 22px; grid-template-rows: repeat(3, minmax(min-content, 1fr)); }
+.models > .stage { height: auto; min-height: 148px; padding: 12px 12px 10px 16px; }
+.model-heading { display: flex; align-items: center; gap: 9px; min-width: 0; }
+.model-logo { width: 30px; height: 30px; flex: none; object-fit: contain; }
+.model-name { font: 700 clamp(18px, 1.6vw, 25px)/1.13 var(--sans); overflow-wrap: anywhere; text-wrap: balance; }
+.model-runtime { margin-top: 4px; font: 400 11px/1.3 var(--mono); color: var(--dim); }
+.model-body { display: grid; grid-template-columns: minmax(0, 1fr) minmax(82px, 36%); align-items: center; gap: 10px; margin-top: 9px; }
+.model-body .name { font-size: 17px; }
+.model-body .sub { line-height: 1.25; margin-top: 3px; }
+.model-preview { margin: 0; min-width: 0; }
+.model-preview-image { height: clamp(64px, 7.8vh, 90px); border: 1px solid var(--line); border-radius: 4px; display: grid; place-items: center; background: #e5e0d5; }
+.model-preview img { width: 100%; height: 100%; min-height: 0; object-fit: contain; }
+.model-preview [hidden], .model-heading [hidden] { display: none; }
+.model-preview .empty { color: var(--dim); text-align: center; padding: 8px; font: 400 11px/1.25 var(--mono); }
+.model-preview figcaption { font: 400 11px/1.25 var(--mono); color: var(--dim); margin-top: 4px; }
+.stage[data-evaluating="true"] .model-preview-image { border: 2px solid var(--c); }
+.stage[data-evaluating="true"] .model-preview figcaption { color: var(--c); }
+.models .ms { right: auto; left: 16px; bottom: 6px; }
+#st-scout { flex-wrap: wrap; }
+#st-scout .model-heading { flex: 1 0 100%; }
+#st-scout .model-logo { width: 25px; height: 25px; }
+#st-scout .model-name { font-size: clamp(17px, 1.5vw, 22px); }
+#st-scout .model-runtime { flex: 1 0 100%; margin-top: -4px; }
+#st-scout .spec { width: 48px; }
+@media (max-height: 850px), (max-width: 1000px) {
+  html, body { height: auto; overflow: visible; }
+  .app { height: auto; min-height: 100dvh; grid-template-rows: auto auto auto auto; }
+  .board { min-height: 680px; }
+  footer { flex-wrap: wrap; white-space: normal; }
+  footer .expanso { flex-basis: 100%; }
+}
+@media (max-width: 1000px) {
+  .board { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); row-gap: 28px; }
+  .cam { min-height: 500px; }
+  .models { min-height: 640px; }
+  .record { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .record .lede { grid-column: 1 / -1; }
+}
+@media (max-width: 540px) {
+  .board { grid-template-columns: minmax(0, 1fr); }
+  .laptop { min-height: 370px; }
+  .out { gap: 12px; }
+  .out > .dest { height: 110px; }
+  .bar { align-items: flex-start; }
+  .bar h1 { white-space: normal; font-size: 18px; }
+  .ratio b { font-size: 26px; }
+  .ratio span { font-size: 11px; }
+}

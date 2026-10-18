@@ -1,0 +1,87 @@
+{
+  "schema_version": 1,
+  "evidence_kind": "endpoint",
+  "execution_mode": "measured",
+  "model_server": {
+    "name": "vLLM",
+    "version": "0.28.0",
+    "host": "sherlock-h100",
+    "hardware": "Brev, 1x H100 PCIe 80GB",
+    "label": "Brev \u00b7 vLLM",
+    "source": "declared"
+  },
+  "code": {
+    "commit": "09dfd8f39caa4b375d384d8e197f527357ffcbe4",
+    "ref": "main @09dfd8f",
+    "patches": [
+      "brev/serve.sh from #67 (merged as 369e428): --limit-mm-per-prompt as JSON for vLLM 0.28",
+      "brev/serve.sh from #79 (merged as 3743bd9): start the VLM before the Director"
+    ],
+    "source": "declared",
+    "note": "The Brev copy had no .git, so the benchmark recorded git_commit as null."
+  },
+  "mode": "ab",
+  "ok": true,
+  "stages": [
+    {
+      "prefix_caching": "off",
+      "server_config_sha256": "f06cdaeb8f45416e34b3823bd61f3410ea594463cadd195c4f6d06212c584cec",
+      "models": {
+        "director": {
+          "ids": [
+            "nvidia/NVIDIA-Nemotron-3.5-Lightning-30B-A3B-NVFP4",
+            "director"
+          ],
+          "selected": "director"
+        },
+        "vlm": {
+          "ids": [
+            "HuggingFaceTB/SmolVLM-500M-Instruct",
+            "vlm"
+          ],
+          "selected": "vlm"
+        }
+      },
+      "smoke": {
+        "director": {
+          "valid_tool_calls": 1,
+          "thinking": false
+        },
+        "vlm": {
+          "nonempty_response": true
+        }
+      },
+      "benchmark_json": "results/brev_preflight_20261017T200806_125411Z/off/vllm_bench_20261017T201339_500799Z.json"
+    },
+    {
+      "prefix_caching": "on",
+      "server_config_sha256": "f06cdaeb8f45416e34b3823bd61f3410ea594463cadd195c4f6d06212c584cec",
+      "models": {
+        "director": {
+          "ids": [
+            "nvidia/NVIDIA-Nemotron-3.5-Lightning-30B-A3B-NVFP4",
+            "director"
+          ],
+          "selected": "director"
+        },
+        "vlm": {
+          "ids": [
+            "HuggingFaceTB/SmolVLM-500M-Instruct",
+            "vlm"
+          ],
+          "selected": "vlm"
+        }
+      },
+      "smoke": {
+        "director": {
+          "valid_tool_calls": 1,
+          "thinking": false
+        },
+        "vlm": {
+          "nonempty_response": true
+        }
+      },
+      "benchmark_json": "results/brev_preflight_20261017T200806_125411Z/on/vllm_bench_20261017T201913_625341Z.json"
+    }
+  ]
+}

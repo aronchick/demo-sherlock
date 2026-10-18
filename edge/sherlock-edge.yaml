@@ -1,0 +1,10 @@
+# The laptop: cameras, Scout, orchestrator. Runs E1, E2 and E3.
+name: sherlock-edge
+api:
+  listen_addr: 127.0.0.1:23110
+log:
+  level: info
+  format: console
+labels:
+  demo: sherlock
+  role: sherlock-edge

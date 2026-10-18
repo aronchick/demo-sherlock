@@ -1,0 +1,103 @@
+# C2, cloud core (the Brev box): every 10 s, read both vLLM servers' /metrics
+# and turn them into one small record per server: KV-cache use, prefix-cache
+# queries and hits, running and waiting requests. Records are kept on the core
+# and pushed to the laptop dashboard through the SSH tunnel's reverse port.
+name: sherlock-vllm-metrics
+type: pipeline
+labels:
+  demo: sherlock
+  stage: vllm-metrics
+
+selector:
+  match_labels:
+    role: sherlock-core
+
+config:
+  input:
+    label: tick
+    generate:
+      interval: "${SHERLOCK_METRICS_INTERVAL:10s}"
+      mapping: |
+        root = [
+          {"server": "director", "url": env("SHERLOCK_DIRECTOR_METRICS").or("http://127.0.0.1:8001/metrics")},
+          {"server": "vlm", "url": env("SHERLOCK_VLM_METRICS").or("http://127.0.0.1:8002/metrics")}
+        ]
+
+  pipeline:
+    processors:
+      - label: one_per_server
+        unarchive:
+          format: json_array
+
+      - label: target
+        mutation: |
+          meta scrape_url = this.url
+
+      - label: scrape
+        branch:
+          request_map: root = ""
+          processors:
+            - http:
+                url: '${! meta("scrape_url") }'
+                verb: GET
+                timeout: 3s
+                retries: 0
+          result_map: |
+            root.text = content().string()
+
+      # Prometheus text format, one sample per line: name{labels} value.
+      # Only the families the benchmark also reads are kept.
+      - label: parse
+        mapping: |
+          let text = if this.text == null {
+            throw("no answer from " + meta("scrape_url").or("the server"))
+          } else { this.text }
+          let samples = $text.split("\n").filter(l -> !l.has_prefix("#") && l.trim() != "").map_each(l -> {
+            "name": l.re_replace_all("[{ ].*$", ""),
+            "value": l.re_replace_all("^.* ", "")
+          }).filter(s -> s.name.has_prefix("vllm:") && s.value != "NaN")
+          # One engine per server here (no tensor parallelism), so a sum is
+          # that engine's value.
+          let kv = $samples.filter(s -> s.name == "vllm:kv_cache_usage_perc" || s.name == "vllm:gpu_cache_usage_perc").map_each(s -> s.value.number())
+          root.server = this.server
+          root.up = true
+          root.at = now()
+          root.kv_cache_usage = if $kv.length() > 0 { $kv.sum() } else { null }
+          root.prefix_cache_queries = $samples.filter(s -> s.name == "vllm:prefix_cache_queries_total").map_each(s -> s.value.number()).sum()
+          root.prefix_cache_hits = $samples.filter(s -> s.name == "vllm:prefix_cache_hits_total").map_each(s -> s.value.number()).sum()
+          root.requests_running = $samples.filter(s -> s.name == "vllm:num_requests_running").map_each(s -> s.value.number()).sum()
+          root.requests_waiting = $samples.filter(s -> s.name == "vllm:num_requests_waiting").map_each(s -> s.value.number()).sum()
+
+      # A server that is down or still loading is a record too, not a gap.
+      - label: server_down
+        catch:
+          - mapping: |
+              root = {"server": this.server.or("unknown"), "up": false,
+                      "at": now(), "error": error()}
+
+      - label: provenance
+        mutation: |
+          root.core = {"node": env("EDGE_NODE_NAME").or(hostname()), "pipeline": "sherlock-vllm-metrics"}
+
+  output:
+    label: keep_and_show
+    broker:
+      pattern: fan_out
+      outputs:
+        - file:
+            path: >-
+              ${SHERLOCK_CORE_DIR:/tmp/sherlock-core}/serving/${! now().ts_format("2006-01-02") }.jsonl
+            codec: lines
+        # The dashboard is reachable only while the laptop's tunnel is up;
+        # without it these records are dropped, not queued.
+        - drop_on:
+            error: true
+            back_pressure: 5s
+            output:
+              http_client:
+                url: "${SHERLOCK_DASHBOARD_URL:http://127.0.0.1:23100}/api/serving"
+                verb: POST
+                headers:
+                  Content-Type: application/json
+                timeout: 3s
+                retries: 0

@@ -115,7 +115,7 @@ Open `/slides` in a separate localhost tab for four slides: the problem, the
 YOLO → Brev → camera loop, human review and evidence, and projected impact.
 Use arrow keys, Space, or Back/Next. Each slide has a shareable hash;
 `/slides#impact` opens the recap. Board, Phone and Evidence links reuse named
-tabs. The final slide links to the public GitHub repository.
+tabs. The final slide links to the GitHub repository.
 
 ### Responder phone and signed case files
 
@@ -131,6 +131,19 @@ then **Notify team** or **Resolve**. These actions are persisted locally as sign
 revisions. No SMS, push notification or team message leaves the application.
 Mock locations map `hero` to Building A / Level 1 / North lobby and `scout1` to
 East corridor; live cameras without location data display unknown.
+
+Set `CAMERA_LOCATIONS` in the project `.env` to label real cameras. Keys must
+match names in `CAMERAS`; each location accepts `building`, `floor`, and `area`.
+For example, replace this placeholder with your actual room:
+
+```dotenv
+CAMERA_LOCATIONS='{"hero":{"area":"Your actual room"}}'
+```
+
+Run `just up` to apply the configuration to new incidents. The trigger camera
+selects the location, even when another camera supplies evidence. These are
+operator-supplied labels, not model-inferred positions. Location is part of the
+signed record; changing configuration does not rewrite historical incidents.
 
 New records use Ed25519 signatures. Each signed revision binds the payload
 SHA-256, signer public key and fingerprint, revision number, previous envelope

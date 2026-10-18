@@ -8,7 +8,7 @@ with five briefing slides and at least ten complete rehearsals.
 | Requirement | Proof required | Current state |
 | --- | --- | --- |
 | Fast camera loop | Real YOLO detection, Brev tool call, physical OBSBOT response with timestamps | Fresh OBSBOT connection works; image nearly black, physical prop run pending |
-| Phone response | Open notice, inspect location and pictures, investigate, notify, resolve | Investigate, paging and Notify team verified on ten full photo walkthroughs; building location metadata not implemented |
+| Phone response | Open notice, inspect location and pictures, investigate, notify, resolve | Investigate, paging and Notify team verified on ten full photo walkthroughs; location configuration implemented, actual labels awaited |
 | Evidence | Summary modal, detailed timeline, JSON, image hashes and signed revisions verified | Saved photo incidents pass signature, artifact and revision-history checks |
 | Expanso | Cloud-connected edge and core, active jobs, same incident received on core with matching crop hash | Verified real Cloud execution, remote disk-readback crop receipts and serving metrics on Nebius |
 | vLLM ecosystem | Correct model names and serving proof; sourced FP8/LLM Compressor explanation | Both FP8 Director and SmolVLM passed inference smoke; narration and five slides updated |

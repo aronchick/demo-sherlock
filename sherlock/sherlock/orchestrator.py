@@ -63,7 +63,7 @@ class Sherlock:
                            measure=not cfg.mock and backend != "scene", handled_via=self._handled_via,
                            conf=cfg.scout_conf)
         self.evidence_dir = pathlib.Path(evidence_dir or os.environ.get("EVIDENCE_DIR", "snapshots"))
-        self.incidents = IncidentStore(self.evidence_dir)
+        self.incidents = IncidentStore(self.evidence_dir, cfg.camera_locations)
         self.edge = EdgeSink.from_env(self.evidence_dir)  # None unless SHERLOCK_EDGE=1
         self.latest_wide_at: dict[str, float] = {}
         self.latest_wide: dict[str, np.ndarray] = {}

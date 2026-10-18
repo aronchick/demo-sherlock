@@ -95,12 +95,11 @@ local_cli() { expanso-cli --endpoint "http://$1" "${@:2}"; }
 
 port_busy() { lsof -nP -iTCP:"$1" -sTCP:LISTEN >/dev/null 2>&1; }
 
-node_running() {
-  local pid
-  [[ -f "$RUNTIME/$1.pid" ]] || return 1
-  pid="$(cat "$RUNTIME/$1.pid")"
-  kill -0 "$pid" 2>/dev/null && ps -p "$pid" -o command= | grep -q expanso-edge
+process_control() {
+  uv run --no-project python scripts/expanso_process.py "$@" --root "$ROOT"
 }
+
+node_running() { process_control status "$1"; }
 
 # The pipelines read these at start; ${VAR:default} in jobs/*.yaml.
 node_env() {
@@ -119,30 +118,23 @@ node_env() {
 start_node() {
   local role="$1" mode="$2" api ports args
   if [[ "$role" == edge ]]; then api="$EDGE_API"; ports=("${EDGE_PORTS[@]}"); else api="$CORE_API"; ports=("${CORE_PORTS[@]}"); fi
-  node_running "$role" && die "sherlock-$role is already running here; run: scripts/expanso.sh down"
-  for p in "${api##*:}" "${ports[@]}"; do port_busy "$p" && die "port $p is in use"; done
+  if ! node_running "$role"; then
+    for p in "${api##*:}" "${ports[@]}"; do port_busy "$p" && die "port $p is in use"; done
+  fi
   mkdir -p "$RUNTIME"
   node_env "$role"
   args=(run -c "edge/sherlock-$role.yaml" --no-watch --api-listen "$api")
   if [[ "$mode" == local ]]; then
-    rm -rf "$RUNTIME/$role-local"
+    mkdir -p "$RUNTIME/$role-local"
     args+=(--local --data-dir "$RUNTIME/$role-local")
   else
     args+=(--data-dir "$STATE/sherlock-$role")
   fi
-  # A separate session survives the invoking terminal/SSH connection closing.
   need uv
-  uv run --no-project python - "$RUNTIME/$role.log" "$RUNTIME/$role.pid" "${args[@]}" <<'PY'
-import pathlib
-import subprocess
-import sys
-
-with open(sys.argv[1], 'ab') as log:
-    process = subprocess.Popen(['expanso-edge', *sys.argv[3:]],
-                               stdin=subprocess.DEVNULL, stdout=log, stderr=log,
-                               start_new_session=True)
-pathlib.Path(sys.argv[2]).write_text(str(process.pid) + '\n')
-PY
+  # Exact process identity and a config fingerprint govern reuse and shutdown.
+  uv run --no-project python scripts/expanso_process.py ensure "$role" \
+    --root "$ROOT" --fingerprint-file "$ROOT/edge/sherlock-$role.yaml" \
+    -- "$(command -v expanso-edge)" "${args[@]}"
   echo "$mode" >| "$RUNTIME/mode"
 }
 
@@ -164,7 +156,7 @@ wait_ports() {
   done
 }
 
-# deploy <cli function and args...> -- <job files...>; an unchanged job is restarted.
+# Deploy changed specs; unchanged running versions keep their executions.
 deploy() {
   local cli=() file name out
   while [[ "$1" != -- ]]; do cli+=("$1"); shift; done; shift
@@ -173,12 +165,36 @@ deploy() {
     if out="$("${cli[@]}" job deploy "$file" 2>&1)"; then
       say "  deployed $name"
     elif grep -q NO_CHANGES_DETECTED <<<"$out"; then
-      "${cli[@]}" job rerun "$name" >/dev/null && say "  $name unchanged; restarted"
+      say "  $name unchanged; preserving running executions"
     else
       printf '%s\n' "$out" | sed -n '1,8p' >&2
       die "could not deploy $file"
     fi
+    wait_job "${cli[@]}" -- "$name"
   done
+}
+
+# Verify the current version, not a historical execution. All declared jobs
+# must be running before the complete demo can be called ready.
+wait_job() {
+  local cli=() name version state executions restarted=0
+  while [[ "$1" != -- ]]; do cli+=("$1"); shift; done; shift
+  name="$1"
+  for _ in $(seq 1 60); do
+    state="$("${cli[@]}" job describe "$name" -f json)"
+    version="$(jq -er '.status.version | numbers' <<<"$state")"
+    executions="$("${cli[@]}" job executions "$name" --job-version "$version" -f json)"
+    if jq -e --argjson version "$version" 'any(.[]; .job_version == $version and .status.desired_state.state_type == "running" and .status.observed_state.state_type == "running")' <<<"$executions" >/dev/null; then
+      say "  $name v$version running"
+      return
+    fi
+    if [[ "$restarted" == 0 ]] && { jq -e '.status.state.state_type == "stopped"' <<<"$state" >/dev/null || jq -e 'length > 0 and all(.[]; .status.observed_state.state_type == "failed" or .status.observed_state.state_type == "stopped" or .status.observed_state.state_type == "complete")' <<<"$executions" >/dev/null; }; then
+      "${cli[@]}" job rerun "$name" >/dev/null
+      restarted=1
+    fi
+    sleep 1
+  done
+  die "$name current version did not reach a running execution"
 }
 
 bootstrap() {
@@ -194,18 +210,7 @@ bootstrap() {
     }
 }
 
-stop_node() {
-  local role="$1" pid
-  [[ -f "$RUNTIME/$role.pid" ]] || return 0
-  pid="$(cat "$RUNTIME/$role.pid")"
-  if node_running "$role"; then
-    kill "$pid" 2>/dev/null || true
-    for _ in $(seq 1 40); do kill -0 "$pid" 2>/dev/null || break; sleep 0.25; done
-    kill -9 "$pid" 2>/dev/null || true
-    say "sherlock-$role stopped"
-  fi
-  rm -f "$RUNTIME/$role.pid"
-}
+stop_node() { process_control stop "$1"; }
 
 # --------------------------------------------------------------- commands
 
@@ -215,7 +220,7 @@ cmd_check() {
 }
 
 cmd_local() {
-  need expanso-edge; need expanso-cli
+  need expanso-edge; need expanso-cli; need jq
   cmd_check >/dev/null
   # Locally the core pushes serving numbers straight to the dashboard.
   export SHERLOCK_DASHBOARD_URL="${SHERLOCK_DASHBOARD_URL:-http://127.0.0.1:${DASHBOARD_PORT:-8000}}"
@@ -256,7 +261,9 @@ cmd_edge() {
   cmd_check >/dev/null
   load_creds; require_cli_creds; require_bootstrap_token
   if node_running edge; then
+    start_node edge cloud
     wait_connected edge
+    deploy cloud_cli -- "${EDGE_JOBS[@]}" "${CORE_JOBS[@]}"
     wait_ports edge "${EDGE_PORTS[@]}"
     say "sherlock-edge already connected; reusing active Cloud pipelines"
     return
@@ -276,34 +283,22 @@ cmd_edge() {
 }
 
 start_receipts() {
-  local pidfile="$RUNTIME/receipts.pid" pid
-  if [[ -f "$pidfile" ]]; then
-    pid="$(cat "$pidfile")"
-    if kill -0 "$pid" 2>/dev/null; then
-      ps -p "$pid" -o command= | grep -q 'scripts/core_receipts.py' \
-        || die "receipt watcher PID belongs to another process; inspect $pidfile"
-      return
-    fi
-  fi
   need uv
-  uv run --no-project python - "$RUNTIME/receipts.log" "$pidfile" "$SHERLOCK_CORE_DIR" <<'PY'
-import pathlib
-import subprocess
-import sys
-
-with open(sys.argv[1], 'ab') as log:
-    process = subprocess.Popen([sys.executable, 'scripts/core_receipts.py',
-                                '--core-dir', sys.argv[3], '--watch'],
-                               stdin=subprocess.DEVNULL, stdout=log, stderr=log,
-                               start_new_session=True)
-pathlib.Path(sys.argv[2]).write_text(str(process.pid) + '\n')
-PY
+  # The interpreter and script are absolute so ownership is unambiguous.
+  local interpreter
+  interpreter="$(uv run --no-project python -c 'import sys; print(sys.executable)')"
+  uv run --no-project python scripts/expanso_process.py ensure receipts \
+    --root "$ROOT" --fingerprint-file "$ROOT/scripts/core_receipts.py" \
+    -- "$interpreter" "$ROOT/scripts/core_receipts.py" \
+    --core-dir "$SHERLOCK_CORE_DIR" --watch
 }
 
 cmd_core() {
   need expanso-edge "install it: curl -fsSL https://get.expanso.io/edge/install.sh | bash"
   export SHERLOCK_CORE_DIR="${SHERLOCK_CORE_DIR:-$ROOT/.runtime/expanso/core}"
+  export SHERLOCK_DASHBOARD_URL="${SHERLOCK_DASHBOARD_URL:-http://127.0.0.1:23100}"
   if node_running core; then
+    start_node core cloud
     start_receipts
     say "sherlock-core already running; reusing its Cloud connection"
     return
@@ -335,6 +330,7 @@ cmd_status() {
 }
 
 cmd_down() {
+  stop_node receipts
   stop_node edge
   stop_node core
   rm -f "$RUNTIME/mode"

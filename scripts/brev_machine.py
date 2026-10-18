@@ -16,6 +16,7 @@ RUNTIME = ROOT / '.runtime' / 'brev'
 DIRECTOR = 'RedHatAI/NVIDIA-Nemotron-3.5-Lightning-30B-A3B-FP8'
 VLM = 'HuggingFaceTB/SmolVLM-500M-Instruct'
 PORTS = (18001, 18002)
+TRANSPORT_PORT = 23121
 
 
 def run(args, **kwargs):
@@ -129,13 +130,13 @@ def up(name):
     # Only committed, selected source files travel. No .env, keys, camera files or results.
     revision = run(['git', 'rev-parse', 'HEAD'], cwd=ROOT,
                    capture_output=True, text=True).stdout.strip()
-    if run(['git', 'status', '--porcelain', '--', 'brev', 'scripts', 'sherlock',
+    if run(['git', 'status', '--porcelain', '--', 'brev', 'scripts', 'sherlock', 'jobs', 'edge',
             'pyproject.toml', 'uv.lock', 'tests/fixtures/vllm'], cwd=ROOT,
            capture_output=True, text=True).stdout:
         raise ValueError('Commit setup source changes before uploading a release')
     relative = f'code/second-brain/projects/demos/demo-sherlock/releases/{revision}'
     remote = f'"$HOME"/{shlex.quote(relative)}'
-    archive = run(['git', 'archive', revision, 'brev', 'scripts', 'sherlock',
+    archive = run(['git', 'archive', revision, 'brev', 'scripts', 'sherlock', 'jobs', 'edge',
                    'pyproject.toml', 'uv.lock', 'tests/fixtures/vllm'],
                   cwd=ROOT, capture_output=True).stdout
     run([*ssh(name), f'mkdir -p {remote} && tar -xf - -C {remote}'], input=archive)
@@ -147,13 +148,15 @@ def connect(name):
     item = find_instance(name)
     if item['status'] != 'RUNNING':
         raise ValueError('Instance is not running; use just brev-up first')
-    require_free_ports(PORTS)
+    require_free_ports((*PORTS, TRANSPORT_PORT))
     run(['brev', 'refresh'])
     RUNTIME.mkdir(parents=True, exist_ok=True)
     receipt = RUNTIME / 'connection.json'
     command = ssh(name, '-N', '-o', 'ExitOnForwardFailure=yes',
                   '-L', f'127.0.0.1:{PORTS[0]}:127.0.0.1:8001',
-                  '-L', f'127.0.0.1:{PORTS[1]}:127.0.0.1:8002')
+                  '-L', f'127.0.0.1:{PORTS[1]}:127.0.0.1:8002',
+                  '-L', '127.0.0.1:23121:127.0.0.1:23121',
+                  '-R', '127.0.0.1:23100:127.0.0.1:8000')
     with subprocess.Popen(command) as tunnel:
         try:
             time.sleep(1)

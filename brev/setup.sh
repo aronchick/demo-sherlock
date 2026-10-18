@@ -80,12 +80,14 @@ elif [[ "$reuse" == 1 ]]; then
   else
     # Keep container compilation caches across a GPU stop/start. Profile the
     # small VLM first, as on initial deployment, before loading the Director.
+    echo 'Starting SmolVLM; waiting for model loading and warmup.'
     docker start vlm >/dev/null
     deadline=$((SECONDS + 600))
     until curl -sf http://127.0.0.1:8002/v1/models >/dev/null; do
       (( SECONDS < deadline )) || { echo 'VLM restart timed out' >&2; exit 1; }
       sleep 5
     done
+    echo 'SmolVLM is ready. Starting the FP8 Director; checkpoint loading can take several minutes.'
     docker start director >/dev/null
     echo 'Reused existing model containers and caches after GPU restart.'
   fi

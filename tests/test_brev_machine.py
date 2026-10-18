@@ -190,7 +190,13 @@ def test_failed_tunnel_smoke_preserves_previous_receipt_and_stops_own_process(tm
             return 0
 
     tunnel = Tunnel()
-    monkeypatch.setattr(workflow.subprocess, 'Popen', lambda *_: tunnel)
+    def launch(command):
+        assert '127.0.0.1:23121:127.0.0.1:23121' in command
+        assert '127.0.0.1:23100:127.0.0.1:8000' in command
+        assert '-R' in command
+        return tunnel
+
+    monkeypatch.setattr(workflow.subprocess, 'Popen', launch)
 
     def fail(_):
         raise ValueError('wrong model')

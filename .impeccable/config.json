@@ -47,6 +47,15 @@
         ],
         "createdAt": "2026-10-18T05:51:14.312Z",
         "reason": "False positive on .view: edge-to-edge camera image viewport with absolute overlays; cover is centered and captions/stamps have their own insets. Controls and headers checked at 1080p and 720p."
+      },
+      {
+        "rule": "border-accent-on-rounded",
+        "value": "*",
+        "files": [
+          "sherlock/sherlock/dashboard/static/casefile.css"
+        ],
+        "createdAt": "2026-10-18T06:08:15.436Z",
+        "reason": "Detector false positive after correction: custody modal has border-radius: 0; browser computed 0px at 1280x720 and 1920x1080. The 5px top rule belongs to the square case-file modal."
       }
     ]
   }

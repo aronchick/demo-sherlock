@@ -1,5 +1,5 @@
 """Run Sherlock.  `uv run --extra yolo python run.py` (real cameras+models per .env; `just live`)
-                 `uv run python run.py --mock --synthetic` (no hardware, no models; `just up`)"""
+`uv run python run.py --mock --synthetic` (no hardware, no models; `just demo-up`)"""
 import argparse
 import os
 import sys

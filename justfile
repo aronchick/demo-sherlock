@@ -4,6 +4,10 @@ set shell := ["bash", "-euo", "pipefail", "-c"]
 _default:
     @"{{ just_executable() }}" --justfile "{{ justfile() }}" --list --unsorted
 
+# Verify idle-board motion in isolated headless browsers, including reduced motion.
+motion-check:
+    uv run python scripts/check_motion.py
+
 # Ensure the configured existing GPU, model servers, tunnel and actual camera demo.
 up:
     uv run --no-project scripts/brev_machine.py demo-up

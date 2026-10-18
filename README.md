@@ -213,7 +213,8 @@ time: prompt, tool descriptions, thinking, or Director model
 Five Expanso Edge jobs (`jobs/sherlock-*.yaml`) on two nodes, deployed from
 Expanso Cloud by node label. The orchestrator hands its events to them
 through a small sink (`sherlock/sherlock/edge.py`) that is **off unless
-`SHERLOCK_EDGE=1`**, so `just up` and `just live` work with no Expanso.
+`SHERLOCK_EDGE=1`**. `just up` enables it and starts the Cloud-connected nodes;
+`just demo-up` and `just live` can run without Expanso.
 
 **What Expanso carries, and what it does not.** Model calls stay direct
 HTTP from the orchestrator to vLLM: they sit inside a tool loop where every
@@ -267,8 +268,8 @@ last 30 s, and says whether the nodes run locally or from Expanso Cloud.
 
 ```bash
 just expanso-local                 # starts both nodes, deploys the jobs
-SHERLOCK_EDGE=1 just up            # mock run; or SHERLOCK_EDGE=1 just live
-just down && just expanso-down
+SHERLOCK_EDGE=1 just demo-up       # generated scene; no GPU needed
+just down-local && just expanso-down
 ```
 
 Core records land in `.runtime/expanso/core/`. Locally C2 reads
@@ -1233,7 +1234,7 @@ kept, and seconds later the scene's real knife is confirmed. With real models
 SCOUT_MISLABEL=cup=knife uv run python run.py --synthetic
 ```
 
-Offline, `SCOUT_MISLABEL=cup=knife just up` plays the same beat: the mock
+Offline, `SCOUT_MISLABEL=cup=knife just demo-up` plays the same beat: the mock
 Verifier classifies the drawn crop, so it rejects the cup too.
 
 ## Open data and synthetic dataset provenance

@@ -557,11 +557,11 @@ function flow(edge, ms, color) {
   const e = E[edge];
   e.hot = Math.max(e.hot, now() + ms);
   e.tint = color || null;
-  if (!REDUCED) spawnParticle(e);
+  spawnParticle(e);
 }
 function spawnParticle(e, t0 = 0) {
   if (S.particles.some(p => p.e === e)) return;
-  S.particles.push({ e, t: t0, v: 0.006, j: 0, size: 2 });
+  S.particles.push({ e, t: t0, v: 0.006 * (REDUCED ? 0.35 : 1), j: 0, size: 4 });
 }
 function burst(x, y, color, n = 26) {
   if (REDUCED) n = Math.min(n, 6);
@@ -1066,8 +1066,8 @@ function drawFeed(t) {
 }
 function step(t) {
   ctx.clearRect(0, 0, innerWidth, innerHeight);
-  if (E.frames && !REDUCED && Math.random() < S.ambient * 0.05) spawnParticle(E.frames);
-  for (const e of Object.values(E)) if (e.hot > t && !REDUCED && Math.random() < 0.015) spawnParticle(e);
+  if (E.frames && Math.random() < S.ambient * 0.05) spawnParticle(E.frames);
+  for (const e of Object.values(E)) if (e.hot > t && Math.random() < 0.015) spawnParticle(e);
   for (const p of S.particles) p.t += p.v;
   S.particles = S.particles.filter(p => p.t < 1);
   if (S.particles.length > 400) S.particles.splice(0, S.particles.length - 400);

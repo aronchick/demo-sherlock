@@ -26,7 +26,7 @@ html, body { background: var(--paper); color: var(--ink); }
 .model-preview-image { border-radius: 1px; background: #e0e6ec; }
 .model-body .name { font-weight: 600; }
 .frame { border-color: #a4b0bd; }
-.frame .fh { padding-block: 7px; background: var(--card); }
+.frame .fh { padding-block: 8px; background: var(--card); }
 .frame.alert { outline-color: var(--weapon); }
 .stamp { background: var(--card); transform: none; border-radius: 1px; }
 .stamp.on { transform: none; }

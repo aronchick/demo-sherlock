@@ -29,6 +29,24 @@
         ],
         "createdAt": "2026-10-17T19:47:57.359Z",
         "reason": "Agent verified existing model preview images are hidden until pipeline-models.js assigns real data URLs; these are event-driven images, not shipped broken placeholders."
+      },
+      {
+        "rule": "cream-palette",
+        "value": "*",
+        "files": [
+          "sherlock/sherlock/dashboard/static/pipeline.html"
+        ],
+        "createdAt": "2026-10-18T05:49:08.140Z",
+        "reason": "False positive: later casefile.css overrides the legacy fallback palette with approved cool blue-gray #edf0f3 and #f8fafc, verified in rendered recording layouts."
+      },
+      {
+        "rule": "cramped-padding",
+        "value": "*",
+        "files": [
+          "sherlock/sherlock/dashboard/static/pipeline.html"
+        ],
+        "createdAt": "2026-10-18T05:51:14.312Z",
+        "reason": "False positive on .view: edge-to-edge camera image viewport with absolute overlays; cover is centered and captions/stamps have their own insets. Controls and headers checked at 1080p and 720p."
       }
     ]
   }

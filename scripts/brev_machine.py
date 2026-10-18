@@ -98,7 +98,7 @@ def down(name, timeout=180):
     item = find_instance(name)
     stopped = {'STOPPED', 'PAUSED', 'OFF'}
     if item['status'] in stopped:
-        print(f"{name}: {item['status']}; already stopped.")
+        print(f"{name}: Brev reports {item['status']}; no new stop request needed.")
         return
     if item['status'] != 'STOPPING':
         try:
@@ -112,7 +112,8 @@ def down(name, timeout=180):
         if observed['id'] != item['id']:
             raise ValueError('Instance identity changed while stopping; inspect brev ls')
         if observed['status'] in stopped:
-            print(f"{name}: {observed['status']}. GPU stopped; storage may still incur charges.")
+            print(f"{name}: Brev reports {observed['status']}. Provider shutdown may still "
+                  "be completing; retained storage remains billable.")
             return
         if time.monotonic() >= deadline:
             raise ValueError(f"Stop not confirmed ({observed['status']}); check brev ls --json")

@@ -416,3 +416,33 @@ def test_invalid_receipt_cannot_skip_gpu_shutdown(receipt, tmp_path, monkeypatch
     with pytest.raises(ValueError, match='receipt is invalid'):
         workflow.demo_down('new')
     assert calls == ['new']
+
+
+def test_setup_restarts_matching_containers_without_deleting_caches(tmp_path):
+    import os
+
+    fake = tmp_path / 'bin'
+    fake.mkdir()
+    calls = tmp_path / 'calls'
+    docker = fake / 'docker'
+    docker.write_text('''#!/bin/bash
+printf '%s\\n' "$*" >> "$CALLS"
+case "$*" in
+  *Config.Image*) echo vllm/vllm-openai:v0.28.0 ;;
+  *Config.Cmd*director) printf '%s\\n' --model RedHatAI/NVIDIA-Nemotron-3.5-Lightning-30B-A3B-FP8 ;;
+  *Config.Cmd*vlm) printf '%s\\n' --model HuggingFaceTB/SmolVLM-500M-Instruct ;;
+  *State.Running*) echo false ;;
+esac
+''')
+    docker.chmod(0o755)
+    for name in ['nvidia-smi', 'uv', 'curl']:
+        tool = fake / name
+        tool.write_text('#!/bin/sh\nexit 0\n')
+        tool.chmod(0o755)
+    result = subprocess.run(['bash', str(ROOT / 'brev/setup.sh')],
+                            env={**os.environ, 'PATH': f'{fake}:{os.environ["PATH"]}', 'CALLS': str(calls)},
+                            capture_output=True, text=True, check=False)
+    assert result.returncode == 0, result.stderr
+    operations = calls.read_text().splitlines()
+    assert operations.index('start vlm') < operations.index('start director')
+    assert not any(line.startswith(('rm ', 'pull ', 'run ')) for line in operations)

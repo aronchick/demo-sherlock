@@ -48,6 +48,10 @@ def core_up(name: str):
              'curl -fsSL https://get.expanso.io/edge/install.sh -o .runtime/install-edge.sh && '
              f'EXPANSO_VERSION={VERSION} EXPANSO_INSTALL_DIR="$PWD/bin" '
              'EXPANSO_DISABLEANALYTICS=true bash .runtime/install-edge.sh')])
+    run([*ssh(name), (f'set -e; cd {remote}; export PATH="$PWD/bin:$HOME/.local/bin:$PATH"; '
+         'if ! command -v uv >/dev/null; then '
+         'curl -fsSL https://astral.sh/uv/0.12.17/install.sh -o .runtime/install-uv.sh; '
+         'UV_INSTALL_DIR="$PWD/bin" UV_NO_MODIFY_PATH=1 sh .runtime/install-uv.sh; fi')])
     registered = subprocess.run(
         [*ssh(name), f'test -f {remote}/.cloud-state/sherlock-core/auth/credentials.creds'],
         check=False, capture_output=True)
@@ -55,7 +59,7 @@ def core_up(name: str):
     # stdin keeps the short-lived bootstrap credential out of argv and logs.
     command = (f'set -e; cd {remote} && umask 077 && mkdir -p .runtime && '
                'cat > .runtime/bootstrap.env && '
-               'export PATH="$PWD/bin:$PATH" && '
+               'export PATH="$PWD/bin:$HOME/.local/bin:$PATH" && '
                'export EXPANSO_WORKSPACE_ENV="$PWD/.runtime/bootstrap.env" && '
                'export SHERLOCK_CORE_DIR="$PWD/.runtime/expanso/core" && '
                'trap \'rm -f .runtime/bootstrap.env\' EXIT; '

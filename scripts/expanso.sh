@@ -51,7 +51,11 @@ load_creds() {
   local file perm key value
   file="$(env_file)"
   [[ -f "$file" ]] || die "no credentials file at $file (README: Expanso)"
-  perm="$(stat -f '%Lp' "$file" 2>/dev/null || stat -c '%a' "$file")"
+  if [[ "$(uname -s)" == Darwin ]]; then
+    perm="$(stat -f '%Lp' "$file")"
+  else
+    perm="$(stat -c '%a' "$file")"
+  fi
   [[ "$perm" == 600 ]] || die "$file must be readable only by you (chmod 600)"
   EXPANSO_CLI_ENDPOINT="" EXPANSO_CLI_API_KEY="" EXPANSO_EDGE_BOOTSTRAP_TOKEN=""
   while IFS='=' read -r key value; do
@@ -91,12 +95,11 @@ local_cli() { expanso-cli --endpoint "http://$1" "${@:2}"; }
 
 port_busy() { lsof -nP -iTCP:"$1" -sTCP:LISTEN >/dev/null 2>&1; }
 
-node_running() {
-  local pid
-  [[ -f "$RUNTIME/$1.pid" ]] || return 1
-  pid="$(cat "$RUNTIME/$1.pid")"
-  kill -0 "$pid" 2>/dev/null && ps -p "$pid" -o command= | grep -q expanso-edge
+process_control() {
+  uv run --no-project python scripts/expanso_process.py "$@" --root "$ROOT"
 }
+
+node_running() { process_control status "$1"; }
 
 # The pipelines read these at start; ${VAR:default} in jobs/*.yaml.
 node_env() {
@@ -115,19 +118,23 @@ node_env() {
 start_node() {
   local role="$1" mode="$2" api ports args
   if [[ "$role" == edge ]]; then api="$EDGE_API"; ports=("${EDGE_PORTS[@]}"); else api="$CORE_API"; ports=("${CORE_PORTS[@]}"); fi
-  node_running "$role" && die "sherlock-$role is already running here; run: scripts/expanso.sh down"
-  for p in "${api##*:}" "${ports[@]}"; do port_busy "$p" && die "port $p is in use"; done
+  if ! node_running "$role"; then
+    for p in "${api##*:}" "${ports[@]}"; do port_busy "$p" && die "port $p is in use"; done
+  fi
   mkdir -p "$RUNTIME"
   node_env "$role"
   args=(run -c "edge/sherlock-$role.yaml" --no-watch --api-listen "$api")
   if [[ "$mode" == local ]]; then
-    rm -rf "$RUNTIME/$role-local"
+    mkdir -p "$RUNTIME/$role-local"
     args+=(--local --data-dir "$RUNTIME/$role-local")
   else
     args+=(--data-dir "$STATE/sherlock-$role")
   fi
-  nohup expanso-edge "${args[@]}" >| "$RUNTIME/$role.log" 2>&1 </dev/null &
-  echo $! >| "$RUNTIME/$role.pid"
+  need uv
+  # Exact process identity and a config fingerprint govern reuse and shutdown.
+  uv run --no-project python scripts/expanso_process.py ensure "$role" \
+    --root "$ROOT" --fingerprint-file "$ROOT/edge/sherlock-$role.yaml" \
+    -- "$(command -v expanso-edge)" "${args[@]}"
   echo "$mode" >| "$RUNTIME/mode"
 }
 
@@ -149,7 +156,7 @@ wait_ports() {
   done
 }
 
-# deploy <cli function and args...> -- <job files...>; an unchanged job is restarted.
+# Deploy changed specs; unchanged running versions keep their executions.
 deploy() {
   local cli=() file name out
   while [[ "$1" != -- ]]; do cli+=("$1"); shift; done; shift
@@ -158,12 +165,36 @@ deploy() {
     if out="$("${cli[@]}" job deploy "$file" 2>&1)"; then
       say "  deployed $name"
     elif grep -q NO_CHANGES_DETECTED <<<"$out"; then
-      "${cli[@]}" job rerun "$name" >/dev/null && say "  $name unchanged; restarted"
+      say "  $name unchanged; preserving running executions"
     else
       printf '%s\n' "$out" | sed -n '1,8p' >&2
       die "could not deploy $file"
     fi
+    wait_job "${cli[@]}" -- "$name"
   done
+}
+
+# Verify the current version, not a historical execution. All declared jobs
+# must be running before the complete demo can be called ready.
+wait_job() {
+  local cli=() name version state executions restarted=0
+  while [[ "$1" != -- ]]; do cli+=("$1"); shift; done; shift
+  name="$1"
+  for _ in $(seq 1 60); do
+    state="$("${cli[@]}" job describe "$name" -f json)"
+    version="$(jq -er '.status.version | numbers' <<<"$state")"
+    executions="$("${cli[@]}" job executions "$name" --job-version "$version" -f json)"
+    if jq -e --argjson version "$version" 'any(.[]; .job_version == $version and .status.desired_state.state_type == "running" and .status.observed_state.state_type == "running")' <<<"$executions" >/dev/null; then
+      say "  $name v$version running"
+      return
+    fi
+    if [[ "$restarted" == 0 ]] && { jq -e '.status.state.state_type == "stopped"' <<<"$state" >/dev/null || jq -e 'length > 0 and all(.[]; .status.observed_state.state_type == "failed" or .status.observed_state.state_type == "stopped" or .status.observed_state.state_type == "complete")' <<<"$executions" >/dev/null; }; then
+      "${cli[@]}" job rerun "$name" >/dev/null
+      restarted=1
+    fi
+    sleep 1
+  done
+  die "$name current version did not reach a running execution"
 }
 
 bootstrap() {
@@ -179,18 +210,7 @@ bootstrap() {
     }
 }
 
-stop_node() {
-  local role="$1" pid
-  [[ -f "$RUNTIME/$role.pid" ]] || return 0
-  pid="$(cat "$RUNTIME/$role.pid")"
-  if node_running "$role"; then
-    kill "$pid" 2>/dev/null || true
-    for _ in $(seq 1 40); do kill -0 "$pid" 2>/dev/null || break; sleep 0.25; done
-    kill -9 "$pid" 2>/dev/null || true
-    say "sherlock-$role stopped"
-  fi
-  rm -f "$RUNTIME/$role.pid"
-}
+stop_node() { process_control stop "$1"; }
 
 # --------------------------------------------------------------- commands
 
@@ -200,7 +220,7 @@ cmd_check() {
 }
 
 cmd_local() {
-  need expanso-edge; need expanso-cli
+  need expanso-edge; need expanso-cli; need jq
   cmd_check >/dev/null
   # Locally the core pushes serving numbers straight to the dashboard.
   export SHERLOCK_DASHBOARD_URL="${SHERLOCK_DASHBOARD_URL:-http://127.0.0.1:${DASHBOARD_PORT:-8000}}"
@@ -240,6 +260,14 @@ cmd_edge() {
   need expanso-edge; need expanso-cli; need jq
   cmd_check >/dev/null
   load_creds; require_cli_creds; require_bootstrap_token
+  if node_running edge; then
+    start_node edge cloud
+    wait_connected edge
+    deploy cloud_cli -- "${EDGE_JOBS[@]}" "${CORE_JOBS[@]}"
+    wait_ports edge "${EDGE_PORTS[@]}"
+    say "sherlock-edge already connected; reusing active Cloud pipelines"
+    return
+  fi
   mkdir -p "$RUNTIME"
   cloud_cli node list >/dev/null 2>"$RUNTIME/cloud-check.log" || {
     sed -n '1,6p' "$RUNTIME/cloud-check.log" >&2
@@ -254,15 +282,37 @@ cmd_edge() {
   say "Run Sherlock with the sink on:  SHERLOCK_EDGE=1 just live"
 }
 
+start_receipts() {
+  need uv
+  # The interpreter and script are absolute so ownership is unambiguous.
+  local interpreter
+  interpreter="$(uv run --no-project python -c 'import sys; print(sys.executable)')"
+  uv run --no-project python scripts/expanso_process.py ensure receipts \
+    --root "$ROOT" --fingerprint-file "$ROOT/scripts/core_receipts.py" \
+    -- "$interpreter" "$ROOT/scripts/core_receipts.py" \
+    --core-dir "$SHERLOCK_CORE_DIR" --watch
+}
+
 cmd_core() {
   need expanso-edge "install it: curl -fsSL https://get.expanso.io/edge/install.sh | bash"
-  load_creds; require_bootstrap_token
+  export SHERLOCK_CORE_DIR="${SHERLOCK_CORE_DIR:-$ROOT/.runtime/expanso/core}"
+  export SHERLOCK_DASHBOARD_URL="${SHERLOCK_DASHBOARD_URL:-http://127.0.0.1:23100}"
+  if node_running core; then
+    start_node core cloud
+    start_receipts
+    say "sherlock-core already running; reusing its Cloud connection"
+    return
+  fi
+  if [[ ! -f "$STATE/sherlock-core/auth/credentials.creds" ]]; then
+    load_creds; require_bootstrap_token
+  fi
   # The dashboard is reached through the laptop tunnel's reverse port.
   export SHERLOCK_DASHBOARD_URL="${SHERLOCK_DASHBOARD_URL:-http://127.0.0.1:23100}"
-  export SHERLOCK_CORE_DIR="${SHERLOCK_CORE_DIR:-$HOME/sherlock-core}"
+  export SHERLOCK_CORE_DIR="${SHERLOCK_CORE_DIR:-$ROOT/.runtime/expanso/core}"
   mkdir -p "$RUNTIME"
   bootstrap core
   start_node core cloud
+  start_receipts
   say "sherlock-core started; C1 and C2 start once Expanso Cloud assigns them."
   say "Records land in $SHERLOCK_CORE_DIR. Check with: scripts/expanso.sh status"
 }
@@ -280,6 +330,7 @@ cmd_status() {
 }
 
 cmd_down() {
+  stop_node receipts
   stop_node edge
   stop_node core
   rm -f "$RUNTIME/mode"

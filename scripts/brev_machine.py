@@ -1,14 +1,18 @@
-"""Mac entry point for an existing Brev machine and owned, foreground SSH tunnel."""
+"""Mac entry point for an existing Brev machine and owned presenter and SSH lifecycle."""
 from __future__ import annotations
 
 import argparse
+import fcntl
+import hashlib
 import json
 import os
 import re
 import shlex
+import signal
 import socket
 import subprocess
 import time
+import urllib.request
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -16,6 +20,8 @@ RUNTIME = ROOT / '.runtime' / 'brev'
 DIRECTOR = 'RedHatAI/NVIDIA-Nemotron-3.5-Lightning-30B-A3B-FP8'
 VLM = 'HuggingFaceTB/SmolVLM-500M-Instruct'
 PORTS = (18001, 18002)
+TRANSPORT_PORT = 23121
+DEFAULT_INSTANCE = 'sherlock-nebius-h100'
 
 
 def run(args, **kwargs):
@@ -92,7 +98,7 @@ def down(name, timeout=180):
     item = find_instance(name)
     stopped = {'STOPPED', 'PAUSED', 'OFF'}
     if item['status'] in stopped:
-        print(f"{name}: {item['status']}; already stopped.")
+        print(f"{name}: Brev reports {item['status']}; no new stop request needed.")
         return
     if item['status'] != 'STOPPING':
         try:
@@ -106,12 +112,30 @@ def down(name, timeout=180):
         if observed['id'] != item['id']:
             raise ValueError('Instance identity changed while stopping; inspect brev ls')
         if observed['status'] in stopped:
-            print(f"{name}: {observed['status']}. GPU stopped; storage may still incur charges.")
+            print(f"{name}: Brev reports {observed['status']}. Provider shutdown may still "
+                  "be completing; retained storage remains billable.")
             return
         if time.monotonic() >= deadline:
             raise ValueError(f"Stop not confirmed ({observed['status']}); check brev ls --json")
         print(f"Waiting for {name} to stop ({observed['status']})...", flush=True)
         time.sleep(3)
+
+
+def start_existing(name):
+    # Brev inventory can report STOPPED before the provider finishes STOPPING.
+    deadline = time.monotonic() + 180
+    while True:
+        try:
+            result = run(['brev', 'start', name, '--detached'], capture_output=True, text=True)
+            if result.stdout:
+                print(result.stdout.strip(), flush=True)
+            return
+        except subprocess.CalledProcessError as exc:
+            detail = (exc.stdout or '') + (exc.stderr or '')
+            if 'status=STOPPING' not in detail or time.monotonic() >= deadline:
+                raise
+            print('Provider is still completing shutdown; retrying start shortly.', flush=True)
+            time.sleep(5)
 
 
 def up(name):
@@ -121,39 +145,41 @@ def up(name):
     if item['status'] in {'STOPPED', 'STOPPING', 'PAUSED', 'OFF'}:
         if item['status'] == 'STOPPING':
             raise ValueError('Instance is still stopping; retry after it has stopped')
-        run(['brev', 'start', name])
-    elif item['status'] != 'RUNNING':
+        start_existing(name)
+    elif item['status'] not in {'RUNNING', 'STARTING', 'UNHEALTHY'}:
         raise ValueError(f"Instance is {item['status']}; wait for Brev to finish")
     run(['brev', 'refresh'])
     wait_for_ssh(name)
     # Only committed, selected source files travel. No .env, keys, camera files or results.
     revision = run(['git', 'rev-parse', 'HEAD'], cwd=ROOT,
                    capture_output=True, text=True).stdout.strip()
-    if run(['git', 'status', '--porcelain', '--', 'brev', 'scripts', 'sherlock',
+    if run(['git', 'status', '--porcelain', '--', 'brev', 'scripts', 'sherlock', 'jobs', 'edge',
             'pyproject.toml', 'uv.lock', 'tests/fixtures/vllm'], cwd=ROOT,
            capture_output=True, text=True).stdout:
         raise ValueError('Commit setup source changes before uploading a release')
     relative = f'code/second-brain/projects/demos/demo-sherlock/releases/{revision}'
     remote = f'"$HOME"/{shlex.quote(relative)}'
-    archive = run(['git', 'archive', revision, 'brev', 'scripts', 'sherlock',
+    archive = run(['git', 'archive', revision, 'brev', 'scripts', 'sherlock', 'jobs', 'edge',
                    'pyproject.toml', 'uv.lock', 'tests/fixtures/vllm'],
                   cwd=ROOT, capture_output=True).stdout
     run([*ssh(name), f'mkdir -p {remote} && tar -xf - -C {remote}'], input=archive)
     run([*ssh(name), f'cd {remote} && bash brev/setup.sh'])
-    print(f'GPU setup verified. Next: just brev-connect {name}', flush=True)
+    print(f'GPU setup verified: {name}.', flush=True)
 
 
 def connect(name):
     item = find_instance(name)
     if item['status'] != 'RUNNING':
         raise ValueError('Instance is not running; use just brev-up first')
-    require_free_ports(PORTS)
+    require_free_ports((*PORTS, TRANSPORT_PORT))
     run(['brev', 'refresh'])
     RUNTIME.mkdir(parents=True, exist_ok=True)
     receipt = RUNTIME / 'connection.json'
     command = ssh(name, '-N', '-o', 'ExitOnForwardFailure=yes',
                   '-L', f'127.0.0.1:{PORTS[0]}:127.0.0.1:8001',
-                  '-L', f'127.0.0.1:{PORTS[1]}:127.0.0.1:8002')
+                  '-L', f'127.0.0.1:{PORTS[1]}:127.0.0.1:8002',
+                  '-L', '127.0.0.1:23121:127.0.0.1:23121',
+                  '-R', '127.0.0.1:23100:127.0.0.1:8000')
     with subprocess.Popen(command) as tunnel:
         try:
             time.sleep(1)
@@ -225,6 +251,236 @@ def live(args):
                 pidfile.unlink()
 
 
+def process_identity(pid):
+    """A PID alone cannot authorize reuse or termination after recycling."""
+    status = subprocess.run(['ps', '-p', str(pid), '-o', 'stat='],
+                            capture_output=True, text=True, check=False)
+    if status.returncode or status.stdout.strip().startswith('Z'):
+        return ''
+    result = subprocess.run(['ps', '-p', str(pid), '-o', 'lstart=', '-o', 'command='],
+                            capture_output=True, text=True, check=False)
+    return result.stdout.strip() if result.returncode == 0 else ''
+
+
+def read_owned(kind):
+    path = RUNTIME / f'{kind}.json'
+    if not path.exists():
+        return None
+    state = json.loads(path.read_text())
+    if (not isinstance(state, dict) or type(state.get('pid')) is not int
+            or state['pid'] <= 1 or not isinstance(state.get('identity'), str)
+            or not state['identity']):
+        raise ValueError(f'{kind} ownership receipt is invalid; no process was touched')
+    identity = process_identity(state['pid'])
+    if not identity:
+        path.unlink()
+        return None
+    if identity != state['identity'] or os.getpgid(state['pid']) != state['pid']:
+        raise ValueError(f'{kind} PID ownership changed; no unrelated process was touched')
+    return state
+
+
+def stop_owned(kind):
+    state = read_owned(kind)
+    if state is None:
+        return
+    pid = state['pid']
+    os.killpg(pid, signal.SIGTERM)
+    deadline = time.monotonic() + 15
+    while process_identity(pid) == state['identity']:
+        if time.monotonic() >= deadline:
+            # Never signal a recycled group after the original leader disappears.
+            if os.getpgid(pid) == pid:
+                os.killpg(pid, signal.SIGKILL)
+            break
+        time.sleep(.2)
+    (RUNTIME / f'{kind}.json').unlink(missing_ok=True)
+    if kind == 'presenter':
+        (ROOT / '.runtime' / 'sherlock.pid').unlink(missing_ok=True)
+
+
+def launch_owned(kind, command, settings, env=None):
+    RUNTIME.mkdir(parents=True, exist_ok=True)
+    with (RUNTIME / f'{kind}.log').open('ab') as log:
+        process = subprocess.Popen(command, cwd=ROOT, env=env, stdin=subprocess.DEVNULL,
+                                   stdout=log, stderr=log, start_new_session=True)
+    time.sleep(.2)
+    identity = process_identity(process.pid)
+    if process.poll() is not None or not identity:
+        raise ValueError(f'{kind} exited; inspect .runtime/brev/{kind}.log')
+    state = {**settings, 'pid': process.pid, 'identity': identity}
+    path = RUNTIME / f'{kind}.json'
+    temporary = path.with_suffix('.tmp')
+    temporary.write_text(json.dumps(state, indent=2) + '\n')
+    temporary.replace(path)
+    return state
+
+
+def tunnel_command(name, port):
+    return ssh(name, '-N', '-o', 'ExitOnForwardFailure=yes',
+               '-L', f'127.0.0.1:{PORTS[0]}:127.0.0.1:8001',
+               '-L', f'127.0.0.1:{PORTS[1]}:127.0.0.1:8002',
+               '-L', f'127.0.0.1:{TRANSPORT_PORT}:127.0.0.1:{TRANSPORT_PORT}',
+               '-R', f'127.0.0.1:23100:127.0.0.1:{port}')
+
+
+def ensure_tunnel(name, item, port):
+    expected = {'name': name, 'id': item['id'], 'port': port}
+    state = read_owned('tunnel')
+    if state:
+        if any(state.get(key) != value for key, value in expected.items()):
+            raise ValueError('Owned tunnel targets different settings; run just down first')
+        smoke(name)
+        return
+    require_free_ports((*PORTS, TRANSPORT_PORT))
+    launch_owned('tunnel', tunnel_command(name, port), expected)
+    try:
+        smoke(name)
+        if not read_owned('tunnel'):
+            raise ValueError('Tunnel exited during inference verification')
+    except Exception:
+        stop_owned('tunnel')
+        raise
+
+
+def presenter_settings(name, item, port):
+    # Compare configuration without ever writing credentials to a receipt.
+    digest = hashlib.sha256()
+    path = ROOT / '.env'
+    if path.exists():
+        digest.update(path.read_bytes())
+    relevant = {key: value for key, value in os.environ.items()
+                if key.startswith(('SCOUT_', 'YOLO_', 'OBSBOT_', 'SHERLOCK_', 'DIRECTOR_',
+                                   'ANALYST_', 'VERIFIER_')) or key in {'CAMERAS'}}
+    digest.update(json.dumps(relevant, sort_keys=True).encode())
+    # Loaded Python must not silently survive an application update.
+    for source in sorted([ROOT / 'run.py', *(ROOT / 'sherlock').rglob('*.py'),
+                          *(ROOT / 'models').glob('*.pt')]):
+        if source.is_file():
+            digest.update(str(source.relative_to(ROOT)).encode())
+            digest.update(source.read_bytes())
+    return {'name': name, 'id': item['id'], 'port': port,
+            'root': str(ROOT), 'config_digest': digest.hexdigest()}
+
+
+def presenter_health(port):
+    with urllib.request.urlopen(f'http://127.0.0.1:{port}/mode', timeout=5) as response:
+        mode = json.load(response)
+    return (mode.get('mock') is False and mode.get('synthetic') is False
+            and mode.get('director_model') == DIRECTOR and mode.get('vlm_model') == VLM
+            and mode.get('scout_backend') == 'yolo')
+
+
+def ensure_presenter(name, item, port):
+    expected = presenter_settings(name, item, port)
+    state = read_owned('presenter')
+    if state:
+        if any(state.get(key) != value for key, value in expected.items()):
+            print('Presenter source or configuration changed; restarting the owned presenter.')
+            stop_owned('presenter')
+        else:
+            if not presenter_health(port):
+                raise ValueError('Owned presenter is not healthy; inspect presenter.log')
+            print(f'Sherlock already healthy: http://localhost:{port}/')
+            return
+    require_free_ports([port])
+    state = launch_owned('presenter',
+                         ['uv', 'run', '--extra', 'yolo', 'python', str(ROOT / 'run.py'),
+                          '--port', str(port)], expected,
+                         env={**os.environ, **model_env(name), 'SHERLOCK_EDGE': '1'})
+    (ROOT / '.runtime' / 'sherlock.pid').write_text(f"{state['pid']}\n")
+    deadline = time.monotonic() + 180
+    try:
+        while time.monotonic() < deadline:
+            if not read_owned('presenter'):
+                raise ValueError('Presenter exited; inspect .runtime/brev/presenter.log')
+            try:
+                if presenter_health(port):
+                    print(f'Sherlock ready: http://localhost:{port}/')
+                    return
+            except (OSError, ValueError):
+                pass
+            time.sleep(1)
+        raise ValueError('Presenter did not report real YOLO and models within three minutes')
+    except Exception:
+        stop_owned('presenter')
+        raise
+
+
+def sandbox_up(port):
+    existing = read_owned('presenter')
+    if existing:
+        if existing.get('sandbox') is True and existing.get('port') == port:
+            with urllib.request.urlopen(f'http://127.0.0.1:{port}/mode', timeout=5) as response:
+                if json.load(response).get('mock') is True:
+                    print(f'Rehearsal already ready: http://localhost:{port}/')
+                    return
+        raise ValueError('A different presenter is owned; run just down-local first')
+    require_free_ports([port])
+    launch_owned('presenter', ['uv', 'run', 'python', str(ROOT / 'run.py'),
+                              '--mock', '--synthetic', '--port', str(port)],
+                 {'sandbox': True, 'port': port},
+                 env={**os.environ, 'DASHBOARD_HOST': '127.0.0.1',
+                      'SHERLOCK_EDGE': '0',
+                      'EVIDENCE_DIR': str(ROOT / '.runtime' / 'rehearsal-evidence'),
+                      'CAMERAS': 'hero:fake:synthetic,scout1:fake:synthetic'})
+    deadline = time.monotonic() + 120
+    try:
+        while time.monotonic() < deadline:
+            if not read_owned('presenter'):
+                raise ValueError('Rehearsal exited; inspect presenter.log')
+            try:
+                with urllib.request.urlopen(f'http://127.0.0.1:{port}/mode', timeout=5) as response:
+                    if json.load(response).get('mock') is True:
+                        print(f'Rehearsal ready: http://localhost:{port}/')
+                        return
+            except (OSError, ValueError):
+                pass
+            time.sleep(1)
+        raise ValueError('Rehearsal did not become ready within two minutes')
+    except Exception:
+        stop_owned('presenter')
+        raise
+
+
+def demo_up(name, port):
+    # Existing-instance only. No command in this path creates a billable machine.
+    # Fail busy/foreign local state before spending time booting a GPU.
+    if read_owned('tunnel') is None:
+        require_free_ports((*PORTS, TRANSPORT_PORT))
+    if read_owned('presenter') is None:
+        require_free_ports([port])
+    up(name)
+    item = find_instance(name)
+    if item['status'] != 'RUNNING':
+        raise ValueError('Instance did not reach RUNNING after setup')
+    run(['uv', 'run', '--no-project', 'scripts/expanso_brev.py', 'up', name], cwd=ROOT)
+    ensure_tunnel(name, item, port)
+    run(['bash', 'scripts/expanso.sh', 'edge'], cwd=ROOT)
+    ensure_presenter(name, item, port)
+
+
+def demo_down(name, local_only=False):
+    errors = []
+    for kind in (('presenter',) if local_only else ('presenter', 'tunnel')):
+        try:
+            stop_owned(kind)
+        except (OSError, ValueError) as exc:
+            errors.append(str(exc))
+    # A missing or invalid local PID must never prevent the GPU stop request.
+    if not local_only:
+        try:
+            run(['bash', 'scripts/expanso.sh', 'down'], cwd=ROOT)
+        except (OSError, ValueError, subprocess.CalledProcessError) as exc:
+            errors.append(str(exc))
+        try:
+            down(name)
+        except (OSError, ValueError, subprocess.CalledProcessError) as exc:
+            errors.append(str(exc))
+    if errors:
+        raise ValueError('; '.join(errors))
+
+
 def retire(old, replacement):
     previous, current = find_instance(old), find_instance(replacement)
     if previous['id'] == current['id']:
@@ -245,9 +501,11 @@ def retire(old, replacement):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     sub = parser.add_subparsers(dest='command', required=True)
-    for command in ('up', 'connect', 'down'):
+    for command in ('up', 'connect', 'down', 'demo-up', 'demo-down', 'local-down', 'sandbox-up'):
         child = sub.add_parser(command)
-        child.add_argument('instance', nargs='?', default='sherlock-h100', type=instance_name)
+        child.add_argument('instance', nargs='?', default=os.environ.get('BREV_INSTANCE', DEFAULT_INSTANCE), type=instance_name)
+        if command in {'demo-up', 'sandbox-up'}:
+            child.add_argument('--port', type=int, default=int(os.environ.get('DASHBOARD_PORT', '8000')))
     sub.add_parser('status')
     child = sub.add_parser('live')
     child.add_argument('args', nargs=argparse.REMAINDER)
@@ -256,7 +514,17 @@ def main():
     child.add_argument('replacement', type=instance_name)
     args = parser.parse_args()
     try:
-        if args.command == 'status':
+        if args.command in {'demo-up', 'demo-down', 'local-down', 'sandbox-up'}:
+            RUNTIME.mkdir(parents=True, exist_ok=True)
+            with (RUNTIME / 'lifecycle.lock').open('a') as lock:
+                fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                if args.command == 'sandbox-up':
+                    sandbox_up(args.port)
+                elif args.command == 'demo-up':
+                    demo_up(args.instance, args.port)
+                else:
+                    demo_down(args.instance, local_only=args.command == 'local-down')
+        elif args.command == 'status':
             print(json.dumps(inventory(), indent=2))
         elif args.command == 'up':
             up(args.instance)
@@ -269,9 +537,11 @@ def main():
         else:
             retire(args.old, args.replacement)
     except (ValueError, OSError, subprocess.CalledProcessError) as exc:
-        parser.exit(1, f'Sherlock Brev: {exc}\n')
+        hint = ('GPU may remain running; use just down to request and verify shutdown.\n'
+                if args.command == 'demo-up' else '')
+        parser.exit(1, f'Sherlock Brev: {exc}\n{hint}')
     except KeyboardInterrupt:
-        parser.exit(130, 'Brev connection closed.\n')
+        parser.exit(130, 'Interrupted. Owned services and GPU may still be running; use just down.\n')
 
 
 if __name__ == '__main__':

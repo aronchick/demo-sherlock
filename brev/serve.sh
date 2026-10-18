@@ -75,6 +75,7 @@ done
 docker run -d --name director --gpus all --ipc=host -p "${MODEL_BIND_HOST}:8001:8000" \
   -v ~/.cache/huggingface:/root/.cache/huggingface "$IMG" \
   --model "$DIRECTOR" --served-model-name "$DIRECTOR" director \
+  --safetensors-load-strategy prefetch \
   --max-model-len 32768 --gpu-memory-utilization 0.60 --max-num-seqs 16 \
   "${PREFIX_CACHE_FLAGS[@]}" \
   --enable-auto-tool-choice --tool-call-parser "$TOOL_PARSER" "${REASONING_FLAGS[@]}"

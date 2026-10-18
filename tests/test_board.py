@@ -71,7 +71,8 @@ def test_board_is_served_at_log_and_later_routes_still_win():
         assert client.get("/").json() == {"page": "flow"}  # beats the static index.html
         assert client.get("/mode").json() == {"mock": True, "director_model": None, "vlm_model": None,
                                                "scout_backend": None, "synthetic": False, "scout_ms": None,
-                                               "servers": None}
+                                               "servers": None, "scout_model": s.cfg.yolo_model,
+                                               "scout_sha256": None}
         assert client.get("/stream/wide/nope").status_code == 404
         assert client.get("/nope.js").status_code == 404
 

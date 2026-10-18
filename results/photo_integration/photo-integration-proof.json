@@ -1,0 +1,396 @@
+{
+  "cases": [
+    {
+      "input": 0,
+      "incident": "20261018-000351-001",
+      "action": "alert",
+      "verified": true,
+      "ms": 5630,
+      "receipt": true,
+      "response": {
+        "status": "investigating",
+        "simulated": true,
+        "team_notified_at": 1792296309.216866,
+        "events": [
+          {
+            "action": "investigate",
+            "t": 1792296309.11484,
+            "simulated": true
+          },
+          {
+            "action": "notify_team",
+            "t": 1792296309.216866,
+            "simulated": true
+          }
+        ]
+      },
+      "verification": {
+        "signature": "verified",
+        "artifacts": "verified",
+        "history": "verified"
+      }
+    },
+    {
+      "input": 1,
+      "incident": "20261018-000712-002",
+      "action": "alert",
+      "verified": true,
+      "ms": 4118,
+      "receipt": true,
+      "response": {
+        "status": "investigating",
+        "simulated": true,
+        "team_notified_at": 1792296437.042319,
+        "events": [
+          {
+            "action": "investigate",
+            "t": 1792296436.67962,
+            "simulated": true
+          },
+          {
+            "action": "notify_team",
+            "t": 1792296437.042319,
+            "simulated": true
+          }
+        ]
+      },
+      "verification": {
+        "signature": "verified",
+        "artifacts": "verified",
+        "history": "verified"
+      }
+    },
+    {
+      "input": 2,
+      "incident": "20261018-000717-003",
+      "action": "alert",
+      "verified": true,
+      "ms": 7092,
+      "receipt": true,
+      "response": {
+        "status": "investigating",
+        "simulated": true,
+        "team_notified_at": 1792296447.857325,
+        "events": [
+          {
+            "action": "investigate",
+            "t": 1792296447.49883,
+            "simulated": true
+          },
+          {
+            "action": "notify_team",
+            "t": 1792296447.857325,
+            "simulated": true
+          }
+        ]
+      },
+      "verification": {
+        "signature": "verified",
+        "artifacts": "verified",
+        "history": "verified"
+      }
+    },
+    {
+      "input": 3,
+      "incident": "20261018-000728-004",
+      "action": "alert",
+      "verified": true,
+      "ms": 4365,
+      "receipt": true,
+      "response": {
+        "status": "investigating",
+        "simulated": true,
+        "team_notified_at": 1792296453.767617,
+        "events": [
+          {
+            "action": "investigate",
+            "t": 1792296453.400073,
+            "simulated": true
+          },
+          {
+            "action": "notify_team",
+            "t": 1792296453.767617,
+            "simulated": true
+          }
+        ]
+      },
+      "verification": {
+        "signature": "verified",
+        "artifacts": "verified",
+        "history": "verified"
+      }
+    },
+    {
+      "input": 4,
+      "incident": "20261018-000734-005",
+      "action": "alert",
+      "verified": true,
+      "ms": 2558,
+      "receipt": true,
+      "response": {
+        "status": "investigating",
+        "simulated": true,
+        "team_notified_at": 1792296457.898251,
+        "events": [
+          {
+            "action": "investigate",
+            "t": 1792296457.534024,
+            "simulated": true
+          },
+          {
+            "action": "notify_team",
+            "t": 1792296457.898251,
+            "simulated": true
+          }
+        ]
+      },
+      "verification": {
+        "signature": "verified",
+        "artifacts": "verified",
+        "history": "verified"
+      }
+    },
+    {
+      "input": 5,
+      "incident": "20261018-000836-006",
+      "action": "alert",
+      "verified": true,
+      "ms": 7047,
+      "receipt": true,
+      "response": {
+        "status": "investigating",
+        "simulated": true,
+        "team_notified_at": 1792296524.277344,
+        "events": [
+          {
+            "action": "investigate",
+            "t": 1792296523.9162629,
+            "simulated": true
+          },
+          {
+            "action": "notify_team",
+            "t": 1792296524.277344,
+            "simulated": true
+          }
+        ]
+      },
+      "verification": {
+        "signature": "verified",
+        "artifacts": "verified",
+        "history": "verified"
+      }
+    },
+    {
+      "input": 6,
+      "incident": "20261018-000845-007",
+      "action": "alert",
+      "verified": true,
+      "ms": 6407,
+      "receipt": true,
+      "response": {
+        "status": "investigating",
+        "simulated": true,
+        "team_notified_at": 1792296532.275847,
+        "events": [
+          {
+            "action": "investigate",
+            "t": 1792296531.912813,
+            "simulated": true
+          },
+          {
+            "action": "notify_team",
+            "t": 1792296532.275847,
+            "simulated": true
+          }
+        ]
+      },
+      "verification": {
+        "signature": "verified",
+        "artifacts": "verified",
+        "history": "verified"
+      }
+    },
+    {
+      "input": 8,
+      "incident": "20261018-000855-008",
+      "action": "log",
+      "verified": false,
+      "ms": 5520,
+      "receipt": true,
+      "response": {
+        "status": "new",
+        "simulated": true,
+        "team_notified_at": null,
+        "events": []
+      },
+      "verification": {
+        "signature": "verified",
+        "artifacts": "verified",
+        "history": "verified"
+      }
+    },
+    {
+      "input": 9,
+      "incident": "20261018-000902-009",
+      "action": "ignore",
+      "verified": null,
+      "ms": 7,
+      "receipt": false,
+      "response": {
+        "status": "new",
+        "simulated": true,
+        "team_notified_at": null,
+        "events": []
+      },
+      "verification": {
+        "signature": "verified",
+        "artifacts": "verified",
+        "history": "verified"
+      }
+    }
+  ],
+  "transport": {
+    "edge": false,
+    "configured": true,
+    "delivery_state": "idle",
+    "last_delivery_s": 48.1,
+    "sent": {
+      "events": 188,
+      "incidents": 9,
+      "examples": 0,
+      "failed": 0
+    },
+    "examples": false,
+    "mode": "cloud",
+    "serving": {
+      "director": {
+        "requests_running": 0,
+        "prefix_cache_queries": 73232,
+        "kv_cache_usage": 0,
+        "up": true,
+        "prefix_cache_hits": 0,
+        "at": "2026-10-18T04:09:45.371093793Z",
+        "requests_waiting": 0,
+        "received": 1792296585.865417
+      },
+      "vlm": {
+        "requests_running": 0,
+        "prefix_cache_queries": 13614,
+        "kv_cache_usage": 0,
+        "up": true,
+        "prefix_cache_hits": 6352,
+        "at": "2026-10-18T04:09:45.372897983Z",
+        "requests_waiting": 0,
+        "received": 1792296586.3208451
+      }
+    },
+    "receipts": [
+      {
+        "incident": "20261018-000855-008",
+        "core_node": "sherlock-core",
+        "proof": "disk_readback",
+        "stored_at": "2026-10-18T04:09:02.70081994Z",
+        "crops": {
+          "weapon_crop": {
+            "sha256": "4b9339597b4684804d4f63a9b3db4129881386311bcbd82c7a17ed0e6581e0db",
+            "bytes": 36639,
+            "url": "/evidence/20261018-000855-008/4b9339597b4684804d4f63a9b3db4129881386311bcbd82c7a17ed0e6581e0db.jpg"
+          }
+        }
+      },
+      {
+        "incident": "20261018-000845-007",
+        "core_node": "sherlock-core",
+        "proof": "disk_readback",
+        "stored_at": "2026-10-18T04:08:52.265026171Z",
+        "crops": {
+          "weapon_crop": {
+            "sha256": "d792d1b521fada91f8575c53e8566b8f2b2353d3124d8a2c7f2911bf40e7268b",
+            "bytes": 34423,
+            "url": "/evidence/20261018-000845-007/d792d1b521fada91f8575c53e8566b8f2b2353d3124d8a2c7f2911bf40e7268b.jpg"
+          }
+        }
+      },
+      {
+        "incident": "20261018-000836-006",
+        "core_node": "sherlock-core",
+        "proof": "disk_readback",
+        "stored_at": "2026-10-18T04:08:44.020407646Z",
+        "crops": {
+          "weapon_crop": {
+            "sha256": "1bee096e24a8ca6de8683fbf9e1383e636a78c955020de8d69ecf7d637ae99a7",
+            "bytes": 30033,
+            "url": "/evidence/20261018-000836-006/1bee096e24a8ca6de8683fbf9e1383e636a78c955020de8d69ecf7d637ae99a7.jpg"
+          }
+        }
+      },
+      {
+        "incident": "20261018-000734-005",
+        "core_node": "sherlock-core",
+        "proof": "disk_readback",
+        "stored_at": "2026-10-18T04:07:37.307161143Z",
+        "crops": {
+          "weapon_crop": {
+            "sha256": "eabc515ed09899bf8de95d00856a489935ace501735d0aef7aef8a185d576241",
+            "bytes": 31948,
+            "url": "/evidence/20261018-000734-005/eabc515ed09899bf8de95d00856a489935ace501735d0aef7aef8a185d576241.jpg"
+          }
+        }
+      },
+      {
+        "incident": "20261018-000728-004",
+        "core_node": "sherlock-core",
+        "proof": "disk_readback",
+        "stored_at": "2026-10-18T04:07:33.184683748Z",
+        "crops": {
+          "weapon_crop": {
+            "sha256": "e9b3968ab477cc350c4b871efb80e00d8d7b03386c7b663fdd2d60f74d5d7297",
+            "bytes": 42041,
+            "url": "/evidence/20261018-000728-004/e9b3968ab477cc350c4b871efb80e00d8d7b03386c7b663fdd2d60f74d5d7297.jpg"
+          }
+        }
+      },
+      {
+        "incident": "20261018-000717-003",
+        "core_node": "sherlock-core",
+        "proof": "disk_readback",
+        "stored_at": "2026-10-18T04:07:26.523479322Z",
+        "crops": {
+          "weapon_crop": {
+            "sha256": "0ddfc0836e02e619b5cb863ffd80aa4d21c5e33f0bb83f710012a86c5b2038d1",
+            "bytes": 33079,
+            "url": "/evidence/20261018-000717-003/0ddfc0836e02e619b5cb863ffd80aa4d21c5e33f0bb83f710012a86c5b2038d1.jpg"
+          }
+        }
+      },
+      {
+        "incident": "20261018-000712-002",
+        "core_node": "sherlock-core",
+        "proof": "disk_readback",
+        "stored_at": "2026-10-18T04:07:16.484780981Z",
+        "crops": {
+          "weapon_crop": {
+            "sha256": "dfc07629fd2466e7fd5596469262da47654bb41918ad398e3d01ee4108903a7f",
+            "bytes": 33853,
+            "url": "/evidence/20261018-000712-002/dfc07629fd2466e7fd5596469262da47654bb41918ad398e3d01ee4108903a7f.jpg"
+          }
+        }
+      },
+      {
+        "incident": "20261018-000351-001",
+        "core_node": "sherlock-core",
+        "proof": "disk_readback",
+        "stored_at": "2026-10-18T04:03:58.284358662Z",
+        "crops": {
+          "weapon_crop": {
+            "sha256": "e89b0d5beb0bc376c08a7f46875de3befee3b9e4fc980a30ae743fc21d00e78b",
+            "bytes": 89906,
+            "url": "/evidence/20261018-000351-001/e89b0d5beb0bc376c08a7f46875de3befee3b9e4fc980a30ae743fc21d00e78b.jpg"
+          }
+        }
+      }
+    ]
+  },
+  "physical_camera": false,
+  "method": "Supplied capture images through real YOLO, Nebius models, software PTZ, Expanso Cloud, phone and custody UI"
+}

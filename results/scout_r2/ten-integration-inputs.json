@@ -1,0 +1,160 @@
+[
+  {
+    "image": "/Users/daaronch/code/demo-sherlock-capture/data/scout/images/test/room_knife_hero-20261017-173649_0039.jpg",
+    "label": "/Users/daaronch/code/demo-sherlock-capture/data/scout/labels/test/room_knife_hero-20261017-173649_0039.txt",
+    "reason": "Early capture session",
+    "has_weapon_ground_truth": true,
+    "recommended_weapon_predictions": [
+      [
+        "weapon",
+        0.7768809199333191,
+        [
+          1326.5240478515625,
+          383.80572509765625,
+          1488.4556884765625,
+          650.4258422851562
+        ]
+      ]
+    ]
+  },
+  {
+    "image": "/Users/daaronch/code/demo-sherlock-capture/data/scout/images/test/room_knife_hero-20261017-184411_0033.jpg",
+    "label": "/Users/daaronch/code/demo-sherlock-capture/data/scout/labels/test/room_knife_hero-20261017-184411_0033.txt",
+    "reason": "Previously duplicated boxes",
+    "has_weapon_ground_truth": true,
+    "recommended_weapon_predictions": [
+      [
+        "weapon",
+        0.7020100355148315,
+        [
+          1040.248779296875,
+          496.8717956542969,
+          1214.9669189453125,
+          536.8170776367188
+        ]
+      ]
+    ]
+  },
+  {
+    "image": "/Users/daaronch/code/demo-sherlock-capture/data/scout/images/test/room_knife_hero-20261017-184411_0035.jpg",
+    "label": "/Users/daaronch/code/demo-sherlock-capture/data/scout/labels/test/room_knife_hero-20261017-184411_0035.txt",
+    "reason": "Tight blade localization",
+    "has_weapon_ground_truth": true,
+    "recommended_weapon_predictions": [
+      [
+        "weapon",
+        0.7535092234611511,
+        [
+          1023.665771484375,
+          357.6893310546875,
+          1184.299072265625,
+          408.097900390625
+        ]
+      ]
+    ]
+  },
+  {
+    "image": "/Users/daaronch/code/demo-sherlock-capture/data/scout/images/test/room_knife_hero-20261017-184449_0039.jpg",
+    "label": "/Users/daaronch/code/demo-sherlock-capture/data/scout/labels/test/room_knife_hero-20261017-184449_0039.txt",
+    "reason": "Another capture session",
+    "has_weapon_ground_truth": true,
+    "recommended_weapon_predictions": [
+      [
+        "weapon",
+        0.8670238852500916,
+        [
+          1.157318115234375,
+          422.625,
+          204.86334228515625,
+          473.4971923828125
+        ]
+      ]
+    ]
+  },
+  {
+    "image": "/Users/daaronch/code/demo-sherlock-capture/data/scout/images/test/room_knife_hero-20261017-193342_0039.jpg",
+    "label": "/Users/daaronch/code/demo-sherlock-capture/data/scout/labels/test/room_knife_hero-20261017-193342_0039.txt",
+    "reason": "Horizontal knife",
+    "has_weapon_ground_truth": true,
+    "recommended_weapon_predictions": [
+      [
+        "weapon",
+        0.3715241253376007,
+        [
+          1173.670654296875,
+          525.22509765625,
+          1385.6824951171875,
+          561.732666015625
+        ]
+      ]
+    ]
+  },
+  {
+    "image": "/Users/daaronch/code/demo-sherlock-capture/data/scout/images/test/room_knife_hero-20261017-193421_0035.jpg",
+    "label": "/Users/daaronch/code/demo-sherlock-capture/data/scout/labels/test/room_knife_hero-20261017-193421_0035.txt",
+    "reason": "Vertical blade previously missed",
+    "has_weapon_ground_truth": true,
+    "recommended_weapon_predictions": [
+      [
+        "weapon",
+        0.7980362772941589,
+        [
+          1454.1287841796875,
+          105.75260925292969,
+          1490.87548828125,
+          332.2766418457031
+        ]
+      ]
+    ]
+  },
+  {
+    "image": "/Users/daaronch/code/demo-sherlock-capture/data/scout/images/test/room_knife_hero-20261017-193421_0037.jpg",
+    "label": "/Users/daaronch/code/demo-sherlock-capture/data/scout/labels/test/room_knife_hero-20261017-193421_0037.txt",
+    "reason": "Vertical blade formerly duplicate boxes",
+    "has_weapon_ground_truth": true,
+    "recommended_weapon_predictions": [
+      [
+        "weapon",
+        0.8669086694717407,
+        [
+          1277.14208984375,
+          111.08171081542969,
+          1320.6787109375,
+          350.86224365234375
+        ]
+      ]
+    ]
+  },
+  {
+    "image": "/Users/daaronch/code/demo-sherlock-capture/data/scout/images/test/room_none_hero-20261017-173934_0039.jpg",
+    "label": "/Users/daaronch/code/demo-sherlock-capture/data/scout/labels/test/room_none_hero-20261017-173934_0039.txt",
+    "reason": "Empty hand false-positive challenge",
+    "has_weapon_ground_truth": false,
+    "recommended_weapon_predictions": []
+  },
+  {
+    "image": "/Users/daaronch/code/demo-sherlock-capture/data/scout/images/test/room_none_scout1-20261017-171153_0037.jpg",
+    "label": "/Users/daaronch/code/demo-sherlock-capture/data/scout/labels/test/room_none_scout1-20261017-171153_0037.txt",
+    "reason": "Other camera empty-hand challenge",
+    "has_weapon_ground_truth": false,
+    "recommended_weapon_predictions": [
+      [
+        "weapon",
+        0.36743175983428955,
+        [
+          370.93133544921875,
+          433.77996826171875,
+          447.8935852050781,
+          847.3694458007812
+        ]
+      ]
+    ]
+  },
+  {
+    "image": "/Users/daaronch/code/demo-sherlock-capture/data/scout/images/test/room_coke_hero-20261017-173858_0034.jpg",
+    "label": "/Users/daaronch/code/demo-sherlock-capture/data/scout/labels/test/room_coke_hero-20261017-173858_0034.txt",
+    "reason": "Benign Coke prop",
+    "has_weapon_ground_truth": false,
+    "recommended_weapon_predictions": []
+  }
+]

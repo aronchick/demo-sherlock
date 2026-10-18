@@ -163,10 +163,13 @@
     <div class="ratio"><b id="avoided">0</b><span>VLM calls avoided</span></div>
   </header>
 
-  <section class="board" id="board">
+  <main class="board" id="board" aria-label="Camera investigation pipeline">
     <div class="col cam" id="cCam">
       <article class="frame" id="wideFrame">
-        <div class="fh"><i></i>Hero camera<small id="wideNote">every frame</small></div>
+        <div class="fh" style="flex-wrap:wrap"><i></i>Hero camera<small id="wideNote">every frame</small>
+          <span id="cameraTiming" hidden style="flex-basis:100%;letter-spacing:0;text-transform:none"
+            title="Scout detection to successful camera command completion, measured from server timestamps. Camera settling and the full investigation are separate."></span>
+        </div>
         <div class="view">
           <img id="wide" src="/stream/wide" alt="Live wide view">
           <div class="stamp" id="wideStamp">alert</div>
@@ -202,7 +205,7 @@
       <article class="stage" id="st-bucket" style="--c: var(--benign)">
         <div class="kind">Local evidence</div>
         <div class="sub">snapshots/ on this disk</div>
-        <div class="slots evidence-links" id="evidence-links" aria-label="Saved evidence"><span>No saved evidence yet</span></div>
+        <div class="slots evidence-links" id="evidence-links" role="group" aria-label="Saved evidence"><span>No saved evidence yet</span></div>
         <a href="/custody" target="sherlock-evidence" class="custody-link">Browse chain of custody</a>
         <span class="badge"></span>
       </article>
@@ -275,7 +278,7 @@
         <div class="sub" id="cloud-evidence-status">Delivery unconfirmed</div>
       </article>
     </div>
-  </section>
+  </main>
 
   <section class="record" id="record" aria-label="Incident record">
     <div class="lede">Incident record<small>filled in by each stage</small></div>
@@ -302,11 +305,13 @@
     <button type="button" id="coverBtn" onclick="toggleCover()">Cover hero lens</button>
   </footer>
 </div>
-<canvas id="fx"></canvas>
+<canvas id="fx" aria-hidden="true"></canvas>
 
 <script src="/pipeline/assets/pipeline-models.js"></script>
+<script src="/pipeline/assets/board-hydration.js"></script>
 <script src="/pipeline/assets/custody-detail.js" defer></script>
 <script src="/pipeline/assets/incidents.js" defer></script>
+<script src="/pipeline/assets/expanso-status.js"></script>
 <script>
 'use strict';
 // ---------------------------------------------------------------------------
@@ -353,14 +358,8 @@ for (const r of ['director', 'analyst', 'verifier']) {
 // Expanso status comes from /expanso: live only while the Edge pipelines on this
 // laptop accept this run's events. Nothing here is configured by hand.
 function expansoFooter(s) {
-  const live = !!(s && s.edge);
-  const where = s && s.mode === 'cloud'
-    ? 'Expanso Cloud deploys and monitors the pipelines'
-    : 'local mode, not deployed from Expanso Cloud';
-  const text = live
-    ? `enabled · Expanso Edge accepts incident packages; ${where} · cloud receipt unconfirmed`
-    : 'not connected in this run · start the Edge pipelines and set SHERLOCK_EDGE=1 to carry events and alerts';
-  $('expanso').classList.toggle('live', live);
+  const text = expansoStatusText(s);
+  $('expanso').classList.toggle('live', s?.delivery_state === 'active');
   $('expansoText').textContent = text;
   $('expanso').title = text;
   return s;
@@ -411,6 +410,7 @@ function cellSet(key, text, meta) {
   el.style.animation = 'none'; void el.offsetWidth; el.style.animation = '';
 }
 function cellsReset() {
+  $('record').querySelector('.lede small').textContent = 'Current investigation';
   for (const k of CELLS) {
     const el = $('c-' + k); el.classList.remove('on');
     el.querySelector('.v').textContent = 'waiting'; el.querySelector('.m').textContent = '';
@@ -557,11 +557,11 @@ function flow(edge, ms, color) {
   const e = E[edge];
   e.hot = Math.max(e.hot, now() + ms);
   e.tint = color || null;
-  if (!REDUCED) spawnParticle(e);
+  spawnParticle(e);
 }
 function spawnParticle(e, t0 = 0) {
   if (S.particles.some(p => p.e === e)) return;
-  S.particles.push({ e, t: t0, v: 0.006, j: 0, size: 2 });
+  S.particles.push({ e, t: t0, v: 0.006 * (REDUCED ? 0.35 : 1), j: 0, size: 4 });
 }
 function burst(x, y, color, n = 26) {
   if (REDUCED) n = Math.min(n, 6);
@@ -872,9 +872,16 @@ function settleAnalyst(report) {
   analystEv = null;
 }
 
+const hydration = new IncidentHydration(record => hydrateIncident(record, modelCards, cellSet));
+const cameraTiming = new CameraCommandTiming(seconds => {
+  $('cameraTiming').hidden = seconds === null;
+  $('cameraTiming').textContent = seconds === null ? '' : `First camera command: ${seconds.toFixed(1)} s`;
+});
 const es = new EventSource('/events');
 es.onmessage = e => {
+  hydration.live();
   const ev = JSON.parse(e.data), m = ev.msg || '';
+  cameraTiming.receive(ev);
 
   if (ev.stage === 'analyst') holdAnalyst(ev);   // held now: the report may land before the beat plays
   switch (ev.stage) {
@@ -903,6 +910,7 @@ es.onmessage = e => {
       return;
   }
 };
+hydration.load();
 let lastFrames = 0;
 es.addEventListener('stats', e => {
   const s = JSON.parse(e.data);
@@ -1005,7 +1013,7 @@ function drawRails(t) {
     const x = q.x + nx * p.j * Math.sin(p.t * 6), y = q.y + ny * p.j * Math.sin(p.t * 6);
     ctx.globalAlpha = 1 - Math.abs(p.t - 0.5) * 0.5;
     ctx.fillStyle = p.e.tint || p.e.color;
-    if (p.e.shape === 'frame') { ctx.save(); ctx.translate(x, y); ctx.rotate(ang); ctx.globalAlpha *= 0.7; ctx.fillRect(-2.5, -1.8, 5, 3.6); ctx.restore(); }
+    if (p.e.shape === 'frame') { ctx.save(); ctx.translate(x, y); ctx.rotate(ang); ctx.globalAlpha *= 0.7; ctx.fillRect(-p.size, -p.size * 0.7, p.size * 2, p.size * 1.4); ctx.restore(); }
     else { ctx.beginPath(); ctx.arc(x, y, p.size, 0, Math.PI * 2); ctx.fill(); }
   }
   ctx.globalAlpha = 1;
@@ -1066,8 +1074,8 @@ function drawFeed(t) {
 }
 function step(t) {
   ctx.clearRect(0, 0, innerWidth, innerHeight);
-  if (E.frames && !REDUCED && Math.random() < S.ambient * 0.05) spawnParticle(E.frames);
-  for (const e of Object.values(E)) if (e.hot > t && !REDUCED && Math.random() < 0.015) spawnParticle(e);
+  if (E.frames) spawnParticle(E.frames);
+  for (const e of Object.values(E)) if (e.hot > t && Math.random() < 0.015) spawnParticle(e);
   for (const p of S.particles) p.t += p.v;
   S.particles = S.particles.filter(p => p.t < 1);
   if (S.particles.length > 400) S.particles.splice(0, S.particles.length - 400);

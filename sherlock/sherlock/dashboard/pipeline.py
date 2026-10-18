@@ -89,7 +89,7 @@ def pipeline_font(name: str) -> FileResponse:
 
 @router.get("/pipeline/assets/{name}")
 def pipeline_asset(name: str) -> FileResponse:
-    allowed = {"pipeline-models.js", "pipeline-models.css", "brand-nvidia.svg",
+    allowed = {"board-hydration.js", "expanso-status.js", "pipeline-models.js", "pipeline-models.css", "brand-nvidia.svg",
                "brand-huggingface.svg", "brand-ultralytics.svg", "incidents.js", "incidents.css", "custody-detail.js", "phone.js", "phone.css", "casefile.css", "slides.css", "slides.js"}
     if name not in allowed:
         raise HTTPException(status_code=404)

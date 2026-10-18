@@ -91,7 +91,6 @@
     if (revision === shelfRevision) return;
     shelfRevision = revision;
 
-    if (cloudShelf) cloudShelf.replaceChildren(...entries.slice(0, 3).map(({record, artifact}) => pictureLink(record, artifact)));
     shelf.replaceChildren(...entries.map(({ record, artifact }) => pictureLink(record, artifact)));
 
     if (!entries.length) shelf.append(element('span', 'No saved evidence yet'));
@@ -109,14 +108,8 @@
   function renderCustody(record, custody = document.createElement('div')) {
     custody.replaceChildren();
     const summary = element('div', '', 'incident-summary');
-    summary.append(fact('Incident', record.incident), fact('Trigger camera', record.trigger?.camera || 'Not recorded'), fact('Evidence camera', record.evidence_camera || 'Not recorded'), fact('Analysis', record.models?.mock ? 'Mock run' : 'Live run'), fact('Decision', record.state === 'investigating' ? 'Investigating' : record.action), fact('Recorded', timestamp(record.t)));
-    custody.append(summary, element('h2', record.claim || 'Incident evidence'), custodyCryptography(record));
-
-    if (record.comparison) {
-      const comparison = element('section', '', 'comparison-record');
-      comparison.append(element('h3', `Comparison: ${record.comparison.status}`), element('p', record.comparison.reason), element('p', `Verifier supports claim: ${verdictLabel(record.comparison.verifier_supports)} · Analyst description names it: ${verdictLabel(record.comparison.analyst_names_claim)} (advisory)`));
-      custody.append(comparison);
-    }
+    summary.append(fact('Incident', record.incident), fact('Trigger camera', record.trigger?.camera || 'Not recorded'), fact('Evidence camera', record.evidence_camera || 'Not recorded'), fact('Analysis', record.models?.mock ? 'Mock run' : 'Model inference'), fact('Decision', record.state === 'investigating' ? 'Investigating' : record.action), fact('Recorded', timestamp(record.t)));
+    custody.append(summary);
 
     const grid = element('div', '', 'artifact-grid');
 
@@ -168,7 +161,15 @@
     }
 
     if (!record.artifacts.length) grid.append(element('p', 'No image was saved for this incident.'));
-    custody.append(grid, element('h2', 'Chain of custody'));
+    custody.append(grid);
+
+    if (record.comparison) {
+      const comparison = element('section', '', 'comparison-record');
+      comparison.append(element('h3', `Comparison: ${record.comparison.status}`), element('p', record.comparison.reason), element('p', `Verifier supports claim: ${verdictLabel(record.comparison.verifier_supports)} · Analyst description names it: ${verdictLabel(record.comparison.analyst_names_claim)} (advisory)`));
+      custody.append(comparison);
+    }
+
+    custody.append(custodyCryptography(record), element('h2', 'Chain of custody'));
     const timeline = element('ol', '', 'custody-timeline');
 
     for (const event of [...record.custody].sort((first, second) => first.t - second.t)) {
@@ -193,7 +194,7 @@
     custody.append(downloadParagraph);
   }
 
-  /** @param {boolean|null} verdict */
+  /** @param {boolean|null|undefined} verdict */
   function verdictLabel(verdict) {
     return verdict == null ? 'uncertain' : verdict ? 'yes' : 'no';
   }
@@ -265,8 +266,27 @@
       if (shelf) renderShelf(await read('/incidents?limit=8&evidence_only=true'));
 
       if (cloudStatus) {
-        const [mode, transport] = await Promise.all([read('/mode'), read('/expanso')]);
-        cloudStatus.textContent = mode.mock ? 'Simulated destination · no upload' : transport.edge ? 'Edge accepted · cloud unconfirmed' : 'Not connected · source previews';
+        const transport = await read('/expanso');
+        const receipts = transport.receipts || [];
+
+        if (cloudShelf) {
+          const links = receipts.flatMap(/** @param {any} receipt */ receipt => Object.entries(receipt.crops).map(([name, crop]) => {
+            const item = /** @type {{url:string}} */ (crop);
+            const link = document.createElement('a');
+            link.href = `/custody?incident=${encodeURIComponent(receipt.incident)}`;
+            link.target = 'sherlock-evidence';
+            const image = document.createElement('img');
+            image.src = item.url;
+            image.alt = `${name.replaceAll('_', ' ')} · core storage verified`;
+            link.append(image);
+
+            return link;
+          }));
+
+          cloudShelf.replaceChildren(...links.slice(0, 3));
+        }
+
+        cloudStatus.textContent = receipts.length ? `${receipts.length} core receipts · crop hashes verified` : transport.edge ? 'Edge accepted · awaiting core readback' : 'Awaiting verified core storage';
       }
     } catch {
       if (phoneError) phoneError.textContent = 'Connection unavailable. Displayed incident may be out of date.';

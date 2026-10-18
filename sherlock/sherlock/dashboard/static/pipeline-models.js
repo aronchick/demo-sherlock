@@ -1,5 +1,61 @@
 // @ts-check
 
+/** Timestamp measurement, independent of the board's animation queue. */
+class CameraCommandTiming {
+  /** @param {(seconds:number|null) => void} render */
+  constructor(render) {
+    this.render = render;
+    /** @type {Map<string, number[]>} */
+    this.detections = new Map();
+    this.incident = '';
+    /** @type {number|null} */
+    this.started = null;
+    this.measured = false;
+  }
+
+  /** @param {any} event */
+  receive(event) {
+    const data = event.data || {};
+    const key = `${data.camera}:${data.label}`;
+
+    if (event.stage === 'scout' && data.bbox && Number.isFinite(event.t)) {
+      if (data.handled_via) return;
+
+      const previous = this.detections.get(key) || [];
+
+      // Multiple unmatched detections cannot be attributed to an incident safely.
+      this.detections.set(key, [...previous, event.t].slice(-2));
+
+      if (this.detections.size > 64) this.detections.clear();
+
+      return;
+    }
+
+    if (!['narration', 'tool'].includes(event.stage) || !data.incident) return;
+
+    if (data.incident !== this.incident) {
+      this.incident = data.incident;
+      this.measured = false;
+      this.started = null;
+      this.render(null);
+      const detections = this.detections.get(key);
+
+      if (detections?.length === 1) this.started = detections[0];
+
+      this.detections.delete(key);
+    }
+
+    if (this.measured || this.started === null || event.stage !== 'tool') return;
+
+    if (!['look_at', 'move'].includes(data.tool) || data.error || data.result?.ok !== true) return;
+
+    if (!Number.isFinite(event.t) || event.t < this.started) return;
+
+    this.measured = true;
+    this.render(event.t - this.started);
+  }
+}
+
 /** @typedef {{model?: string, where?: string}} Model */
 /** @typedef {{mock: boolean, models: Record<string, Model>}} ModelConfig */
 
@@ -27,6 +83,10 @@ function modelIdentity(model) {
     return {name: shortName.replace(/-Instruct$/, '').replaceAll('-', ' '), brand: 'huggingface', vendor: 'Hugging Face'};
   }
 
+  if (shortName === 'scout-r2-960.pt') {
+    return {name: 'YOLOv8n · fine-tuned', brand: 'ultralytics', vendor: 'Ultralytics'};
+  }
+
   if (/yolo/i.test(model)) {
     return {name: shortName.replace(/\.pt$/, '').replace(/^yolo/i, 'YOLO'), brand: 'ultralytics', vendor: 'Ultralytics'};
   }
@@ -44,7 +104,9 @@ function scoutIdentity(backend, model) {
   if (backend === 'yolo') {
     const identity = modelIdentity(model || 'yolo');
 
-    return {...identity, tag: identity.name, runtime: 'Configured model', sub: 'YOLO, every frame'};
+    const runtime = model.split('/').pop() === 'scout-r2-960.pt' ? 'scout-r2-960.pt · revision 2' : 'Configured model';
+
+    return {...identity, tag: identity.name, runtime, sub: 'YOLO, every frame'};
   }
 
   const none = {brand: '', vendor: ''};
@@ -107,11 +169,34 @@ class ModelCards {
     for (const role of this.roles) {
       const image = /** @type {HTMLImageElement} */ (modelElement(`${role}Preview`));
 
+      image.onload = null;
       image.hidden = true;
+      modelElement(`${role}Empty`).textContent = role === 'director' ? 'No detection yet' : 'No crop yet';
       image.removeAttribute('src');
       modelElement(`${role}Empty`).hidden = false;
       modelElement(`${role}PreviewState`).textContent = role === 'director' ? 'Detection context' : 'Waiting for the crop';
       modelElement(`st-${role}`).dataset.evaluating = 'false';
+    }
+  }
+
+  /** @param {string} role @param {string|null|undefined} source @param {string} label */
+  restore(role, source, label) {
+    const image = /** @type {HTMLImageElement} */ (modelElement(`${role}Preview`));
+
+    image.onload = null;
+    image.hidden = true;
+    modelElement(`${role}Empty`).hidden = true;
+    modelElement(`${role}PreviewState`).textContent = label;
+    modelElement(`st-${role}`).dataset.evaluating = 'false';
+
+    if (source) {
+      image.onload = () => { image.hidden = false; };
+
+      image.src = source;
+    } else {
+      image.removeAttribute('src');
+      modelElement(`${role}Empty`).textContent = 'No saved crop';
+      modelElement(`${role}Empty`).hidden = false;
     }
   }
 

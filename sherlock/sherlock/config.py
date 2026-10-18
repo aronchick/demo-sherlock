@@ -32,7 +32,7 @@ class CameraSpec:
 class Config:
     mock: bool = field(default_factory=lambda: _env("SHERLOCK_MOCK", "0") == "1")
     scout_backend: str = field(default_factory=lambda: _env("SCOUT_BACKEND", "yolo"))
-    yolo_model: str = field(default_factory=lambda: _env("YOLO_MODEL", "yolov8n.pt"))
+    yolo_model: str = field(default_factory=lambda: _env("YOLO_MODEL", "models/scout-r2-960.pt"))
     scout_conf: float = field(default_factory=lambda: float(_env("SCOUT_CONF", "0.35")))
     director: Endpoint = field(default_factory=lambda: Endpoint(
         _env("DIRECTOR_BASE_URL", "http://localhost:8001/v1"),

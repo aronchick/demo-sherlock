@@ -108,3 +108,13 @@ footer a { border-bottom: 0; text-decoration: underline; text-underline-offset: 
 #modelsHead .brev-logo { width: 30px; height: 30px; object-fit: contain; }
 #modelsHead .brev-name { font: 600 19px var(--sans); letter-spacing: -.02em; text-transform: none; }
 #modelsHead small { margin-left: auto; }
+
+/* Evidence leads the case detail; complete signatures remain one click away. */
+#custody-view .page-intro { margin-bottom: 20px; }
+#custody-view .page-intro h1 { margin-block: 8px 12px; }
+.incident-row > summary { padding-block: 12px; }
+.incident-expanded .artifact-grid { margin-top: 16px; }
+.incident-expanded .artifact img { height: clamp(180px, 30vh, 280px); }
+@media (min-width: 800px) {
+  .incident-row > summary { grid-template-columns: 180px minmax(130px, 1fr) minmax(120px, 1fr) 76px; }
+}

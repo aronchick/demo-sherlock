@@ -10,6 +10,47 @@ from sherlock.config import CameraSpec, Config
 from sherlock.orchestrator import Sherlock
 
 
+@pytest.fixture(autouse=True)
+def isolate_resolution_and_nms(monkeypatch):
+    monkeypatch.setenv("YOLO_MODEL", "yolov8n.pt")
+    monkeypatch.delenv("SCOUT_IMGSZ", raising=False)
+    monkeypatch.delenv("SCOUT_NMS_IOU", raising=False)
+
+
+def test_promoted_checkpoint_defaults_match_measured_operating_point(monkeypatch):
+    monkeypatch.delenv("YOLO_MODEL")
+    monkeypatch.delenv("SCOUT_WEAPON_CONF", raising=False)
+    monkeypatch.setitem(sys.modules, "ultralytics", SimpleNamespace(YOLO=lambda _: None))
+    cfg = Config()
+    assert cfg.yolo_model == "models/scout-r2-960.pt"
+    detector = YoloScout(cfg.yolo_model)
+    assert detector.weapon_conf == .15
+    assert detector.predict_options == {"imgsz": 640, "iou": .6}
+
+
+def test_resolution_and_nms_reach_actual_predict(monkeypatch):
+    calls = []
+    model = SimpleNamespace(predict=lambda frame, **kwargs:
+                            calls.append(kwargs) or [SimpleNamespace(boxes=[])])
+    monkeypatch.setitem(sys.modules, "ultralytics", SimpleNamespace(YOLO=lambda _: model))
+    monkeypatch.setenv("SCOUT_IMGSZ", "960")
+    monkeypatch.setenv("SCOUT_NMS_IOU", "0.6")
+    detector = YoloScout()
+    detector.detect(np.zeros((50, 50, 3)), "hero")
+    assert calls[0]["imgsz"] == 960
+    assert calls[0]["iou"] == .6
+
+
+@pytest.mark.parametrize("key,value", [("SCOUT_IMGSZ", "0"), ("SCOUT_IMGSZ", "641"),
+    ("SCOUT_IMGSZ", "4096"), ("SCOUT_NMS_IOU", "nan"), ("SCOUT_NMS_IOU", "0"),
+    ("SCOUT_NMS_IOU", "1.1")])
+def test_invalid_predict_settings_fail(monkeypatch, key, value):
+    monkeypatch.setitem(sys.modules, "ultralytics", SimpleNamespace(YOLO=lambda _: None))
+    monkeypatch.setenv(key, value)
+    with pytest.raises(ValueError, match=key):
+        YoloScout()
+
+
 @pytest.mark.parametrize("value,expected", [(None, 0.35), ("0.10", 0.10), ("0", 0.0), ("1", 1.0)])
 def test_scout_conf_reaches_predict(tmp_path, monkeypatch, value, expected):
     monkeypatch.delenv("SCOUT_WEAPON_CONF", raising=False)

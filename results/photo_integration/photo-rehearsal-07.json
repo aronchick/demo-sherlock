@@ -1,0 +1,10 @@
+{
+  "index": 7,
+  "source": "/Users/daaronch/code/demo-sherlock-capture/data/scout/images/test/room_none_hero-20261017-173934_0039.jpg",
+  "source_sha256": "305e3b95ce1139eae84eae3a2841f9baefef8af491e18cbbb0c88341b5603a22",
+  "expected_weapon": false,
+  "weapon_detections": 0,
+  "elapsed_s": 0.0001709461212158203,
+  "reports": [],
+  "physical_camera": false
+}

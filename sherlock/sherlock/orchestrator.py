@@ -193,6 +193,7 @@ class Sherlock:
                     try:
                         self.incidents.save(pending, custody, {
                             "mock": self.cfg.mock, "scout": self.cfg.yolo_model,
+                            "scout_sha256": getattr(self.scout.impl, "model_sha256", None),
                             "director": self.cfg.director.model, "analyst": self.cfg.analyst.model,
                             "verifier": self.cfg.verifier.model})
                     except (OSError, ValueError) as exc:
@@ -267,6 +268,7 @@ class Sherlock:
             try:
                 record = self.incidents.save(report, custody, {
                     "mock": self.cfg.mock, "scout": self.cfg.yolo_model,
+                    "scout_sha256": getattr(self.scout.impl, "model_sha256", None),
                     "director": self.cfg.director.model, "analyst": self.cfg.analyst.model,
                     "verifier": self.cfg.verifier.model,
                 })

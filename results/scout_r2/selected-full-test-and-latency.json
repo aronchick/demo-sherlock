@@ -1,0 +1,336 @@
+{
+  "conf": 0.15,
+  "imgsz": 640,
+  "nms_iou": 0.6,
+  "device": "cpu",
+  "models": {
+    "stock": {
+      "sha256": "f59b3d833e2ff32e194b5bb8e08d211dc7c5bdf144b90d2c8412c47ccfc83b36",
+      "metrics": {
+        "coco": {
+          "person": {
+            "tp": 404,
+            "fp": 210,
+            "fn": 102,
+            "precision": 0.658,
+            "recall": 0.7984
+          },
+          "weapon": {
+            "tp": 88,
+            "fp": 40,
+            "fn": 110,
+            "precision": 0.6875,
+            "recall": 0.4444
+          },
+          "badge": {
+            "tp": 0,
+            "fp": 0,
+            "fn": 0,
+            "precision": 0.0,
+            "recall": 0.0
+          },
+          "bottle": {
+            "tp": 95,
+            "fp": 114,
+            "fn": 65,
+            "precision": 0.4545,
+            "recall": 0.5938
+          },
+          "fedora": {
+            "tp": 0,
+            "fp": 0,
+            "fn": 0,
+            "precision": 0.0,
+            "recall": 0.0
+          },
+          "cap": {
+            "tp": 0,
+            "fp": 0,
+            "fn": 0,
+            "precision": 0.0,
+            "recall": 0.0
+          },
+          "coke": {
+            "tp": 0,
+            "fp": 0,
+            "fn": 0,
+            "precision": 0.0,
+            "recall": 0.0
+          }
+        },
+        "all": {
+          "person": {
+            "tp": 525,
+            "fp": 210,
+            "fn": 102,
+            "precision": 0.7143,
+            "recall": 0.8373
+          },
+          "weapon": {
+            "tp": 89,
+            "fp": 40,
+            "fn": 149,
+            "precision": 0.6899,
+            "recall": 0.3739
+          },
+          "badge": {
+            "tp": 0,
+            "fp": 0,
+            "fn": 0,
+            "precision": 0.0,
+            "recall": 0.0
+          },
+          "bottle": {
+            "tp": 95,
+            "fp": 114,
+            "fn": 65,
+            "precision": 0.4545,
+            "recall": 0.5938
+          },
+          "fedora": {
+            "tp": 0,
+            "fp": 0,
+            "fn": 40,
+            "precision": 0.0,
+            "recall": 0.0
+          },
+          "cap": {
+            "tp": 0,
+            "fp": 0,
+            "fn": 16,
+            "precision": 0.0,
+            "recall": 0.0
+          },
+          "coke": {
+            "tp": 0,
+            "fp": 0,
+            "fn": 23,
+            "precision": 0.0,
+            "recall": 0.0
+          }
+        },
+        "room": {
+          "person": {
+            "tp": 121,
+            "fp": 0,
+            "fn": 0,
+            "precision": 1.0,
+            "recall": 1.0
+          },
+          "weapon": {
+            "tp": 1,
+            "fp": 0,
+            "fn": 39,
+            "precision": 1.0,
+            "recall": 0.025
+          },
+          "badge": {
+            "tp": 0,
+            "fp": 0,
+            "fn": 0,
+            "precision": 0.0,
+            "recall": 0.0
+          },
+          "bottle": {
+            "tp": 0,
+            "fp": 0,
+            "fn": 0,
+            "precision": 0.0,
+            "recall": 0.0
+          },
+          "fedora": {
+            "tp": 0,
+            "fp": 0,
+            "fn": 40,
+            "precision": 0.0,
+            "recall": 0.0
+          },
+          "cap": {
+            "tp": 0,
+            "fp": 0,
+            "fn": 16,
+            "precision": 0.0,
+            "recall": 0.0
+          },
+          "coke": {
+            "tp": 0,
+            "fp": 0,
+            "fn": 23,
+            "precision": 0.0,
+            "recall": 0.0
+          }
+        }
+      },
+      "single_image_cpu_ms": {
+        "samples": 30,
+        "median": 20.83904156461358,
+        "p95": 24.15666589513421,
+        "max": 29.963042121380568
+      }
+    },
+    "selected": {
+      "sha256": "59ef75726532cd5c403e3e74b0a15cc8a789c71205bee89562cbe18cffd94cfe",
+      "metrics": {
+        "coco": {
+          "person": {
+            "tp": 372,
+            "fp": 275,
+            "fn": 134,
+            "precision": 0.575,
+            "recall": 0.7352
+          },
+          "weapon": {
+            "tp": 73,
+            "fp": 87,
+            "fn": 125,
+            "precision": 0.4562,
+            "recall": 0.3687
+          },
+          "badge": {
+            "tp": 0,
+            "fp": 0,
+            "fn": 0,
+            "precision": 0.0,
+            "recall": 0.0
+          },
+          "bottle": {
+            "tp": 66,
+            "fp": 137,
+            "fn": 94,
+            "precision": 0.3251,
+            "recall": 0.4125
+          },
+          "fedora": {
+            "tp": 0,
+            "fp": 0,
+            "fn": 0,
+            "precision": 0.0,
+            "recall": 0.0
+          },
+          "cap": {
+            "tp": 0,
+            "fp": 0,
+            "fn": 0,
+            "precision": 0.0,
+            "recall": 0.0
+          },
+          "coke": {
+            "tp": 0,
+            "fp": 0,
+            "fn": 0,
+            "precision": 0.0,
+            "recall": 0.0
+          }
+        },
+        "all": {
+          "person": {
+            "tp": 493,
+            "fp": 275,
+            "fn": 134,
+            "precision": 0.6419,
+            "recall": 0.7863
+          },
+          "weapon": {
+            "tp": 108,
+            "fp": 91,
+            "fn": 130,
+            "precision": 0.5427,
+            "recall": 0.4538
+          },
+          "badge": {
+            "tp": 0,
+            "fp": 0,
+            "fn": 0,
+            "precision": 0.0,
+            "recall": 0.0
+          },
+          "bottle": {
+            "tp": 66,
+            "fp": 137,
+            "fn": 94,
+            "precision": 0.3251,
+            "recall": 0.4125
+          },
+          "fedora": {
+            "tp": 40,
+            "fp": 0,
+            "fn": 0,
+            "precision": 1.0,
+            "recall": 1.0
+          },
+          "cap": {
+            "tp": 16,
+            "fp": 0,
+            "fn": 0,
+            "precision": 1.0,
+            "recall": 1.0
+          },
+          "coke": {
+            "tp": 22,
+            "fp": 4,
+            "fn": 1,
+            "precision": 0.8462,
+            "recall": 0.9565
+          }
+        },
+        "room": {
+          "person": {
+            "tp": 121,
+            "fp": 0,
+            "fn": 0,
+            "precision": 1.0,
+            "recall": 1.0
+          },
+          "weapon": {
+            "tp": 35,
+            "fp": 4,
+            "fn": 5,
+            "precision": 0.8974,
+            "recall": 0.875
+          },
+          "badge": {
+            "tp": 0,
+            "fp": 0,
+            "fn": 0,
+            "precision": 0.0,
+            "recall": 0.0
+          },
+          "bottle": {
+            "tp": 0,
+            "fp": 0,
+            "fn": 0,
+            "precision": 0.0,
+            "recall": 0.0
+          },
+          "fedora": {
+            "tp": 40,
+            "fp": 0,
+            "fn": 0,
+            "precision": 1.0,
+            "recall": 1.0
+          },
+          "cap": {
+            "tp": 16,
+            "fp": 0,
+            "fn": 0,
+            "precision": 1.0,
+            "recall": 1.0
+          },
+          "coke": {
+            "tp": 22,
+            "fp": 4,
+            "fn": 1,
+            "precision": 0.8462,
+            "recall": 0.9565
+          }
+        }
+      },
+      "single_image_cpu_ms": {
+        "samples": 30,
+        "median": 21.907396032474935,
+        "p95": 27.028125012293458,
+        "max": 28.81520800292492
+      }
+    }
+  }
+}

@@ -148,6 +148,40 @@ Brev syntax was checked against NVIDIA's [connectivity guide][connectivity] and
 tunnels require browser authentication, so use SSH forwarding for API clients.
 The Brev CLI was not installed or exercised locally.
 
+## Cold startup and checkpoint prefetch
+
+The Director starts with `--safetensors-load-strategy prefetch` on vLLM 0.28.0.
+This reads checkpoint shards into the OS page cache using eight background
+readers with 16 MiB blocks, while the regular memory-mapped loader continues.
+Explicit prefetch also works on EXT4, where vLLM does not automatically enable
+it even when the underlying block storage has high latency. It leaves the FP8
+weights and inference settings unchanged.
+
+`just up` compares this flag with the existing Director container configuration.
+An absent or different strategy triggers replacement of the known model
+containers after ownership checks. The Hugging Face bind mount retains downloaded
+weights. Container-local compilation caches can be lost during that replacement;
+this workflow does not copy undocumented cache directories. Subsequent starts
+reuse matching containers and their caches, including after a GPU stop/start.
+
+The official v0.28.0 sources define the [CLI flag][prefetch-cli],
+[defaults and memory behavior][prefetch-config], and [background file reads][prefetch-code].
+The [loader rejects][prefetch-incompatible] combining prefetch with
+`enable_multithread_load`. Keep available host RAM comfortably above the total
+checkpoint size; vLLM warns when an explicit prefetch exceeds 90% of available RAM.
+
+A faster cold start still needs a hardware measurement. On the next planned GPU
+stop/start, record elapsed time through model readiness and the Director log's
+`Loading weights took` duration. Compare the same checkpoint and machine with
+the prior cold run. A manual warm read followed by readiness does not establish
+that prefetch caused the improvement. Compilation, CPU work and GPU transfers
+also contribute to startup time.
+
+[prefetch-cli]: https://github.com/vllm-project/vllm/blob/v0.28.0/vllm/engine/arg_utils.py#L938-L947
+[prefetch-config]: https://github.com/vllm-project/vllm/blob/v0.28.0/vllm/config/load.py#L62-L92
+[prefetch-code]: https://github.com/vllm-project/vllm/blob/v0.28.0/vllm/model_executor/model_loader/weight_utils.py#L737-L912
+[prefetch-incompatible]: https://github.com/vllm-project/vllm/blob/v0.28.0/vllm/model_executor/model_loader/default_loader.py#L116-L126
+
 ## Results and failure recovery
 
 Each invocation writes `results/brev_preflight_<timestamp>/preflight.json` with

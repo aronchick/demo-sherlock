@@ -1,0 +1,416 @@
+{
+  "model": "scout_r2",
+  "scope": "heldout122; thresholds explored on this set so not unbiased final test",
+  "sweep": [
+    {
+      "conf": 0.1,
+      "tp": 31,
+      "fp": 27,
+      "fn": 9,
+      "precision": 0.5345,
+      "recall": 0.775,
+      "relaxed_iou25_tp": 34,
+      "GT_center_contained": 33,
+      "negative_trigger_images": 2,
+      "negative_fp_boxes": 3
+    },
+    {
+      "conf": 0.15,
+      "tp": 30,
+      "fp": 16,
+      "fn": 10,
+      "precision": 0.6522,
+      "recall": 0.75,
+      "relaxed_iou25_tp": 33,
+      "GT_center_contained": 32,
+      "negative_trigger_images": 2,
+      "negative_fp_boxes": 2
+    },
+    {
+      "conf": 0.2,
+      "tp": 27,
+      "fp": 11,
+      "fn": 13,
+      "precision": 0.7105,
+      "recall": 0.675,
+      "relaxed_iou25_tp": 29,
+      "GT_center_contained": 29,
+      "negative_trigger_images": 1,
+      "negative_fp_boxes": 1
+    },
+    {
+      "conf": 0.25,
+      "tp": 24,
+      "fp": 9,
+      "fn": 16,
+      "precision": 0.7273,
+      "recall": 0.6,
+      "relaxed_iou25_tp": 26,
+      "GT_center_contained": 26,
+      "negative_trigger_images": 1,
+      "negative_fp_boxes": 1
+    },
+    {
+      "conf": 0.3,
+      "tp": 21,
+      "fp": 8,
+      "fn": 19,
+      "precision": 0.7241,
+      "recall": 0.525,
+      "relaxed_iou25_tp": 24,
+      "GT_center_contained": 24,
+      "negative_trigger_images": 1,
+      "negative_fp_boxes": 1
+    },
+    {
+      "conf": 0.35,
+      "tp": 21,
+      "fp": 8,
+      "fn": 19,
+      "precision": 0.7241,
+      "recall": 0.525,
+      "relaxed_iou25_tp": 24,
+      "GT_center_contained": 24,
+      "negative_trigger_images": 1,
+      "negative_fp_boxes": 1
+    }
+  ],
+  "sessions": {
+    "room_knife_hero-20261017-173636": [
+      {
+        "conf": 0.1,
+        "images": 2,
+        "tp": 0,
+        "fp": 0,
+        "fn": 0,
+        "precision": 0.0,
+        "recall": 0.0
+      },
+      {
+        "conf": 0.15,
+        "images": 2,
+        "tp": 0,
+        "fp": 0,
+        "fn": 0,
+        "precision": 0.0,
+        "recall": 0.0
+      },
+      {
+        "conf": 0.2,
+        "images": 2,
+        "tp": 0,
+        "fp": 0,
+        "fn": 0,
+        "precision": 0.0,
+        "recall": 0.0
+      },
+      {
+        "conf": 0.25,
+        "images": 2,
+        "tp": 0,
+        "fp": 0,
+        "fn": 0,
+        "precision": 0.0,
+        "recall": 0.0
+      },
+      {
+        "conf": 0.3,
+        "images": 2,
+        "tp": 0,
+        "fp": 0,
+        "fn": 0,
+        "precision": 0.0,
+        "recall": 0.0
+      },
+      {
+        "conf": 0.35,
+        "images": 2,
+        "tp": 0,
+        "fp": 0,
+        "fn": 0,
+        "precision": 0.0,
+        "recall": 0.0
+      }
+    ],
+    "room_knife_hero-20261017-173649": [
+      {
+        "conf": 0.1,
+        "images": 8,
+        "tp": 8,
+        "fp": 2,
+        "fn": 0,
+        "precision": 0.8,
+        "recall": 1.0
+      },
+      {
+        "conf": 0.15,
+        "images": 8,
+        "tp": 8,
+        "fp": 2,
+        "fn": 0,
+        "precision": 0.8,
+        "recall": 1.0
+      },
+      {
+        "conf": 0.2,
+        "images": 8,
+        "tp": 8,
+        "fp": 2,
+        "fn": 0,
+        "precision": 0.8,
+        "recall": 1.0
+      },
+      {
+        "conf": 0.25,
+        "images": 8,
+        "tp": 7,
+        "fp": 1,
+        "fn": 1,
+        "precision": 0.875,
+        "recall": 0.875
+      },
+      {
+        "conf": 0.3,
+        "images": 8,
+        "tp": 6,
+        "fp": 0,
+        "fn": 2,
+        "precision": 1.0,
+        "recall": 0.75
+      },
+      {
+        "conf": 0.35,
+        "images": 8,
+        "tp": 6,
+        "fp": 0,
+        "fn": 2,
+        "precision": 1.0,
+        "recall": 0.75
+      }
+    ],
+    "room_knife_hero-20261017-184411": [
+      {
+        "conf": 0.1,
+        "images": 8,
+        "tp": 4,
+        "fp": 10,
+        "fn": 4,
+        "precision": 0.2857,
+        "recall": 0.5
+      },
+      {
+        "conf": 0.15,
+        "images": 8,
+        "tp": 4,
+        "fp": 6,
+        "fn": 4,
+        "precision": 0.4,
+        "recall": 0.5
+      },
+      {
+        "conf": 0.2,
+        "images": 8,
+        "tp": 4,
+        "fp": 5,
+        "fn": 4,
+        "precision": 0.4444,
+        "recall": 0.5
+      },
+      {
+        "conf": 0.25,
+        "images": 8,
+        "tp": 4,
+        "fp": 4,
+        "fn": 4,
+        "precision": 0.5,
+        "recall": 0.5
+      },
+      {
+        "conf": 0.3,
+        "images": 8,
+        "tp": 4,
+        "fp": 4,
+        "fn": 4,
+        "precision": 0.5,
+        "recall": 0.5
+      },
+      {
+        "conf": 0.35,
+        "images": 8,
+        "tp": 4,
+        "fp": 4,
+        "fn": 4,
+        "precision": 0.5,
+        "recall": 0.5
+      }
+    ],
+    "room_knife_hero-20261017-184449": [
+      {
+        "conf": 0.1,
+        "images": 8,
+        "tp": 6,
+        "fp": 4,
+        "fn": 2,
+        "precision": 0.6,
+        "recall": 0.75
+      },
+      {
+        "conf": 0.15,
+        "images": 8,
+        "tp": 6,
+        "fp": 2,
+        "fn": 2,
+        "precision": 0.75,
+        "recall": 0.75
+      },
+      {
+        "conf": 0.2,
+        "images": 8,
+        "tp": 5,
+        "fp": 1,
+        "fn": 3,
+        "precision": 0.8333,
+        "recall": 0.625
+      },
+      {
+        "conf": 0.25,
+        "images": 8,
+        "tp": 5,
+        "fp": 1,
+        "fn": 3,
+        "precision": 0.8333,
+        "recall": 0.625
+      },
+      {
+        "conf": 0.3,
+        "images": 8,
+        "tp": 4,
+        "fp": 1,
+        "fn": 4,
+        "precision": 0.8,
+        "recall": 0.5
+      },
+      {
+        "conf": 0.35,
+        "images": 8,
+        "tp": 4,
+        "fp": 1,
+        "fn": 4,
+        "precision": 0.8,
+        "recall": 0.5
+      }
+    ],
+    "room_knife_hero-20261017-193342": [
+      {
+        "conf": 0.1,
+        "images": 8,
+        "tp": 8,
+        "fp": 4,
+        "fn": 0,
+        "precision": 0.6667,
+        "recall": 1.0
+      },
+      {
+        "conf": 0.15,
+        "images": 8,
+        "tp": 8,
+        "fp": 1,
+        "fn": 0,
+        "precision": 0.8889,
+        "recall": 1.0
+      },
+      {
+        "conf": 0.2,
+        "images": 8,
+        "tp": 8,
+        "fp": 0,
+        "fn": 0,
+        "precision": 1.0,
+        "recall": 1.0
+      },
+      {
+        "conf": 0.25,
+        "images": 8,
+        "tp": 6,
+        "fp": 0,
+        "fn": 2,
+        "precision": 1.0,
+        "recall": 0.75
+      },
+      {
+        "conf": 0.3,
+        "images": 8,
+        "tp": 6,
+        "fp": 0,
+        "fn": 2,
+        "precision": 1.0,
+        "recall": 0.75
+      },
+      {
+        "conf": 0.35,
+        "images": 8,
+        "tp": 6,
+        "fp": 0,
+        "fn": 2,
+        "precision": 1.0,
+        "recall": 0.75
+      }
+    ],
+    "room_knife_hero-20261017-193421": [
+      {
+        "conf": 0.1,
+        "images": 8,
+        "tp": 5,
+        "fp": 4,
+        "fn": 3,
+        "precision": 0.5556,
+        "recall": 0.625
+      },
+      {
+        "conf": 0.15,
+        "images": 8,
+        "tp": 4,
+        "fp": 3,
+        "fn": 4,
+        "precision": 0.5714,
+        "recall": 0.5
+      },
+      {
+        "conf": 0.2,
+        "images": 8,
+        "tp": 2,
+        "fp": 2,
+        "fn": 6,
+        "precision": 0.5,
+        "recall": 0.25
+      },
+      {
+        "conf": 0.25,
+        "images": 8,
+        "tp": 2,
+        "fp": 2,
+        "fn": 6,
+        "precision": 0.5,
+        "recall": 0.25
+      },
+      {
+        "conf": 0.3,
+        "images": 8,
+        "tp": 1,
+        "fp": 2,
+        "fn": 7,
+        "precision": 0.3333,
+        "recall": 0.125
+      },
+      {
+        "conf": 0.35,
+        "images": 8,
+        "tp": 1,
+        "fp": 2,
+        "fn": 7,
+        "precision": 0.3333,
+        "recall": 0.125
+      }
+    ]
+  }
+}

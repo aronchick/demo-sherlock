@@ -20,6 +20,7 @@ from fastapi.staticfiles import StaticFiles
 
 from ..events import BUS
 from ..orchestrator import Sherlock
+from ..receipts import ReceiptStore
 from .model_servers import describe
 from .numbers import read_numbers
 
@@ -70,6 +71,8 @@ def make_app(sherlock: Sherlock) -> FastAPI:
                 "director_model": None if cfg.mock else cfg.director.model,
                 "vlm_model": None if cfg.mock else cfg.analyst.model,
                 "scout_backend": getattr(getattr(sherlock, "scout", None), "kind", None),
+                "scout_model": getattr(cfg, "yolo_model", None),
+                "scout_sha256": getattr(getattr(getattr(sherlock, "scout", None), "impl", None), "model_sha256", None),
                 "synthetic": bool(getattr(sherlock, "scenes", None)),
                 "scout_ms": BUS.snapshot().get("scout_ms"),
                 "servers": describe(cfg)}
@@ -152,17 +155,36 @@ def make_app(sherlock: Sherlock) -> FastAPI:
         return {"ok": True}
 
     serving: dict[str, dict] = {}
+    receipts = ReceiptStore(sherlock.incidents) if hasattr(sherlock, "incidents") else None
 
     @app.get("/expanso")
     def expanso():
         """What the footers may claim. 'edge' is true only while the Edge pipelines on
         this laptop are accepting this run's events; serving is what the cloud core's
         vLLM metrics pipeline last pushed, dropped once it goes stale."""
-        status = sherlock.edge.status() if sherlock.edge else {"edge": False}
+        status = sherlock.edge.status() if sherlock.edge else {"edge": False, "configured": False, "delivery_state": "disabled"}
         now = time.time()
         fresh = {k: v for k, v in serving.items() if now - v["received"] < _SERVING_STALE_S}
-        return JSONResponse({**status, "mode": expanso_mode(), "serving": fresh},
+        return JSONResponse({**status, "mode": expanso_mode(), "serving": fresh,
+                             "receipts": receipts.list() if receipts else []},
                             headers={"Cache-Control": "no-store"})
+
+    @app.post("/api/receipts")
+    async def receipt_in(request: Request):
+        if (request.client.host if request.client else "") not in _LOOPBACK:
+            raise HTTPException(403)
+        body = bytearray()
+        async for chunk in request.stream():
+            body.extend(chunk)
+            if len(body) > 4096:
+                raise HTTPException(413)
+        if receipts is None:
+            raise HTTPException(503)
+        try:
+            accepted = receipts.accept(json.loads(body))
+        except (ValueError, OSError, KeyError, TypeError) as error:
+            raise HTTPException(400, "Receipt does not match local signed evidence") from error
+        return {"ok": True, "incident": accepted["incident"]}
 
     @app.post("/api/serving")
     async def serving_in(request: Request):

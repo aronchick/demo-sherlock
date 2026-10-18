@@ -1,6 +1,12 @@
 #!/usr/bin/env bash
 # Run by just brev-up inside a source-only release on the selected H100.
 set -euo pipefail
+verify_only=0
+case "${1:-}" in
+  '') ;;
+  --verify-only) verify_only=1 ;;
+  *) echo 'Usage: brev/setup.sh [--verify-only]' >&2; exit 2 ;;
+esac
 cd "$(dirname "${BASH_SOURCE[0]}")/.."
 export PATH="$PWD/.runtime/tools:$HOME/.local/bin:$PATH"
 DIRECTOR=RedHatAI/NVIDIA-Nemotron-3.5-Lightning-30B-A3B-FP8
@@ -15,6 +21,7 @@ nvidia-smi --query-gpu=name,memory.total --format=csv,noheader
 docker info >/dev/null
 mkdir -p .runtime
 if ! command -v uv >/dev/null; then
+  [[ "$verify_only" == 0 ]] || { echo 'Verification needs the existing uv installation' >&2; exit 1; }
   curl --fail --location --silent --show-error \
     https://astral.sh/uv/0.12.17/install.sh -o .runtime/install-uv.sh
   UV_INSTALL_DIR="$PWD/.runtime/tools" UV_NO_MODIFY_PATH=1 \
@@ -61,7 +68,13 @@ for name in director vlm; do
   fi
 done
 
-if [[ "$reuse" == 1 ]]; then
+if [[ "$verify_only" == 1 ]]; then
+  [[ "$reuse" == 1 && "$running" == 1 ]] || {
+    echo 'Expected model containers are not running with the requested configuration; no changes made.' >&2
+    exit 1
+  }
+  echo 'Read-only recovery: verifying existing model containers without restart.'
+elif [[ "$reuse" == 1 ]]; then
   if [[ "$running" == 1 ]]; then
     echo 'Exact FP8 and VLM containers already running; checking readiness without restart.'
   else

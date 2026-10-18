@@ -1,0 +1,96 @@
+{
+  "revision": "369e9a07f4e894333d52a9a4f0c5e458c8d7a169",
+  "started_at": 1792311663.489387,
+  "stages": [
+    {
+      "name": "up",
+      "returncode": 0,
+      "elapsed_s": 1271.582109928131
+    },
+    {
+      "name": "up-again",
+      "returncode": 1,
+      "elapsed_s": 19.867691040039062
+    },
+    {
+      "name": "down",
+      "returncode": 0,
+      "elapsed_s": 60.875935077667236
+    }
+  ],
+  "mode": {
+    "mock": false,
+    "director_model": "RedHatAI/NVIDIA-Nemotron-3.5-Lightning-30B-A3B-FP8",
+    "vlm_model": "HuggingFaceTB/SmolVLM-500M-Instruct",
+    "scout_backend": "yolo",
+    "scout_model": "models/scout-r2-960.pt",
+    "scout_sha256": "59ef75726532cd5c403e3e74b0a15cc8a789c71205bee89562cbe18cffd94cfe",
+    "synthetic": false,
+    "scout_ms": 16.0,
+    "servers": {
+      "director": {
+        "name": "vLLM",
+        "version": "0.28.0",
+        "reachable": true,
+        "source": "detected",
+        "host": "sherlock-nebius-h100",
+        "label": "vLLM"
+      },
+      "analyst": {
+        "name": "vLLM",
+        "version": "0.28.0",
+        "reachable": true,
+        "source": "detected",
+        "host": "sherlock-nebius-h100",
+        "label": "vLLM"
+      },
+      "verifier": {
+        "name": "vLLM",
+        "version": "0.28.0",
+        "reachable": true,
+        "source": "detected",
+        "host": "sherlock-nebius-h100",
+        "label": "vLLM"
+      },
+      "endpoints": 2,
+      "vlm_shared": true,
+      "local": false
+    }
+  },
+  "cameras": {
+    "cameras": [
+      {
+        "name": "hero",
+        "pan": 0.0,
+        "tilt": 0.0,
+        "zoom": 1.0,
+        "covered": false,
+        "backend": "obsbot",
+        "ptz": "obsbot-usb"
+      }
+    ],
+    "unavailable": []
+  },
+  "ports": {
+    "8000": false,
+    "8020": false,
+    "18001": false,
+    "18002": false,
+    "23121": false
+  },
+  "instances": [
+    {
+      "name": "sherlock-nebius-h100",
+      "id": "hmbypnd6s",
+      "status": "STOPPED"
+    },
+    {
+      "name": "sherlock-h100",
+      "id": "ctuant3yw",
+      "status": "RUNNING"
+    }
+  ],
+  "completed_at": 1792313018.811875,
+  "scope": "Cold startup passed; repeated startup failed at source transfer; shutdown passed.",
+  "first_attempt": "Hardware guard refused before boot; subsequent inventory reads identified H100. Original rejected hardware field was not retained."
+}

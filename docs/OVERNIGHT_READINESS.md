@@ -183,5 +183,30 @@ verification-only pass. That pass requires the exact expected containers to be
 running, then checks model readiness and inference without starting, stopping,
 replacing or pulling containers. Ordinary setup errors still fail immediately;
 a second SSH failure is reported rather than retried indefinitely. Automated
-tests cover those boundaries. A new live cold cycle is still required to verify
-this recovery under provider conditions.
+tests cover those boundaries.
+
+## Cold-start retest after #132
+
+One cold start completed without intervention in **21 minutes 12 seconds**,
+including both inference smokes, all five running Cloud jobs and presenter
+readiness. The runtime reported the promoted Scout SHA. This run did not lose
+SSH during model setup, so it does not exercise that recovery branch live.
+
+The immediate second `just up` failed when SSH closed during source upload,
+before setup ran. Upload now retries once after reconnecting, resending the
+same committed archive bytes. Setup still waits for a complete transfer;
+ordinary transfer errors and a second disconnect remain failures. Presenter
+reuse needs a new runtime retest after this correction.
+
+An earlier attempt was refused by the H100 guard before boot. Two subsequent
+inventory reads identified the expected H100. The refused GPU field was not
+retained, so its cause is unresolved; the error now includes the reported GPU
+and instance type without weakening the guard.
+
+Automatic `just down` completed in 60.88 seconds. Brev reported Nebius STOPPED,
+and the owned demo ports were closed. See
+`results/recording_readiness/cold-cycle-132.json` for the retained results.
+Allow at least 25 minutes before recording for a cold start; this is planning
+headroom around one measured run, not a startup guarantee. The capture checkout
+has current code and weights, but use the configured presenter checkout at
+`~/code/second-brain/projects/demos/demo-sherlock` for the camera and Cloud run.

@@ -144,6 +144,20 @@ def start_existing(name):
             time.sleep(5)
 
 
+def upload_remote(name, remote, archive):
+    command = [*ssh(name), f'mkdir -p {remote} && tar -xf - -C {remote}']
+    try:
+        run(command, input=archive)
+    except subprocess.CalledProcessError as exc:
+        if exc.returncode != 255:
+            raise
+        # No setup is launched until the complete committed archive arrives.
+        # Replay the same bytes after reconnecting; never rebuild from a changed tree.
+        print('Source upload SSH disconnected; reconnecting to resend the committed archive once.', flush=True)
+        wait_for_ssh(name)
+        run(command, input=archive)
+
+
 def setup_remote(name, remote):
     command = f'cd {remote} && bash brev/setup.sh'
     try:
@@ -160,8 +174,10 @@ def setup_remote(name, remote):
 
 def up(name):
     item = find_instance(name)
-    if 'H100' not in item.get('gpu', '').upper():
-        raise ValueError('This setup targets an existing H100; refusing a different GPU')
+    if 'H100' not in (item.get('gpu') or '').upper():
+        raise ValueError(f'This setup requires an H100; {name} reported '
+                         f'gpu={item.get("gpu")!r}, instance_type={item.get("instance_type")!r}. '
+                         'No instance was started.')
     if item['status'] in {'STOPPED', 'STOPPING', 'PAUSED', 'OFF'}:
         if item['status'] == 'STOPPING':
             raise ValueError('Instance is still stopping; retry after it has stopped')
@@ -182,7 +198,7 @@ def up(name):
     archive = run(['git', 'archive', revision, 'brev', 'scripts', 'sherlock', 'jobs', 'edge',
                    'pyproject.toml', 'uv.lock', 'tests/fixtures/vllm'],
                   cwd=ROOT, capture_output=True).stdout
-    run([*ssh(name), f'mkdir -p {remote} && tar -xf - -C {remote}'], input=archive)
+    upload_remote(name, remote, archive)
     setup_remote(name, remote)
     print(f'GPU setup verified: {name}.', flush=True)
 

@@ -87,6 +87,38 @@ def test_setup_disconnect_recovery_does_not_loop(monkeypatch):
     assert calls[-1][-1].endswith('--verify-only')
 
 
+@pytest.mark.parametrize('exit_code', [1, 255])
+@pytest.mark.parametrize('retry_fails', [False, True])
+def test_upload_retry_preserves_archive_and_is_transport_only(monkeypatch, exit_code, retry_fails):
+    calls, waits = [], []
+    archive = b'committed source archive'
+
+    def execute(args, **kwargs):
+        calls.append((args, kwargs))
+        if len(calls) == 1 or retry_fails:
+            raise subprocess.CalledProcessError(exit_code, args)
+
+    monkeypatch.setattr(workflow, 'run', execute)
+    monkeypatch.setattr(workflow, 'wait_for_ssh', waits.append)
+    if exit_code != 255 or retry_fails:
+        with pytest.raises(subprocess.CalledProcessError):
+            workflow.upload_remote('new', 'release', archive)
+    else:
+        workflow.upload_remote('new', 'release', archive)
+    assert len(calls) == (2 if exit_code == 255 else 1)
+    assert waits == (['new'] if exit_code == 255 else [])
+    assert all(call == calls[0] and call[1]['input'] is archive for call in calls)
+    assert calls[0][0][-1] == 'mkdir -p release && tar -xf - -C release'
+
+
+@pytest.mark.parametrize('gpu', [None, '', 'A100'])
+def test_hardware_refusal_reports_inventory_without_starting(monkeypatch, gpu):
+    monkeypatch.setattr(workflow, 'find_instance', lambda _: {'gpu': gpu, 'instance_type': 'observed-type'})
+    monkeypatch.setattr(workflow, 'run', lambda *a, **kw: pytest.fail('must not start or connect'))
+    with pytest.raises(ValueError, match='observed-type'):
+        workflow.up('new')
+
+
 def test_model_environment_is_exact_and_does_not_replace_camera_settings():
     env = workflow.model_env('sherlock-h100')
     assert env['DIRECTOR_MODEL'] == workflow.DIRECTOR

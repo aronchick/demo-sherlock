@@ -251,6 +251,22 @@ def test_start_does_not_retry_unrelated_provider_errors(monkeypatch):
         workflow.start_existing('new')
 
 
+def test_start_waits_past_three_minutes_but_has_a_ten_minute_limit(monkeypatch):
+    attempts = []
+    clock = iter([0, 181, 599, 600])
+
+    def stopping(args, **kwargs):
+        attempts.append(args)
+        raise subprocess.CalledProcessError(1, args, stderr='status=STOPPING')
+
+    monkeypatch.setattr(workflow, 'run', stopping)
+    monkeypatch.setattr(workflow.time, 'monotonic', lambda: next(clock))
+    monkeypatch.setattr(workflow.time, 'sleep', lambda _: None)
+    with pytest.raises(subprocess.CalledProcessError):
+        workflow.start_existing('new')
+    assert len(attempts) == 3
+
+
 def test_down_does_not_claim_success_when_still_running(monkeypatch):
     monkeypatch.setattr(workflow, 'find_instance',
                         lambda _: {'id': 'owned', 'status': 'STOPPING'})

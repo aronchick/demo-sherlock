@@ -123,7 +123,7 @@ def down(name, timeout=180):
 
 def start_existing(name):
     # Brev inventory can report STOPPED before the provider finishes STOPPING.
-    deadline = time.monotonic() + 180
+    deadline = time.monotonic() + 600
     while True:
         try:
             result = run(['brev', 'start', name, '--detached'], capture_output=True, text=True)

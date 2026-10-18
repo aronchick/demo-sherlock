@@ -1,0 +1,141 @@
+{
+  "scope": "Real cold startup, automatic upload recovery, unchanged presenter on warm reuse, and verified shutdown. No visible prop-to-camera run in this cycle.",
+  "startup_revision": "a654aa0",
+  "warm_revision": "445c249",
+  "cold_start": {
+    "initial": [
+      {
+        "name": "sherlock-nebius-h100",
+        "id": "hmbypnd6s",
+        "status": "STOPPED",
+        "gpu": "H100",
+        "instance_type": "gpu-h100-sxm.1gpu-16vcpu-200gb"
+      }
+    ],
+    "started_at": 1792313320.5106719,
+    "elapsed_s": 1206.4841620922089,
+    "returncode": 0
+  },
+  "warm_reuse": {
+    "returncode": 0,
+    "elapsed_s": 55.816975116729736,
+    "presenter_unchanged": true,
+    "before_pid": 97900,
+    "after_pid": 97900
+  },
+  "shutdown": {
+    "returncode": 0,
+    "elapsed_s": 64.39779901504517,
+    "ports": {
+      "8000": false,
+      "8020": false,
+      "18001": false,
+      "18002": false,
+      "23121": false
+    },
+    "instances": [
+      {
+        "name": "sherlock-nebius-h100",
+        "id": "hmbypnd6s",
+        "status": "STOPPED"
+      },
+      {
+        "name": "sherlock-h100",
+        "id": "ctuant3yw",
+        "status": "RUNNING"
+      }
+    ],
+    "completed_at": 1792314722.128581
+  },
+  "mode": {
+    "mock": false,
+    "director_model": "RedHatAI/NVIDIA-Nemotron-3.5-Lightning-30B-A3B-FP8",
+    "vlm_model": "HuggingFaceTB/SmolVLM-500M-Instruct",
+    "scout_backend": "yolo",
+    "scout_model": "models/scout-r2-960.pt",
+    "scout_sha256": "59ef75726532cd5c403e3e74b0a15cc8a789c71205bee89562cbe18cffd94cfe",
+    "synthetic": false,
+    "scout_ms": 16.1,
+    "servers": {
+      "director": {
+        "name": "vLLM",
+        "version": "0.28.0",
+        "reachable": true,
+        "source": "detected",
+        "host": "sherlock-nebius-h100",
+        "label": "vLLM"
+      },
+      "analyst": {
+        "name": "vLLM",
+        "version": "0.28.0",
+        "reachable": true,
+        "source": "detected",
+        "host": "sherlock-nebius-h100",
+        "label": "vLLM"
+      },
+      "verifier": {
+        "name": "vLLM",
+        "version": "0.28.0",
+        "reachable": true,
+        "source": "detected",
+        "host": "sherlock-nebius-h100",
+        "label": "vLLM"
+      },
+      "endpoints": 2,
+      "vlm_shared": true,
+      "local": false
+    }
+  },
+  "cameras": {
+    "cameras": [
+      {
+        "name": "hero",
+        "pan": 0.0,
+        "tilt": 0.0,
+        "zoom": 1.0,
+        "covered": false,
+        "backend": "obsbot",
+        "ptz": "obsbot-usb"
+      }
+    ],
+    "unavailable": []
+  },
+  "cloud_jobs_running": [
+    "sherlock-telemetry",
+    "sherlock-incidents",
+    "sherlock-examples",
+    "sherlock-core-intake",
+    "sherlock-vllm-metrics"
+  ],
+  "serving_metrics": {
+    "director": {
+      "requests_waiting": 0,
+      "at": "2026-10-18T09:10:21.78686796Z",
+      "up": true,
+      "requests_running": 0,
+      "prefix_cache_hits": 0,
+      "prefix_cache_queries": 5896,
+      "kv_cache_usage": 0,
+      "received": 1792314622.153367
+    },
+    "vlm": {
+      "requests_waiting": 0,
+      "at": "2026-10-18T09:10:21.788919727Z",
+      "up": true,
+      "requests_running": 0,
+      "prefix_cache_hits": 2016,
+      "prefix_cache_queries": 2704,
+      "kv_cache_usage": 0,
+      "received": 1792314622.450212
+    }
+  },
+  "upload_recovery_exercised": true,
+  "source_sha256": {
+    "up.log": "2e506739e8cfcd1fe48427f1263c38be30dfc9db898fbb50b72a93a919cfc3af",
+    "warm-up.log": "5a7cab82dd4e28e7748d2ee31dea4f9127ec47c05ae3964c43201a72d3098306",
+    "down.log": "a60f1ad4ed6f979e28346b329613101ca8edcb34444d485ad0c4204e0282d7b6",
+    "up-result.json": "26ad4293ff81c18bdd143b967945198b201caaff611277c15710a38fd56e36cb",
+    "warm-result.json": "a5734d23566b4844a65ad0f784f7f08e35a2ee5538be6c4adfd071fbd67a9d5e",
+    "down-result.json": "4e4cb7b804030ff104644162137e4ddc9bd87dda0cbef952f092e93e8c286d1f"
+  }
+}

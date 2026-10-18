@@ -1,5 +1,61 @@
 // @ts-check
 
+/** Timestamp measurement, independent of the board's animation queue. */
+class CameraCommandTiming {
+  /** @param {(seconds:number|null) => void} render */
+  constructor(render) {
+    this.render = render;
+    /** @type {Map<string, number[]>} */
+    this.detections = new Map();
+    this.incident = '';
+    /** @type {number|null} */
+    this.started = null;
+    this.measured = false;
+  }
+
+  /** @param {any} event */
+  receive(event) {
+    const data = event.data || {};
+    const key = `${data.camera}:${data.label}`;
+
+    if (event.stage === 'scout' && data.bbox && Number.isFinite(event.t)) {
+      if (data.handled_via) return;
+
+      const previous = this.detections.get(key) || [];
+
+      // Multiple unmatched detections cannot be attributed to an incident safely.
+      this.detections.set(key, [...previous, event.t].slice(-2));
+
+      if (this.detections.size > 64) this.detections.clear();
+
+      return;
+    }
+
+    if (!['narration', 'tool'].includes(event.stage) || !data.incident) return;
+
+    if (data.incident !== this.incident) {
+      this.incident = data.incident;
+      this.measured = false;
+      this.started = null;
+      this.render(null);
+      const detections = this.detections.get(key);
+
+      if (detections?.length === 1) this.started = detections[0];
+
+      this.detections.delete(key);
+    }
+
+    if (this.measured || this.started === null || event.stage !== 'tool') return;
+
+    if (!['look_at', 'move'].includes(data.tool) || data.error || data.result?.ok !== true) return;
+
+    if (!Number.isFinite(event.t) || event.t < this.started) return;
+
+    this.measured = true;
+    this.render(event.t - this.started);
+  }
+}
+
 /** @typedef {{model?: string, where?: string}} Model */
 /** @typedef {{mock: boolean, models: Record<string, Model>}} ModelConfig */
 

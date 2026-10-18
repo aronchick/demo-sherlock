@@ -26,6 +26,7 @@ from .tools import ToolBox
 DEDUPE_SECONDS = 8.0
 
 _BOX_COLORS = {"weapon": (70, 70, 240), "benign": (130, 200, 140), "unknown": (90, 190, 235),
+               "inspect": (90, 190, 235),
                "person": (200, 170, 120)}
 
 

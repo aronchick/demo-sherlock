@@ -2,8 +2,8 @@
 only once per object (dedupe + dwell), so the expensive stages fire rarely.
 That ratio is the headline number on the dashboard.
 
-Security skin: weapon classes escalate, everything else YOLO names is benign and
-gets ignored without a VLM call. People are context, never triggers: a weapon
+Security skin: weapons escalate, hats request an inspection, and other named
+objects are ignored without a VLM call. People are context, never triggers: a weapon
 event carries the nearest person and a head box to aim the evidence zoom at."""
 from __future__ import annotations
 
@@ -24,6 +24,7 @@ BBox = tuple[int, int, int, int]
 # Classes that escalate. No firearms: COCO has none, and we don't fake it.
 # "weapon" is the fine-tuned Scout's merged class (YOLO_MODEL swap; badge, bottle stay benign).
 WEAPON_CLASSES = frozenset({"knife", "baseball bat", "scissors", "weapon"})
+INSPECTION_CLASSES = frozenset({"fedora", "cap", "hat"})
 CONTEXT_CLASSES = frozenset({"person"})
 UNKNOWN_LABELS = frozenset({"motion"})  # MotionScout can't name things; investigate the old way
 
@@ -34,7 +35,7 @@ class Detection:
     conf: float
     bbox: BBox
     camera: str
-    threat: str = "unknown"  # weapon | benign | unknown
+    threat: str = "unknown"  # weapon | inspect | benign | unknown
     person: BBox | None = None
     head: BBox | None = None
     mislabeled_from: str | None = None  # set only by the SCOUT_MISLABEL test fault
@@ -54,6 +55,8 @@ def parse_mislabel(spec: str) -> dict[str, str]:
 def classify(label: str) -> str:
     if label in WEAPON_CLASSES:
         return "weapon"
+    if label in INSPECTION_CLASSES:
+        return "inspect"
     return "unknown" if label in UNKNOWN_LABELS else "benign"
 
 
@@ -115,7 +118,7 @@ class _Tracker:
             used.add(match)
             rec = self.seen[match]
             rec["bbox"], rec["last"] = d.bbox, now
-            dwell = min(self.dwell, 0.12) if classify(d.label) == "weapon" else self.dwell
+            dwell = min(self.dwell, 0.12) if classify(d.label) in {"weapon", "inspect"} else self.dwell
             if not rec["reported"] and now - rec["first"] >= dwell:
                 rec["reported"] = True
                 fresh.append(d)

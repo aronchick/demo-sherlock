@@ -1284,3 +1284,8 @@ Sherlock incorporates both existing open datasets and openly published synthetic
 
 Code and synthetic evaluation datasets (`gym/resources_servers/sherlock/data/tasks.jsonl`) are released under the [MIT License](LICENSE). Vendored dashboard fonts carry the [SIL Open Font License 1.1](sherlock/sherlock/dashboard/static/fonts/OFL-ibm-plex-mono.txt). COCO 2017 annotations are CC-BY-4.0 with per-image Flickr attribution recorded in `data/coco_subset/manifest.jsonl`.
 
+The bundled Scout checkpoint derives from Ultralytics YOLOv8n and carries
+[AGPL-3.0 terms](models/LICENSE-ultralytics), not the repository's MIT license.
+See [checkpoint provenance and licensing](models/README.md). The vendored YuNet
+face detector has its own [license](sherlock/sherlock/models/LICENSE-yunet).
+

@@ -69,7 +69,7 @@ footer a { border-bottom: 0; text-decoration: underline; text-underline-offset: 
 .json-number { color: #8c4222; }
 .json-literal { color: #774367; }
 .json-navigation button, .incident-pagination button { border-radius: 2px; }
-.custody-modal { border: 1px solid var(--ink); border-top: 5px solid var(--ink); border-radius: 2px; }
+.custody-modal { border: 1px solid var(--ink); border-top: 5px solid var(--ink); border-radius: 0; }
 .custody-modal h2 { letter-spacing: -.03em; }
 .custody-modal .modal-decision { border-top: 1px solid var(--line); padding-top: 12px; }
 .responder-device { border-color: #26313e; background: var(--card); }

@@ -17,6 +17,21 @@ images, held-out results, remaining misses, false positives, latency, and
 regressions on general reference images. The checkpoint is specialized for
 this demo room; it has not been validated as a production security detector.
 
+## License
+
+This checkpoint derives from Ultralytics YOLOv8n and is distributed under
+[AGPL-3.0](LICENSE-ultralytics), consistent with the default model card in
+`scripts/publish_scout_hf.py`. The repository's MIT license does not relicense
+these weights or Ultralytics. See [Ultralytics licensing](https://www.ultralytics.com/license)
+for its upstream terms and enterprise option. The included license text comes
+from the installed `ultralytics` 8.4.180 package.
+
+Training and evaluation code lives in `scripts/train_scout.py`,
+`scripts/scout_data.py` and `scripts/eval_scout.py`. The source room photographs
+remain local and are not part of this repository.
+
+## Compare with the stock detector
+
 To return to the stock detector for comparison:
 
 ```sh

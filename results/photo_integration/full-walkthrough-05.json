@@ -1,0 +1,128 @@
+{
+  "index": 4,
+  "source": "/Users/daaronch/code/demo-sherlock-capture/data/scout/images/test/room_knife_hero-20261017-193342_0039.jpg",
+  "source_sha256": "63d0be84c99d87710b712ae89b14e17b2b008c286c89a37ba24131e24cc45fb8",
+  "expected_weapon": true,
+  "weapon_detections": 1,
+  "elapsed_s": 6.489506006240845,
+  "reports": [
+    {
+      "done": true,
+      "claim": "a weapon",
+      "confidence": 0.37,
+      "action": "alert",
+      "evidence": [
+        "original_frame",
+        "weapon_crop",
+        "face_crop"
+      ],
+      "comparison": {
+        "status": "confirmed",
+        "reason": "Verifier confirms the claim",
+        "verifier_supports": true,
+        "claim": "a weapon",
+        "analyst_names_claim": false
+      },
+      "verified": true,
+      "verifier_reason": "No.",
+      "description": "",
+      "analyst_mismatch": "Camera.",
+      "incident": "20261018-001343-014",
+      "t": 1792296830.23555,
+      "evidence_provenance": {
+        "original_frame": {
+          "camera": "hero",
+          "captured_at": 1792296823.714278,
+          "source_artifact": null,
+          "relationship": "source_frame",
+          "bbox": null
+        },
+        "weapon_crop": {
+          "camera": "hero",
+          "captured_at": 1792296825.952727,
+          "source_artifact": "original_frame",
+          "relationship": "subsequent_capture",
+          "bbox": [
+            1173,
+            525,
+            1385,
+            561
+          ]
+        },
+        "face_crop": {
+          "camera": "hero",
+          "captured_at": 1792296823.714278,
+          "source_artifact": "original_frame",
+          "relationship": "crop_of_source",
+          "bbox": [
+            1213,
+            1,
+            1405,
+            216
+          ]
+        }
+      },
+      "evidence_camera": "hero",
+      "vlm_calls": 2,
+      "total_ms": 6482.719250023365,
+      "trigger": {
+        "camera": "hero",
+        "label": "weapon",
+        "bbox": [
+          1173,
+          525,
+          1385,
+          561
+        ],
+        "threat": "weapon",
+        "person": [
+          1085,
+          1,
+          1533,
+          1080
+        ],
+        "head": [
+          1213,
+          1,
+          1405,
+          216
+        ]
+      },
+      "notification": {
+        "simulated": true,
+        "status": "delivered",
+        "delivered_at": 1792296830.237021,
+        "acknowledged_at": null
+      },
+      "custody_saved": true
+    }
+  ],
+  "physical_camera": false,
+  "take": 5,
+  "completed_at": 1792296834.3307588,
+  "walkthrough_seconds": 13.28221082687378,
+  "verification": {
+    "signature": "verified",
+    "artifacts": "verified",
+    "history": "verified"
+  },
+  "response": {
+    "status": "investigating",
+    "simulated": true,
+    "team_notified_at": 1792296831.0098581,
+    "events": [
+      {
+        "action": "investigate",
+        "t": 1792296830.9504828,
+        "simulated": true
+      },
+      {
+        "action": "notify_team",
+        "t": 1792296831.0098581,
+        "simulated": true
+      }
+    ]
+  },
+  "core_receipt": true,
+  "browser_errors": "{\"success\":true,\"data\":{\"errors\":[{\"column\":15,\"line\":356,\"text\":\"ReferenceError: expansoStatusText is not defined\\n    at expansoFooter (http://127.0.0.1:8000/:357:16)\\n    at http://127.0.0.1:8000/:365:36\",\"url\":null},{\"column\":15,\"line\":356,\"text\":\"ReferenceError: expansoStatusText is not defined\\n    at expansoFooter (http://127.0.0.1:8000/:357:16)\\n    at http://127.0.0.1:8000/:365:36\",\"url\":null},{\"column\":15,\"line\":356,\"text\":\"ReferenceError: expansoStatusText is not defined\\n    at expansoFooter (http://127.0.0.1:8000/:357:16)\\n    at http://127.0.0.1:8000/:365:36\",\"url\":null},{\"column\":15,\"line\":356,\"text\":\"ReferenceError: expansoStatusText is not defined\\n    at expansoFooter (http://127.0.0.1:8000/:357:16)\\n    at http://127.0.0.1:8000/:365:36\",\"url\":null},{\"column\":15,\"line\":356,\"text\":\"ReferenceError: expansoStatusText is not defined\\n    at expansoFooter (http://127.0.0.1:8000/:357:16)\\n    at http://127.0.0.1:8000/:365:36\",\"url\":null},{\"column\":15,\"line\":356,\"text\":\"ReferenceError: expansoStatusText is not defined\\n    at expansoFooter (http://127.0.0.1:8000/:357:16)\\n    at http://127.0.0.1:8000/:365:36\",\"url\":null},{\"column\":15,\"line\":356,\"text\":\"ReferenceError: expansoStatusText is not defined\\n    at expansoFooter (http://127.0.0.1:8000/:357:16)\\n    at http://127.0.0.1:8000/:365:36\",\"url\":null},{\"column\":15,\"line\":356,\"text\":\"ReferenceError: expansoStatusText is not defined\\n    at expansoFooter (http://127.0.0.1:8000/:357:16)\\n    at http://127.0.0.1:8000/:365:36\",\"url\":null},{\"column\":15,\"line\":356,\"text\":\"ReferenceError: expansoStatusText is not defined\\n    at expansoFooter (http://127.0.0.1:8000/:357:16)\\n    at http://127.0.0.1:8000/:365:36\",\"url\":null},{\"column\":15,\"line\":356,\"text\":\"ReferenceError: expansoStatusText is not defined\\n    at expansoFooter (http://127.0.0.1:8000/:357:16)\\n    at http://127.0.0.1:8000/:365:36\",\"url\":null},{\"column\":15,\"line\":356,\"text\":\"ReferenceError: expansoStatusText is not defined\\n    at expansoFooter (http://127.0.0.1:8000/:357:16)\\n    at http://127.0.0.1:8000/:365:36\",\"url\":null},{\"column\":15,\"line\":356,\"text\":\"ReferenceError: expansoStatusText is not defined\\n    at expansoFooter (http://127.0.0.1:8000/:357:16)\\n    at http://127.0.0.1:8000/:365:36\",\"url\":null},{\"column\":15,\"line\":356,\"text\":\"ReferenceError: expansoStatusText is not defined\\n    at expansoFooter (http://127.0.0.1:8000/:357:16)\\n    at http://127.0.0.1:8000/:365:36\",\"url\":null},{\"column\":15,\"line\":356,\"text\":\"ReferenceError: expansoStatusText is not defined\\n    at expansoFooter (http://127.0.0.1:8000/:357:16)\\n    at http://127.0.0.1:8000/:365:36\",\"url\":null},{\"column\":15,\"line\":356,\"text\":\"ReferenceError: expansoStatusText is not defined\\n    at expansoFooter (http://127.0.0.1:8000/:357:16)\\n    at http://127.0.0.1:8000/:365:36\",\"url\":null},{\"column\":15,\"line\":356,\"text\":\"ReferenceError: expansoStatusText is not defined\\n    at expansoFooter (http://127.0.0.1:8000/:357:16)\\n    at http://127.0.0.1:8000/:365:36\",\"url\":null},{\"column\":15,\"line\":356,\"text\":\"ReferenceError: expansoStatusText is not defined\\n    at expansoFooter (http://127.0.0.1:8000/:357:16)\\n    at http://127.0.0.1:8000/:365:36\",\"url\":null},{\"column\":15,\"line\":356,\"text\":\"ReferenceError: expansoStatusText is not defined\\n    at expansoFooter (http://127.0.0.1:8000/:357:16)\\n    at http://127.0.0.1:8000/:365:36\",\"url\":null},{\"column\":15,\"line\":356,\"text\":\"ReferenceError: expansoStatusText is not defined\\n    at expansoFooter (http://127.0.0.1:8000/:357:16)\\n    at http://127.0.0.1:8000/:365:36\",\"url\":null},{\"column\":15,\"line\":356,\"text\":\"ReferenceError: expansoStatusText is not defined\\n    at expansoFooter (http://127.0.0.1:8000/:357:16)\\n    at http://127.0.0.1:8000/:365:36\",\"url\":null},{\"column\":15,\"line\":356,\"text\":\"ReferenceError: expansoStatusText is not defined\\n    at expansoFooter (http://127.0.0.1:8000/:357:16)\\n    at http://127.0.0.1:8000/:365:36\",\"url\":null}],\"lifecycle\":{\"effectiveLaunch\":{\"browserLaunched\":true,\"engine\":\"chrome\",\"launchHash\":11677035664275010974},\"launched\":false,\"relaunchedBrowser\":false,\"restartedBackground\":false,\"restoreStatus\":\"not_configured\",\"reused\":true,\"saveStatus\":\"not_attempted\"}},\"error\":null}\n"
+}

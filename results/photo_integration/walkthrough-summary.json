@@ -1,0 +1,152 @@
+[
+  {
+    "take": 1,
+    "incident": "20261018-001306-010",
+    "source_sha256": "7b36b5ad001914d870150833459b5b9afbe2c8ec3726907b1f3d6a883ad5854a",
+    "total_ms": 4906.354957958683,
+    "verification": {
+      "signature": "verified",
+      "artifacts": "verified",
+      "history": "verified"
+    },
+    "core_receipt": true,
+    "phone_notified": true,
+    "physical_camera": false,
+    "ui_status": "asset loading defect found; browser retest pending"
+  },
+  {
+    "take": 2,
+    "incident": "20261018-001314-011",
+    "source_sha256": "9beae8b4d2683b3765c517b203f679455cc81f3fd9207592d9cec742bee141ba",
+    "total_ms": 4973.927000071853,
+    "verification": {
+      "signature": "verified",
+      "artifacts": "verified",
+      "history": "verified"
+    },
+    "core_receipt": true,
+    "phone_notified": true,
+    "physical_camera": false,
+    "ui_status": "asset loading defect found; browser retest pending"
+  },
+  {
+    "take": 3,
+    "incident": "20261018-001325-012",
+    "source_sha256": "07a6772eb5d69d448901e3e46c4254d69f42531dc4193d58af39dce253fd6fae",
+    "total_ms": 6085.511874873191,
+    "verification": {
+      "signature": "verified",
+      "artifacts": "verified",
+      "history": "verified"
+    },
+    "core_receipt": true,
+    "phone_notified": true,
+    "physical_camera": false,
+    "ui_status": "asset loading defect found; browser retest pending"
+  },
+  {
+    "take": 4,
+    "incident": "20261018-001334-013",
+    "source_sha256": "78cf1c9c1cdbaab69953cffcbb6a94ab365d06d92b5244a6d152a3ebb8342baf",
+    "total_ms": 3086.7405000608414,
+    "verification": {
+      "signature": "verified",
+      "artifacts": "verified",
+      "history": "verified"
+    },
+    "core_receipt": true,
+    "phone_notified": true,
+    "physical_camera": false,
+    "ui_status": "asset loading defect found; browser retest pending"
+  },
+  {
+    "take": 5,
+    "incident": "20261018-001343-014",
+    "source_sha256": "63d0be84c99d87710b712ae89b14e17b2b008c286c89a37ba24131e24cc45fb8",
+    "total_ms": 6482.719250023365,
+    "verification": {
+      "signature": "verified",
+      "artifacts": "verified",
+      "history": "verified"
+    },
+    "core_receipt": true,
+    "phone_notified": true,
+    "physical_camera": false,
+    "ui_status": "asset loading defect found; browser retest pending"
+  },
+  {
+    "take": 6,
+    "incident": "20261018-001354-015",
+    "source_sha256": "27b13166a6b1148331e26788131906f7dc23dd9db29b1612e5138b2e8aa98aba",
+    "total_ms": 5801.903292071074,
+    "verification": {
+      "signature": "verified",
+      "artifacts": "verified",
+      "history": "verified"
+    },
+    "core_receipt": true,
+    "phone_notified": true,
+    "physical_camera": false,
+    "ui_status": "asset loading defect found; browser retest pending"
+  },
+  {
+    "take": 7,
+    "incident": "20261018-001405-016",
+    "source_sha256": "f3a612cf985bbba9d33e6bd71ef510a175014969c03fa268ddfc29af752d8913",
+    "total_ms": 5727.9050829820335,
+    "verification": {
+      "signature": "verified",
+      "artifacts": "verified",
+      "history": "verified"
+    },
+    "core_receipt": true,
+    "phone_notified": true,
+    "physical_camera": false,
+    "ui_status": "asset loading defect found; browser retest pending"
+  },
+  {
+    "take": 8,
+    "incident": "20261018-001415-017",
+    "source_sha256": "7b36b5ad001914d870150833459b5b9afbe2c8ec3726907b1f3d6a883ad5854a",
+    "total_ms": 7867.032208945602,
+    "verification": {
+      "signature": "verified",
+      "artifacts": "verified",
+      "history": "verified"
+    },
+    "core_receipt": true,
+    "phone_notified": true,
+    "physical_camera": false,
+    "ui_status": "asset loading defect found; browser retest pending"
+  },
+  {
+    "take": 9,
+    "incident": "20261018-001432-018",
+    "source_sha256": "78cf1c9c1cdbaab69953cffcbb6a94ab365d06d92b5244a6d152a3ebb8342baf",
+    "total_ms": 2701.1000418569893,
+    "verification": {
+      "signature": "verified",
+      "artifacts": "verified",
+      "history": "verified"
+    },
+    "core_receipt": true,
+    "phone_notified": true,
+    "physical_camera": false,
+    "ui_status": "asset loading defect found; browser retest pending"
+  },
+  {
+    "take": 10,
+    "incident": "20261018-001439-019",
+    "source_sha256": "27b13166a6b1148331e26788131906f7dc23dd9db29b1612e5138b2e8aa98aba",
+    "total_ms": 6232.522875070572,
+    "verification": {
+      "signature": "verified",
+      "artifacts": "verified",
+      "history": "verified"
+    },
+    "core_receipt": true,
+    "phone_notified": true,
+    "physical_camera": false,
+    "ui_status": "asset loading defect found; browser retest pending"
+  }
+]

@@ -2,6 +2,7 @@ __pycache__/
 *.pyc
 .env
 *.pt
+!models/scout-r2-960.pt
 snapshots/
 .venv/
 data/

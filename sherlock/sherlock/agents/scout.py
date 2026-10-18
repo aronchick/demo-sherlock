@@ -11,6 +11,7 @@ import os
 import time
 from collections.abc import Callable
 from dataclasses import dataclass
+from pathlib import Path
 
 import cv2
 import numpy as np
@@ -125,16 +126,17 @@ class YoloScout:
         from ultralytics import YOLO  # imported lazily so mock mode needs no torch
         self.model = YOLO(model_path)
         self.conf = conf
-        self.weapon_conf = float(os.environ.get("SCOUT_WEAPON_CONF", str(conf)))
+        room_checkpoint = Path(model_path).name == "scout-r2-960.pt"
+        self.weapon_conf = float(os.environ.get("SCOUT_WEAPON_CONF", "0.15" if room_checkpoint else str(conf)))
         if not 0 <= self.weapon_conf <= 1:
             raise ValueError("SCOUT_WEAPON_CONF must be between 0 and 1")
         self.predict_options = {}
-        if size := os.environ.get("SCOUT_IMGSZ"):
+        if size := os.environ.get("SCOUT_IMGSZ", "640" if room_checkpoint else ""):
             size = int(size)
             if size < 32 or size > 2048 or size % 32:
                 raise ValueError("SCOUT_IMGSZ must be a multiple of 32 between 32 and 2048")
             self.predict_options["imgsz"] = size
-        if overlap := os.environ.get("SCOUT_NMS_IOU"):
+        if overlap := os.environ.get("SCOUT_NMS_IOU", "0.6" if room_checkpoint else ""):
             overlap = float(overlap)
             if not 0 < overlap <= 1:
                 raise ValueError("SCOUT_NMS_IOU must be greater than 0 and at most 1")

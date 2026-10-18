@@ -96,6 +96,9 @@ function custodyCryptography(record) {
   const section = custodyNode('section', '', 'cryptography-record');
   section.append(custodyNode('h2', 'Cryptographic verification'), custodyNode('p', custodyIntegrity(record), 'integrity-status'));
   section.append(custodyNode('p', 'A local application key signs each revision and its evidence hashes. This verifies consistency with that key; it does not independently attest the camera, operator or time.', 'integrity-scope'));
+  const signatureDetails = document.createElement('details');
+  signatureDetails.className = 'record-disclosure';
+  signatureDetails.append(custodyNode('summary', 'Full signature, public key and hashes'));
   const signature = record.signature;
 
   if (signature) {
@@ -105,7 +108,7 @@ function custodyCryptography(record) {
       fields.append(custodyNode('dt', label), custodyNode('dd', String(value)));
     }
 
-    section.append(fields);
+    signatureDetails.append(fields);
   }
 
   const disclosure = document.createElement('details');
@@ -139,6 +142,9 @@ function custodyCryptography(record) {
       loaded = false;
     }
   });
+
+  if (signature) section.append(signatureDetails);
+
   section.append(disclosure, history);
 
   return section;

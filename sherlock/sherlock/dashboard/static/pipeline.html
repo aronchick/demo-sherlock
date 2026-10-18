@@ -163,7 +163,7 @@
     <div class="ratio"><b id="avoided">0</b><span>VLM calls avoided</span></div>
   </header>
 
-  <section class="board" id="board">
+  <main class="board" id="board" aria-label="Camera investigation pipeline">
     <div class="col cam" id="cCam">
       <article class="frame" id="wideFrame">
         <div class="fh"><i></i>Hero camera<small id="wideNote">every frame</small></div>
@@ -202,7 +202,7 @@
       <article class="stage" id="st-bucket" style="--c: var(--benign)">
         <div class="kind">Local evidence</div>
         <div class="sub">snapshots/ on this disk</div>
-        <div class="slots evidence-links" id="evidence-links" aria-label="Saved evidence"><span>No saved evidence yet</span></div>
+        <div class="slots evidence-links" id="evidence-links" role="group" aria-label="Saved evidence"><span>No saved evidence yet</span></div>
         <a href="/custody" target="sherlock-evidence" class="custody-link">Browse chain of custody</a>
         <span class="badge"></span>
       </article>
@@ -275,7 +275,7 @@
         <div class="sub" id="cloud-evidence-status">Delivery unconfirmed</div>
       </article>
     </div>
-  </section>
+  </main>
 
   <section class="record" id="record" aria-label="Incident record">
     <div class="lede">Incident record<small>filled in by each stage</small></div>
@@ -302,7 +302,7 @@
     <button type="button" id="coverBtn" onclick="toggleCover()">Cover hero lens</button>
   </footer>
 </div>
-<canvas id="fx"></canvas>
+<canvas id="fx" aria-hidden="true"></canvas>
 
 <script src="/pipeline/assets/pipeline-models.js"></script>
 <script src="/pipeline/assets/custody-detail.js" defer></script>

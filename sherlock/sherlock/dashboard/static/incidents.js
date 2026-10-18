@@ -110,13 +110,7 @@
     custody.replaceChildren();
     const summary = element('div', '', 'incident-summary');
     summary.append(fact('Incident', record.incident), fact('Trigger camera', record.trigger?.camera || 'Not recorded'), fact('Evidence camera', record.evidence_camera || 'Not recorded'), fact('Analysis', record.models?.mock ? 'Mock run' : 'Live run'), fact('Decision', record.state === 'investigating' ? 'Investigating' : record.action), fact('Recorded', timestamp(record.t)));
-    custody.append(summary, element('h2', record.claim || 'Incident evidence'), custodyCryptography(record));
-
-    if (record.comparison) {
-      const comparison = element('section', '', 'comparison-record');
-      comparison.append(element('h3', `Comparison: ${record.comparison.status}`), element('p', record.comparison.reason), element('p', `Verifier supports claim: ${verdictLabel(record.comparison.verifier_supports)} · Analyst description names it: ${verdictLabel(record.comparison.analyst_names_claim)} (advisory)`));
-      custody.append(comparison);
-    }
+    custody.append(summary);
 
     const grid = element('div', '', 'artifact-grid');
 
@@ -168,7 +162,15 @@
     }
 
     if (!record.artifacts.length) grid.append(element('p', 'No image was saved for this incident.'));
-    custody.append(grid, element('h2', 'Chain of custody'));
+    custody.append(grid);
+
+    if (record.comparison) {
+      const comparison = element('section', '', 'comparison-record');
+      comparison.append(element('h3', `Comparison: ${record.comparison.status}`), element('p', record.comparison.reason), element('p', `Verifier supports claim: ${verdictLabel(record.comparison.verifier_supports)} · Analyst description names it: ${verdictLabel(record.comparison.analyst_names_claim)} (advisory)`));
+      custody.append(comparison);
+    }
+
+    custody.append(custodyCryptography(record), element('h2', 'Chain of custody'));
     const timeline = element('ol', '', 'custody-timeline');
 
     for (const event of [...record.custody].sort((first, second) => first.t - second.t)) {
@@ -193,7 +195,7 @@
     custody.append(downloadParagraph);
   }
 
-  /** @param {boolean|null} verdict */
+  /** @param {boolean|null|undefined} verdict */
   function verdictLabel(verdict) {
     return verdict == null ? 'uncertain' : verdict ? 'yes' : 'no';
   }

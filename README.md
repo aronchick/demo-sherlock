@@ -350,29 +350,44 @@ Configuration B swaps the Director and shared VLM via `.env` (see the commented-
 - **Total generative parameters**: **17.61B** (with Nano 9B v2) or **21.03B** (with Nano 12B v2).
 - **Tradeoff**: Trades the Nemotron 3.5 Lightning bounty for a larger 8.72B VLM on zoomed crops while staying well under budget. Do not combine Nemotron 3.5 Lightning (30B) with a 7–8B VLM (38.72B by model card, 40.30B by tensor count; over budget either way).
 
-## Run with nothing (sandbox, airplane, dead wifi)
+## Start and stop the camera demo
+
 ```bash
-just up                                    # needs uv and just; ultralytics (the `yolo` extra) is optional for this mode
-open http://127.0.0.1:8000
-just down-local                            # stop only the local demo
+just up
+just down
 ```
 
-For the Brev camera demo, `just down` stops the local presenter and requests
-a stop of `sherlock-h100`, then checks that Brev reports it stopped. Storage charges
-may remain. Use `just down-local` for a quick presenter restart while keeping
-the GPU running and billable.
+`just up` ensures the existing `sherlock-nebius-h100` is started, configures
+its model servers and Expanso Cloud core, verifies inference through an owned
+SSH tunnel, ensures the laptop Edge node, then starts
+the real YOLO/camera presenter on localhost. Repeating it reuses matching,
+healthy services. It never creates a billable instance. Set `BREV_INSTANCE`
+in your shell to select another existing instance; the same value must be used
+for shutdown. Missing instances fail with an explanation.
 
-The current Scaleway H100 rejected `brev stop` in the hardware check on
-2026-10-17. For this instance, `just down` fails with a billing warning;
-it cannot stop GPU charges and never deletes the machine automatically.
+`just down` stops the owned presenter, tunnel and local Expanso nodes, requests the named GPU stop,
+and waits for Brev's stopped-state readback. It attempts GPU shutdown even when
+local PID receipts are absent or invalid. Storage charges may remain. Providers
+that reject stopping produce an error, never a false success or deletion.
 
-After a full shutdown, run `just brev-up`, then `just brev-connect` in one
-terminal and `just brev-live` in another. Cached model files are retained,
-but booting the GPU and loading the models can take several minutes; cold
-restart time has not been measured. `just up` remains the synthetic demo.
-`just up` runs `run.py --mock --synthetic` in the background on `DASHBOARD_PORT` (default 8000) with
-`CAMERAS=hero:fake:synthetic,scout1:fake:synthetic` (set either in your shell to change it), and keeps its
-PID and log in the gitignored `.runtime/`. The first run builds the environment from `pyproject.toml` and `uv.lock`.
+`just down-local` stops only the presenter, leaving the tunnel, Expanso Edge
+and GPU running for a quick restart. The GPU remains billable. Cold starts include GPU boot and model loading;
+use the measured migration report for observed timing. Existing model files are
+reused. Runtime receipts and logs live in `.runtime/brev/` and belong to this
+checkout. Unmanaged listeners and recycled PIDs are never stopped automatically.
+If you have an older foreground presenter or tunnel, stop those terminals first.
+Configuration changes require `just down-local` followed by `just up`.
+
+## Run with nothing (sandbox, airplane, dead wifi)
+
+```bash
+just demo-up
+just down-local
+```
+
+`just demo-up` starts the synthetic rehearsal without starting a GPU. It shares
+the presenter's default port 8000; set `DASHBOARD_PORT` to change it. The first
+run builds the environment from `pyproject.toml` and `uv.lock`.
 
 The dashboard binds to `127.0.0.1` by default. Keep demo and recording UIs local:
 they serve live camera feeds and saved face crops. Set `DASHBOARD_HOST=0.0.0.0`

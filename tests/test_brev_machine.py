@@ -247,3 +247,172 @@ def test_unsupported_stop_warns_about_billing_without_deleting(monkeypatch):
     with pytest.raises(ValueError, match='GPU billing may continue'):
         workflow.down('sherlock-h100')
     assert calls == [['brev', 'stop', 'sherlock-h100']]
+
+
+def test_owned_pid_recycling_never_signals(tmp_path, monkeypatch):
+    monkeypatch.setattr(workflow, 'RUNTIME', tmp_path)
+    (tmp_path / 'presenter.json').write_text(json.dumps({'pid': 42, 'identity': 'original'}))
+    monkeypatch.setattr(workflow, 'process_identity', lambda _: 'unrelated process')
+    monkeypatch.setattr(workflow.os, 'killpg', lambda *_: pytest.fail('must not signal'))
+    with pytest.raises(ValueError, match='ownership changed'):
+        workflow.stop_owned('presenter')
+
+
+def test_missing_receipts_do_not_prevent_gpu_shutdown(tmp_path, monkeypatch):
+    monkeypatch.setattr(workflow, 'run', lambda *a, **kw: None)
+    monkeypatch.setattr(workflow, 'RUNTIME', tmp_path)
+    calls = []
+    monkeypatch.setattr(workflow, 'down', calls.append)
+    workflow.demo_down('new')
+    assert calls == ['new']
+
+
+def test_local_stop_failure_still_attempts_gpu_stop(monkeypatch):
+    monkeypatch.setattr(workflow, 'run', lambda *a, **kw: None)
+    calls = []
+
+    def stop(kind):
+        calls.append(kind)
+        if kind == 'presenter':
+            raise ValueError('ownership changed')
+
+    monkeypatch.setattr(workflow, 'stop_owned', stop)
+    monkeypatch.setattr(workflow, 'down', calls.append)
+    with pytest.raises(ValueError, match='ownership changed'):
+        workflow.demo_down('new')
+    assert calls == ['presenter', 'tunnel', 'new']
+
+
+def test_local_only_does_not_stop_gpu(monkeypatch):
+    calls = []
+    monkeypatch.setattr(workflow, 'stop_owned', calls.append)
+    monkeypatch.setattr(workflow, 'down', lambda _: pytest.fail('must not stop GPU'))
+    workflow.demo_down('new', local_only=True)
+    assert calls == ['presenter']
+
+
+def test_matching_tunnel_is_reused_and_verified(monkeypatch):
+    state = {'name': 'new', 'id': 'owned', 'port': 8000}
+    monkeypatch.setattr(workflow, 'read_owned', lambda _: state)
+    monkeypatch.setattr(workflow, 'launch_owned', lambda *_: pytest.fail('must reuse'))
+    calls = []
+    monkeypatch.setattr(workflow, 'smoke', calls.append)
+    workflow.ensure_tunnel('new', {'id': 'owned'}, 8000)
+    assert calls == ['new']
+
+
+def test_tunnel_target_mismatch_is_not_replaced(monkeypatch):
+    monkeypatch.setattr(workflow, 'read_owned', lambda _: {'name': 'other'})
+    monkeypatch.setattr(workflow, 'launch_owned', lambda *_: pytest.fail('must not replace'))
+    with pytest.raises(ValueError, match='different settings'):
+        workflow.ensure_tunnel('new', {'id': 'owned'}, 8000)
+
+
+def test_presenter_reuses_only_matching_healthy_configuration(monkeypatch):
+    settings = {'name': 'new', 'id': 'owned', 'port': 8000, 'config_digest': 'abc'}
+    monkeypatch.setattr(workflow, 'read_owned', lambda _: settings)
+    monkeypatch.setattr(workflow, 'presenter_settings', lambda *_: settings)
+    monkeypatch.setattr(workflow, 'presenter_health', lambda _: True)
+    monkeypatch.setattr(workflow, 'launch_owned', lambda *_: pytest.fail('must reuse'))
+    workflow.ensure_presenter('new', {'id': 'owned'}, 8000)
+    monkeypatch.setattr(workflow, 'presenter_settings', lambda *_: {**settings, 'config_digest': 'changed'})
+    with pytest.raises(ValueError, match='configuration changed'):
+        workflow.ensure_presenter('new', {'id': 'owned'}, 8000)
+
+
+def test_new_tunnel_smoke_failure_stops_only_new_tunnel(monkeypatch):
+    calls = []
+    monkeypatch.setattr(workflow, 'read_owned', lambda _: None)
+    monkeypatch.setattr(workflow, 'require_free_ports', lambda _: None)
+    monkeypatch.setattr(workflow, 'launch_owned', lambda *a: calls.append(a[0]))
+    monkeypatch.setattr(workflow, 'stop_owned', lambda kind: calls.append(('stop', kind)))
+    monkeypatch.setattr(workflow, 'smoke', lambda _: (_ for _ in ()).throw(ValueError('failed')))
+    with pytest.raises(ValueError, match='failed'):
+        workflow.ensure_tunnel('new', {'id': 'owned'}, 8000)
+    assert calls == ['tunnel', ('stop', 'tunnel')]
+
+
+def test_reverse_transport_uses_actual_presenter_port():
+    command = workflow.tunnel_command('new', 8099)
+    assert '127.0.0.1:23100:127.0.0.1:8099' in command
+    assert command[-1] == 'new'
+
+
+def test_configuration_fingerprint_hides_secrets(tmp_path, monkeypatch):
+    monkeypatch.setattr(workflow, 'ROOT', tmp_path)
+    (tmp_path / '.env').write_text('SECRET=private-value\n')
+    before = workflow.presenter_settings('new', {'id': 'owned'}, 8000)
+    assert 'private-value' not in json.dumps(before)
+    (tmp_path / '.env').write_text('SECRET=changed-value\n')
+    after = workflow.presenter_settings('new', {'id': 'owned'}, 8000)
+    assert before['config_digest'] != after['config_digest']
+
+
+def test_demo_up_never_creates_missing_instance(monkeypatch):
+    calls = []
+    monkeypatch.setattr(workflow, 'read_owned', lambda _: None)
+    monkeypatch.setattr(workflow, 'require_free_ports', lambda _: None)
+    monkeypatch.setattr(workflow, 'inventory', list)
+    monkeypatch.setattr(workflow, 'run', lambda args, **_: calls.append(args))
+    with pytest.raises(ValueError, match='existing instance'):
+        workflow.demo_up('absent', 8000)
+    assert calls == []
+
+
+def test_demo_up_orders_real_transport_before_presenter(monkeypatch):
+    calls = []
+    monkeypatch.setattr(workflow, 'read_owned', lambda _: {'owned': True})
+    monkeypatch.setattr(workflow, 'up', lambda name: calls.append(('gpu', name)))
+    monkeypatch.setattr(workflow, 'find_instance', lambda _: {'id': 'id', 'status': 'RUNNING'})
+    monkeypatch.setattr(workflow, 'run', lambda args, **_: calls.append(args))
+    monkeypatch.setattr(workflow, 'ensure_tunnel', lambda *a: calls.append('tunnel'))
+    monkeypatch.setattr(workflow, 'ensure_presenter', lambda *a: calls.append('presenter'))
+    workflow.demo_up('new', 8000)
+    assert calls == [('gpu', 'new'),
+                     ['uv', 'run', '--no-project', 'scripts/expanso_brev.py', 'up', 'new'],
+                     'tunnel', ['bash', 'scripts/expanso.sh', 'edge'], 'presenter']
+
+
+def test_owned_process_launch_and_stop(tmp_path, monkeypatch):
+    monkeypatch.setattr(workflow, 'RUNTIME', tmp_path / 'runtime')
+    monkeypatch.setattr(workflow, 'ROOT', tmp_path)
+    state = workflow.launch_owned('tunnel', ['sleep', '30'], {'name': 'test'})
+    try:
+        assert workflow.read_owned('tunnel')['pid'] == state['pid']
+        assert 'sleep 30' in state['identity']
+        workflow.stop_owned('tunnel')
+        assert workflow.read_owned('tunnel') is None
+        assert workflow.process_identity(state['pid']) == ''
+    finally:
+        # Reap the test child if this test process still owns it.
+        try:
+            workflow.os.waitpid(state['pid'], 0)
+        except ChildProcessError:
+            pass
+
+
+def test_expanso_stop_failure_does_not_skip_gpu_stop(monkeypatch):
+    calls = []
+    monkeypatch.setattr(workflow, 'stop_owned', lambda _: None)
+
+    def fail(args, **_):
+        raise subprocess.CalledProcessError(1, args)
+
+    monkeypatch.setattr(workflow, 'run', fail)
+    monkeypatch.setattr(workflow, 'down', calls.append)
+    with pytest.raises(ValueError):
+        workflow.demo_down('new')
+    assert calls == ['new']
+
+
+@pytest.mark.parametrize('receipt', [{}, [], {'pid': 0, 'identity': 'x'}, {'pid': 42}])
+def test_invalid_receipt_cannot_skip_gpu_shutdown(receipt, tmp_path, monkeypatch):
+    monkeypatch.setattr(workflow, 'RUNTIME', tmp_path)
+    (tmp_path / 'presenter.json').write_text(json.dumps(receipt))
+    calls = []
+    monkeypatch.setattr(workflow, 'run', lambda *a, **kw: None)
+    monkeypatch.setattr(workflow, 'down', calls.append)
+    monkeypatch.setattr(workflow.os, 'killpg', lambda *_: pytest.fail('must not signal'))
+    with pytest.raises(ValueError, match='receipt is invalid'):
+        workflow.demo_down('new')
+    assert calls == ['new']

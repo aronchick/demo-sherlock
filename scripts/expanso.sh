@@ -240,6 +240,12 @@ cmd_edge() {
   need expanso-edge; need expanso-cli; need jq
   cmd_check >/dev/null
   load_creds; require_cli_creds; require_bootstrap_token
+  if node_running edge; then
+    wait_connected edge
+    wait_ports edge "${EDGE_PORTS[@]}"
+    say "sherlock-edge already connected; reusing active Cloud pipelines"
+    return
+  fi
   mkdir -p "$RUNTIME"
   cloud_cli node list >/dev/null 2>"$RUNTIME/cloud-check.log" || {
     sed -n '1,6p' "$RUNTIME/cloud-check.log" >&2
@@ -256,10 +262,16 @@ cmd_edge() {
 
 cmd_core() {
   need expanso-edge "install it: curl -fsSL https://get.expanso.io/edge/install.sh | bash"
-  load_creds; require_bootstrap_token
+  if node_running core; then
+    say "sherlock-core already running; reusing its Cloud connection"
+    return
+  fi
+  if [[ ! -f "$STATE/sherlock-core/auth/credentials.creds" ]]; then
+    load_creds; require_bootstrap_token
+  fi
   # The dashboard is reached through the laptop tunnel's reverse port.
   export SHERLOCK_DASHBOARD_URL="${SHERLOCK_DASHBOARD_URL:-http://127.0.0.1:23100}"
-  export SHERLOCK_CORE_DIR="${SHERLOCK_CORE_DIR:-$HOME/sherlock-core}"
+  export SHERLOCK_CORE_DIR="${SHERLOCK_CORE_DIR:-$ROOT/.runtime/expanso/core}"
   mkdir -p "$RUNTIME"
   bootstrap core
   start_node core cloud

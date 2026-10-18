@@ -83,11 +83,17 @@ def require_free_ports(ports):
 
 def wait_for_ssh(name, timeout=600):
     deadline = time.monotonic() + timeout
+    refresh_at = 0
     while time.monotonic() < deadline:
         result = subprocess.run([*ssh(name), 'true'], check=False,
                                 stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         if result.returncode == 0:
             return
+        # Stopped instances may be absent from the SSH config refreshed before boot.
+        if time.monotonic() >= refresh_at:
+            subprocess.run(['brev', 'refresh'], check=False,
+                           stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            refresh_at = time.monotonic() + 30
         print(f'Waiting for SSH on {name}...', flush=True)
         time.sleep(5)
     raise ValueError('Brev did not become SSH-ready within ten minutes')

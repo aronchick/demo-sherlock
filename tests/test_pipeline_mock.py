@@ -23,12 +23,16 @@ def is_alert(r):
 
 def test_cascade_produces_verified_alert(tmp_path):
     s = Sherlock(Config(), synthetic=True, evidence_dir=str(tmp_path))
+    s.scout.impl.model_sha256 = "a" * 64
     s.start()
     r = wait_for(s, is_alert)
     s.stop()
     assert r, "no alert happened"
     assert "knife" in r["claim"].lower()
     assert r["verified"] is True
+    stored = s.incidents.read(r["incident"])
+    assert stored["models"]["scout_sha256"] == "a" * 64
+    assert stored["verification"]["signature"] == "verified"
     assert BUS.stats["frames"] > BUS.stats["vlm_calls"] * 5, "cascade should gate the VLM"
 
 

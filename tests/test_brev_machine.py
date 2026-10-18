@@ -359,6 +359,35 @@ def test_demo_up_never_creates_missing_instance(monkeypatch):
     assert calls == []
 
 
+def test_configuration_detects_loaded_source_changes(tmp_path, monkeypatch):
+    monkeypatch.setattr(workflow, 'ROOT', tmp_path)
+    source = tmp_path / 'run.py'
+    source.write_text('VERSION = 1\n')
+    before = workflow.presenter_settings('new', {'id': 'owned'}, 8000)
+    source.write_text('VERSION = 2\n')
+    after = workflow.presenter_settings('new', {'id': 'owned'}, 8000)
+    assert before['config_digest'] != after['config_digest']
+
+
+def test_sandbox_cannot_inherit_live_transport_or_evidence(tmp_path, monkeypatch):
+    monkeypatch.setattr(workflow, 'ROOT', tmp_path)
+    monkeypatch.setenv('SHERLOCK_EDGE', '1')
+    monkeypatch.setenv('EVIDENCE_DIR', '/live/evidence')
+    monkeypatch.setattr(workflow, 'read_owned', lambda _: None)
+    monkeypatch.setattr(workflow, 'require_free_ports', lambda _: None)
+    captured = {}
+
+    def capture(*args, **kwargs):
+        captured.update(kwargs['env'])
+        raise RuntimeError('launch captured')
+
+    monkeypatch.setattr(workflow, 'launch_owned', capture)
+    with pytest.raises(RuntimeError, match='launch captured'):
+        workflow.sandbox_up(8099)
+    assert captured['SHERLOCK_EDGE'] == '0'
+    assert captured['EVIDENCE_DIR'] == str(tmp_path / '.runtime' / 'rehearsal-evidence')
+
+
 def test_demo_up_orders_real_transport_before_presenter(monkeypatch):
     calls = []
     monkeypatch.setattr(workflow, 'read_owned', lambda _: {'owned': True})

@@ -335,6 +335,11 @@ def presenter_settings(name, item, port):
                 if key.startswith(('SCOUT_', 'YOLO_', 'OBSBOT_', 'SHERLOCK_', 'DIRECTOR_',
                                    'ANALYST_', 'VERIFIER_')) or key in {'CAMERAS'}}
     digest.update(json.dumps(relevant, sort_keys=True).encode())
+    # Loaded Python must not silently survive an application update.
+    for source in sorted([ROOT / 'run.py', * (ROOT / 'sherlock').rglob('*.py')]):
+        if source.is_file():
+            digest.update(str(source.relative_to(ROOT)).encode())
+            digest.update(source.read_bytes())
     return {'name': name, 'id': item['id'], 'port': port,
             'root': str(ROOT), 'config_digest': digest.hexdigest()}
 
@@ -395,6 +400,8 @@ def sandbox_up(port):
                               '--mock', '--synthetic', '--port', str(port)],
                  {'sandbox': True, 'port': port},
                  env={**os.environ, 'DASHBOARD_HOST': '127.0.0.1',
+                      'SHERLOCK_EDGE': '0',
+                      'EVIDENCE_DIR': str(ROOT / '.runtime' / 'rehearsal-evidence'),
                       'CAMERAS': 'hero:fake:synthetic,scout1:fake:synthetic'})
     deadline = time.monotonic() + 120
     try:

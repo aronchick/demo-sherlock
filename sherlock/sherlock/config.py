@@ -2,6 +2,7 @@
 Ollama (local) and vLLM (Brev) are a one-line swap."""
 from __future__ import annotations
 
+import json
 import os
 from dataclasses import dataclass, field
 
@@ -44,6 +45,8 @@ class Config:
         _env("VERIFIER_BASE_URL", "http://localhost:8002/v1"),
         _env("VERIFIER_MODEL", "HuggingFaceTB/SmolVLM-500M-Instruct")))
     cameras: list[CameraSpec] = field(default_factory=list)
+    camera_locations: dict[str, dict[str, str]] = field(
+        default_factory=lambda: json.loads(_env("CAMERA_LOCATIONS", "{}")))
     dashboard_port: int = field(default_factory=lambda: int(_env("DASHBOARD_PORT", "8000")))
     dwell_seconds: float = field(default_factory=lambda: float(_env("DWELL_SECONDS", "0.6")))
     max_tool_calls: int = field(default_factory=lambda: int(_env("MAX_TOOL_CALLS", "6")))
@@ -57,6 +60,17 @@ class Config:
             for item in _env("CAMERAS", "hero:fake:0").split(","):
                 name, backend, source = item.strip().split(":", 2)  # source may be "name:<camera>"
                 self.cameras.append(CameraSpec(name, backend, source))
+        if not isinstance(self.camera_locations, dict):
+            raise TypeError("CAMERA_LOCATIONS must be an object keyed by camera name")
+        names = {camera.name for camera in self.cameras}
+        for camera, location in self.camera_locations.items():
+            if camera not in names:
+                raise ValueError("CAMERA_LOCATIONS names a camera absent from CAMERAS")
+            if not isinstance(location, dict) or set(location) - {"building", "floor", "area"}:
+                raise ValueError("Camera location accepts only building, floor and area")
+            if any(not isinstance(value, str) or not value.strip() or len(value) > 120
+                   for value in location.values()):
+                raise ValueError("Camera location labels must be nonempty strings of at most 120 characters")
 
 
 CONFIG = Config()

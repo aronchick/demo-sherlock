@@ -20,9 +20,10 @@ NAMES = {"original_frame", "model_context", "weapon_crop", "object_crop", "face_
 
 
 class IncidentStore:
-    def __init__(self, root: pathlib.Path):
+    def __init__(self, root: pathlib.Path, camera_locations: dict[str, dict[str, str]] | None = None):
         self.root = root
         self.lock = threading.RLock()
+        self.camera_locations = {camera: dict(location) for camera, location in (camera_locations or {}).items()}
 
     def path(self, iid: str, filename: str = "manifest.json") -> pathlib.Path:
         if not ID.fullmatch(iid) or (filename not in {"manifest.json", "manifest.tmp", *(f"{n}.jpg" for n in NAMES), "model_context.png"} and not re.fullmatch(r"[a-f0-9]{64}\.(jpg|png)", filename)):
@@ -171,6 +172,7 @@ class IncidentStore:
                                   "floor": "Level 1" if mock else None,
                                   "area": areas.get(camera, "Demo camera area") if mock else None,
                                   "simulated": mock}
+            record["location"].update(self.camera_locations.get(camera, {}))
             record["response"] = {"status": "new", "simulated": True, "team_notified_at": None, "events": []}
             record["notification"] = {"simulated": True, "status": "not_sent",
                                       "delivered_at": None, "acknowledged_at": None}

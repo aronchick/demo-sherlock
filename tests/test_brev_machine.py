@@ -417,6 +417,15 @@ def test_configuration_fingerprint_hides_secrets(tmp_path, monkeypatch):
     assert before['config_digest'] != after['config_digest']
 
 
+def test_camera_location_override_changes_presenter_fingerprint(tmp_path, monkeypatch):
+    monkeypatch.setattr(workflow, 'ROOT', tmp_path)
+    monkeypatch.setenv('CAMERA_LOCATIONS', '{"hero":{"area":"West room"}}')
+    before = workflow.presenter_settings('new', {'id': 'owned'}, 8000)
+    monkeypatch.setenv('CAMERA_LOCATIONS', '{"hero":{"area":"East room"}}')
+    after = workflow.presenter_settings('new', {'id': 'owned'}, 8000)
+    assert before['config_digest'] != after['config_digest']
+
+
 def test_demo_up_never_creates_missing_instance(monkeypatch):
     calls = []
     monkeypatch.setattr(workflow, 'read_owned', lambda _: None)

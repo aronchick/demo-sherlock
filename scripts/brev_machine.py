@@ -357,7 +357,7 @@ def presenter_settings(name, item, port):
         digest.update(path.read_bytes())
     relevant = {key: value for key, value in os.environ.items()
                 if key.startswith(('SCOUT_', 'YOLO_', 'OBSBOT_', 'SHERLOCK_', 'DIRECTOR_',
-                                   'ANALYST_', 'VERIFIER_')) or key in {'CAMERAS'}}
+                                   'ANALYST_', 'VERIFIER_')) or key in {'CAMERAS', 'CAMERA_LOCATIONS'}}
     digest.update(json.dumps(relevant, sort_keys=True).encode())
     # Loaded Python must not silently survive an application update.
     for source in sorted([ROOT / 'run.py', *(ROOT / 'sherlock').rglob('*.py'),

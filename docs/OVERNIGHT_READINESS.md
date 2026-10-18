@@ -7,15 +7,15 @@ with five briefing slides and at least ten complete rehearsals.
 
 | Requirement | Proof required | Current state |
 | --- | --- | --- |
-| Fast camera loop | Real YOLO detection, Brev tool call, physical OBSBOT response with timestamps | Prior incident measured; fresh run pending |
-| Phone response | Open notice, inspect location and pictures, investigate, notify, resolve | Overnight UI inspection underway |
-| Evidence | Summary modal, detailed timeline, JSON, image hashes and signed revisions verified | Fresh interaction audit pending |
-| Expanso | Cloud-connected edge and core, active jobs, same incident received on core with matching crop hash | Edge restart underway; missing tunnel and remote source packaging found |
-| vLLM ecosystem | Correct model names and serving proof; sourced FP8/LLM Compressor explanation | Existing source available; narration revision underway |
-| Three-minute story | Timed script, slides, complete visible flow | Revision underway |
-| Ten rehearsals | Ten individually recorded outcomes and inspected browser evidence | 0 completed |
-| Recording layout | No clipping/overlap/internal scroll at 1920×1080 and 1280×720 | Initial board screenshot captured |
-| Startup/shutdown | Documented commands and truthful GPU billing state | Current Scaleway instance cannot stop; remains allocated |
+| Fast camera loop | Real YOLO detection, Brev tool call, physical OBSBOT response with timestamps | Fresh OBSBOT connection works; image nearly black, physical prop run pending |
+| Phone response | Open notice, inspect location and pictures, investigate, notify, resolve | Investigate, paging and Notify team verified on ten full photo walkthroughs; real location unconfigured |
+| Evidence | Summary modal, detailed timeline, JSON, image hashes and signed revisions verified | Saved photo incidents pass signature, artifact and revision-history checks |
+| Expanso | Cloud-connected edge and core, active jobs, same incident received on core with matching crop hash | Verified real Cloud execution, remote disk-readback crop receipts and serving metrics on Nebius |
+| vLLM ecosystem | Correct model names and serving proof; sourced FP8/LLM Compressor explanation | Both FP8 Director and SmolVLM passed inference smoke; narration and five slides updated |
+| Three-minute story | Timed script, slides, complete visible flow | 350-word script with 3:00 screen cues; physical recording still pending |
+| Ten rehearsals | Ten individually recorded outcomes and inspected browser evidence | Ten full photo-driven workflow passes plus negative cases; asset-loading defect fixed, browser retest pending |
+| Recording layout | No clipping/overlap/internal scroll at 1920×1080 and 1280×720 | Initial UI audits passed; final reload restoration and new-checkpoint browser retest pending |
+| Startup/shutdown | Documented commands and truthful GPU billing state | `just down` reached Nebius STOPPED and closed local ports; restart recovery underway; Scaleway retained |
 
 ## Boundaries
 
@@ -59,6 +59,30 @@ with stop/start and complete demo verification before deleting Scaleway.
 - SHA256 original archive:
   `eb56681a1da18ce4c346d7dc3256ec5edfd5c3ea88b4b9e63bc6bcc4d1dfa9df`.
 
-Pending gates: both model smoke calls, Cloud core connected, matching downstream
-incident/crop hash, physical camera loop, ten complete rehearsals, idempotent
-startup, stop/start/recovery, then old-instance deletion readback.
+Completed migration gates: both model smoke calls, Cloud core connected,
+matching downstream incident/crop hashes, and verified Nebius stop.
+Pending: restart recovery, repeated startup, final browser retest, physical
+camera loop, then old-instance deletion readback.
+
+## Retrained Scout and integration evidence
+
+Both training runs completed without intervention. The selected checkpoint is
+committed at `models/scout-r2-960.pt`; see `models/README.md` and
+`docs/SCOUT_R2_VALIDATION.md` for the SHA-256, settings, rollback and limitations.
+All 608 supplied images were evaluated. The calibrated held-out result is
+35/40 weapon boxes found, four false-positive boxes and one triggered negative
+frame among 80. General reference-image performance regressed; the report
+does not claim broader production readiness.
+
+`results/photo_integration/` retains ten full walkthrough records. Every take
+used real YOLO and Nebius inference, software PTZ over a supplied photo,
+the phone response controls, verified signed custody and an Expanso core
+disk receipt. These are not ten physical-camera measurements or recorded
+three-minute videos. Seven additional positive input cases alerted; an empty
+hand false positive was rejected, another hand produced no trigger, and Coke
+was ignored locally. The corresponding nine incident histories and image
+hashes verified; all eight cases with transmitted crops received core receipts.
+
+Browser review found a missing asset allowlist entry and missing saved-state
+restoration after reload. Both are fixed in source; final browser validation
+must run on the restarted application before the UI is declared ready.

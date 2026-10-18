@@ -226,6 +226,31 @@ def test_down_is_idempotent(monkeypatch):
     workflow.down('sherlock-h100')
 
 
+def test_start_retries_provider_stopping_race(monkeypatch):
+    attempts = []
+
+    def start(args, **kwargs):
+        attempts.append(args)
+        if len(attempts) == 1:
+            raise subprocess.CalledProcessError(1, args, stderr='Instance is not stopped status=STOPPING')
+        return SimpleNamespace(stdout='started')
+
+    monkeypatch.setattr(workflow, 'run', start)
+    monkeypatch.setattr(workflow.time, 'sleep', lambda _: None)
+    workflow.start_existing('new')
+    assert attempts == [['brev', 'start', 'new']] * 2
+
+
+def test_start_does_not_retry_unrelated_provider_errors(monkeypatch):
+    def denied(args, **kwargs):
+        raise subprocess.CalledProcessError(1, args, stderr='access denied')
+
+    monkeypatch.setattr(workflow, 'run', denied)
+    monkeypatch.setattr(workflow.time, 'sleep', lambda _: pytest.fail('must not retry'))
+    with pytest.raises(subprocess.CalledProcessError):
+        workflow.start_existing('new')
+
+
 def test_down_does_not_claim_success_when_still_running(monkeypatch):
     monkeypatch.setattr(workflow, 'find_instance',
                         lambda _: {'id': 'owned', 'status': 'STOPPING'})

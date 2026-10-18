@@ -120,6 +120,23 @@ def down(name, timeout=180):
         time.sleep(3)
 
 
+def start_existing(name):
+    # Brev inventory can report STOPPED before the provider finishes STOPPING.
+    deadline = time.monotonic() + 180
+    while True:
+        try:
+            result = run(['brev', 'start', name], capture_output=True, text=True)
+            if result.stdout:
+                print(result.stdout.strip(), flush=True)
+            return
+        except subprocess.CalledProcessError as exc:
+            detail = (exc.stdout or '') + (exc.stderr or '')
+            if 'status=STOPPING' not in detail or time.monotonic() >= deadline:
+                raise
+            print('Provider is still completing shutdown; retrying start shortly.', flush=True)
+            time.sleep(5)
+
+
 def up(name):
     item = find_instance(name)
     if 'H100' not in item.get('gpu', '').upper():
@@ -127,7 +144,7 @@ def up(name):
     if item['status'] in {'STOPPED', 'STOPPING', 'PAUSED', 'OFF'}:
         if item['status'] == 'STOPPING':
             raise ValueError('Instance is still stopping; retry after it has stopped')
-        run(['brev', 'start', name])
+        start_existing(name)
     elif item['status'] != 'RUNNING':
         raise ValueError(f"Instance is {item['status']}; wait for Brev to finish")
     run(['brev', 'refresh'])

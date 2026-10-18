@@ -7,7 +7,7 @@ with five briefing slides and at least ten complete rehearsals.
 
 | Requirement | Proof required | Current state |
 | --- | --- | --- |
-| Fast camera loop | Real YOLO detection, Brev tool call, physical OBSBOT response with timestamps | Fresh OBSBOT connection works; image nearly black, physical prop run pending |
+| Fast camera loop | Real YOLO detection, Brev tool call, physical OBSBOT response with timestamps | USB pan, tilt and zoom target readback passed in the dark; visible detection-to-movement prop run pending |
 | Phone response | Open notice, inspect location and pictures, investigate, notify, resolve | Investigate, paging and Notify team verified on ten full photo walkthroughs; location configuration implemented, actual labels awaited |
 | Evidence | Summary modal, detailed timeline, JSON, image hashes and signed revisions verified | Saved photo incidents pass signature, artifact and revision-history checks |
 | Expanso | Cloud-connected edge and core, active jobs, same incident received on core with matching crop hash | Verified real Cloud execution, remote disk-readback crop receipts and serving metrics on Nebius |
@@ -147,3 +147,30 @@ then closed the owned local services and Brev reported Nebius STOPPED. Provider
 shutdown can lag that inventory state; retained storage remains billable.
 The photo servers and isolated validation browser are closed. Claude's process
 and the original training outputs were left untouched.
+
+## Dark-room validation after restart
+
+The user confirmed that the black camera view is expected because the room is
+dark. Hardware control was tested separately from photo-driven detection.
+`results/recording_readiness/dark-room-validation.json` retains the results.
+
+- OBSBOT USB readback reached the requested pan, tilt and zoom targets, then
+  returned to pan 0, tilt 0, zoom 1. Pan and tilt settled in about 0.53 seconds
+  each; zooming to 2x took 2.61 seconds. These are control-test timings, not
+  detection-to-zoom latency or visual confirmation of the scene.
+- A new cold start recovered SSH automatically but subsequently lost its SSH
+  connection during Director loading. The containers continued running. A
+  later `just up` reused them and passed both inference checks. Another warm
+  startup completed in 61.14 seconds and reused the active Cloud pipelines.
+  Unattended cold-start reliability is still unproven.
+- A fresh supplied-photo incident, `20261018-041003-001`, produced a verified
+  alert in 4.56 seconds. Signature, artifacts and revision history verified.
+  Remote Expanso core disk readback matched the local weapon-crop hash. This
+  used software PTZ over a photo, separately from the USB control test.
+- Both the presenter checkout and the capture checkout now contain the same
+  permanent Scout checkpoint and defaults. Its SHA matches the untouched
+  `runs/scout_r2_960/weights/best.pt`, and the actual presenter reported that
+  SHA at `/mode`. The leftover photo-rehearsal process was stopped.
+
+The requested visible prop-to-camera loop remains a daylight validation step.
+The old Scaleway instance has not been deleted; its compute billing continues.

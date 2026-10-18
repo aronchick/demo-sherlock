@@ -7,6 +7,7 @@ gets ignored without a VLM call. People are context, never triggers: a weapon
 event carries the nearest person and a head box to aim the evidence zoom at."""
 from __future__ import annotations
 
+import hashlib
 import os
 import time
 from collections.abc import Callable
@@ -125,6 +126,7 @@ class YoloScout:
     def __init__(self, model_path: str = "yolov8n.pt", conf: float = 0.35):
         from ultralytics import YOLO  # imported lazily so mock mode needs no torch
         self.model = YOLO(model_path)
+        self.model_sha256 = hashlib.sha256(Path(model_path).read_bytes()).hexdigest() if Path(model_path).is_file() else None
         self.conf = conf
         room_checkpoint = Path(model_path).name == "scout-r2-960.pt"
         self.weapon_conf = float(os.environ.get("SCOUT_WEAPON_CONF", "0.15" if room_checkpoint else str(conf)))

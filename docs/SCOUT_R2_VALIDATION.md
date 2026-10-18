@@ -145,7 +145,7 @@ checked every rectangle. The existing labels were scored unchanged; 387 room
 training frames lack review markers. No unsupported labels were silently fixed
 to improve results.
 
-Raw local JSON is in `.codex-work/2026-10-18/scout-r2-eval/`:
+Evaluation JSON is retained in `results/scout_r2/`:
 
 - `dataset-manifest.json`: all 608 image/label hashes and original splits.
 - `stock-detail.json`: baseline capture predictions and threshold breakdown.

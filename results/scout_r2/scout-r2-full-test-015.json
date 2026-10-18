@@ -1,0 +1,339 @@
+{
+  "evidence_kind": "model_evaluation",
+  "execution_mode": "measured",
+  "evaluation_scope": "before_after",
+  "environment": "local",
+  "device": "cpu",
+  "imgsz": 640,
+  "split": "test",
+  "conf": 0.15,
+  "iou": 0.5,
+  "images": {
+    "coco": 144,
+    "room": 122
+  },
+  "classes": [
+    "person",
+    "weapon",
+    "badge",
+    "bottle",
+    "fedora",
+    "cap",
+    "coke"
+  ],
+  "image_count": 266,
+  "dataset_fingerprint": "48e121bb9ba90d158832f3f58b31e0351d0d732ce862fc37a59024d02a82624a",
+  "before": {
+    "model": "yolov8n.pt",
+    "coco": {
+      "person": {
+        "tp": 404,
+        "fp": 235,
+        "fn": 102,
+        "precision": 0.6322,
+        "recall": 0.7984
+      },
+      "weapon": {
+        "tp": 88,
+        "fp": 54,
+        "fn": 110,
+        "precision": 0.6197,
+        "recall": 0.4444
+      },
+      "badge": {
+        "tp": 0,
+        "fp": 0,
+        "fn": 0,
+        "precision": 0.0,
+        "recall": 0.0
+      },
+      "bottle": {
+        "tp": 95,
+        "fp": 129,
+        "fn": 65,
+        "precision": 0.4241,
+        "recall": 0.5938
+      },
+      "fedora": {
+        "tp": 0,
+        "fp": 0,
+        "fn": 0,
+        "precision": 0.0,
+        "recall": 0.0
+      },
+      "cap": {
+        "tp": 0,
+        "fp": 0,
+        "fn": 0,
+        "precision": 0.0,
+        "recall": 0.0
+      },
+      "coke": {
+        "tp": 0,
+        "fp": 0,
+        "fn": 0,
+        "precision": 0.0,
+        "recall": 0.0
+      }
+    },
+    "all": {
+      "person": {
+        "tp": 525,
+        "fp": 235,
+        "fn": 102,
+        "precision": 0.6908,
+        "recall": 0.8373
+      },
+      "weapon": {
+        "tp": 89,
+        "fp": 54,
+        "fn": 149,
+        "precision": 0.6224,
+        "recall": 0.3739
+      },
+      "badge": {
+        "tp": 0,
+        "fp": 0,
+        "fn": 0,
+        "precision": 0.0,
+        "recall": 0.0
+      },
+      "bottle": {
+        "tp": 95,
+        "fp": 129,
+        "fn": 65,
+        "precision": 0.4241,
+        "recall": 0.5938
+      },
+      "fedora": {
+        "tp": 0,
+        "fp": 0,
+        "fn": 40,
+        "precision": 0.0,
+        "recall": 0.0
+      },
+      "cap": {
+        "tp": 0,
+        "fp": 0,
+        "fn": 16,
+        "precision": 0.0,
+        "recall": 0.0
+      },
+      "coke": {
+        "tp": 0,
+        "fp": 0,
+        "fn": 23,
+        "precision": 0.0,
+        "recall": 0.0
+      }
+    },
+    "room": {
+      "person": {
+        "tp": 121,
+        "fp": 0,
+        "fn": 0,
+        "precision": 1.0,
+        "recall": 1.0
+      },
+      "weapon": {
+        "tp": 1,
+        "fp": 0,
+        "fn": 39,
+        "precision": 1.0,
+        "recall": 0.025
+      },
+      "badge": {
+        "tp": 0,
+        "fp": 0,
+        "fn": 0,
+        "precision": 0.0,
+        "recall": 0.0
+      },
+      "bottle": {
+        "tp": 0,
+        "fp": 0,
+        "fn": 0,
+        "precision": 0.0,
+        "recall": 0.0
+      },
+      "fedora": {
+        "tp": 0,
+        "fp": 0,
+        "fn": 40,
+        "precision": 0.0,
+        "recall": 0.0
+      },
+      "cap": {
+        "tp": 0,
+        "fp": 0,
+        "fn": 16,
+        "precision": 0.0,
+        "recall": 0.0
+      },
+      "coke": {
+        "tp": 0,
+        "fp": 0,
+        "fn": 23,
+        "precision": 0.0,
+        "recall": 0.0
+      }
+    }
+  },
+  "after": {
+    "model": "runs/scout_r2/weights/best.pt",
+    "coco": {
+      "person": {
+        "tp": 371,
+        "fp": 326,
+        "fn": 135,
+        "precision": 0.5323,
+        "recall": 0.7332
+      },
+      "weapon": {
+        "tp": 68,
+        "fp": 124,
+        "fn": 130,
+        "precision": 0.3542,
+        "recall": 0.3434
+      },
+      "badge": {
+        "tp": 0,
+        "fp": 0,
+        "fn": 0,
+        "precision": 0.0,
+        "recall": 0.0
+      },
+      "bottle": {
+        "tp": 69,
+        "fp": 151,
+        "fn": 91,
+        "precision": 0.3136,
+        "recall": 0.4313
+      },
+      "fedora": {
+        "tp": 0,
+        "fp": 0,
+        "fn": 0,
+        "precision": 0.0,
+        "recall": 0.0
+      },
+      "cap": {
+        "tp": 0,
+        "fp": 0,
+        "fn": 0,
+        "precision": 0.0,
+        "recall": 0.0
+      },
+      "coke": {
+        "tp": 0,
+        "fp": 0,
+        "fn": 0,
+        "precision": 0.0,
+        "recall": 0.0
+      }
+    },
+    "all": {
+      "person": {
+        "tp": 492,
+        "fp": 326,
+        "fn": 135,
+        "precision": 0.6015,
+        "recall": 0.7847
+      },
+      "weapon": {
+        "tp": 98,
+        "fp": 140,
+        "fn": 140,
+        "precision": 0.4118,
+        "recall": 0.4118
+      },
+      "badge": {
+        "tp": 0,
+        "fp": 0,
+        "fn": 0,
+        "precision": 0.0,
+        "recall": 0.0
+      },
+      "bottle": {
+        "tp": 69,
+        "fp": 151,
+        "fn": 91,
+        "precision": 0.3136,
+        "recall": 0.4313
+      },
+      "fedora": {
+        "tp": 40,
+        "fp": 1,
+        "fn": 0,
+        "precision": 0.9756,
+        "recall": 1.0
+      },
+      "cap": {
+        "tp": 16,
+        "fp": 0,
+        "fn": 0,
+        "precision": 1.0,
+        "recall": 1.0
+      },
+      "coke": {
+        "tp": 21,
+        "fp": 5,
+        "fn": 2,
+        "precision": 0.8077,
+        "recall": 0.913
+      }
+    },
+    "room": {
+      "person": {
+        "tp": 121,
+        "fp": 0,
+        "fn": 0,
+        "precision": 1.0,
+        "recall": 1.0
+      },
+      "weapon": {
+        "tp": 30,
+        "fp": 16,
+        "fn": 10,
+        "precision": 0.6522,
+        "recall": 0.75
+      },
+      "badge": {
+        "tp": 0,
+        "fp": 0,
+        "fn": 0,
+        "precision": 0.0,
+        "recall": 0.0
+      },
+      "bottle": {
+        "tp": 0,
+        "fp": 0,
+        "fn": 0,
+        "precision": 0.0,
+        "recall": 0.0
+      },
+      "fedora": {
+        "tp": 40,
+        "fp": 1,
+        "fn": 0,
+        "precision": 0.9756,
+        "recall": 1.0
+      },
+      "cap": {
+        "tp": 16,
+        "fp": 0,
+        "fn": 0,
+        "precision": 1.0,
+        "recall": 1.0
+      },
+      "coke": {
+        "tp": 21,
+        "fp": 5,
+        "fn": 2,
+        "precision": 0.8077,
+        "recall": 0.913
+      }
+    }
+  },
+  "headline": "Scout weapon detection (room test photos, conf 0.35): recall 2% -> 75%, precision 100% -> 65%"
+}

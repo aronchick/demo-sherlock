@@ -71,6 +71,8 @@ def make_app(sherlock: Sherlock) -> FastAPI:
                 "director_model": None if cfg.mock else cfg.director.model,
                 "vlm_model": None if cfg.mock else cfg.analyst.model,
                 "scout_backend": getattr(getattr(sherlock, "scout", None), "kind", None),
+                "scout_model": getattr(cfg, "yolo_model", None),
+                "scout_sha256": getattr(getattr(getattr(sherlock, "scout", None), "impl", None), "model_sha256", None),
                 "synthetic": bool(getattr(sherlock, "scenes", None)),
                 "scout_ms": BUS.snapshot().get("scout_ms"),
                 "servers": describe(cfg)}

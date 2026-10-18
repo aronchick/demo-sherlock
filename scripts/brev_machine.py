@@ -336,7 +336,8 @@ def presenter_settings(name, item, port):
                                    'ANALYST_', 'VERIFIER_')) or key in {'CAMERAS'}}
     digest.update(json.dumps(relevant, sort_keys=True).encode())
     # Loaded Python must not silently survive an application update.
-    for source in sorted([ROOT / 'run.py', * (ROOT / 'sherlock').rglob('*.py')]):
+    for source in sorted([ROOT / 'run.py', *(ROOT / 'sherlock').rglob('*.py'),
+                          *(ROOT / 'models').glob('*.pt')]):
         if source.is_file():
             digest.update(str(source.relative_to(ROOT)).encode())
             digest.update(source.read_bytes())

@@ -1,0 +1,413 @@
+{
+  "method": "Ordered held-out samples, any weapon box per image; no box association or elapsed-time measurement. This is not the runtime tracker or a video benchmark.",
+  "sources": {
+    "results/scout_r2/recommended-direct-nms.json": "18b397b7406d6e0e9987e9453481a12e99eef0e90c596c6db1bbf51a3ad25d19",
+    "results/scout_r2/dataset-manifest.json": "2d190c1cf3c4ab9f1e24c06dfda86831e9da90b0dc6e2b6d7191566f68ffda3e"
+  },
+  "sessions": [
+    {
+      "session": "room_cap_hero-20261017-173819",
+      "frames": [
+        "room_cap_hero-20261017-173819_0032.jpg",
+        "room_cap_hero-20261017-173819_0033.jpg",
+        "room_cap_hero-20261017-173819_0034.jpg",
+        "room_cap_hero-20261017-173819_0035.jpg",
+        "room_cap_hero-20261017-173819_0036.jpg",
+        "room_cap_hero-20261017-173819_0037.jpg",
+        "room_cap_hero-20261017-173819_0038.jpg",
+        "room_cap_hero-20261017-173819_0039.jpg"
+      ],
+      "weapon_hits": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "any_hit": false,
+      "two_of_three": false,
+      "first_qualifying_sample_index": null
+    },
+    {
+      "session": "room_cap_scout1-20261017-170942",
+      "frames": [
+        "room_cap_scout1-20261017-170942_0032.jpg",
+        "room_cap_scout1-20261017-170942_0033.jpg",
+        "room_cap_scout1-20261017-170942_0034.jpg",
+        "room_cap_scout1-20261017-170942_0035.jpg",
+        "room_cap_scout1-20261017-170942_0036.jpg",
+        "room_cap_scout1-20261017-170942_0037.jpg",
+        "room_cap_scout1-20261017-170942_0038.jpg",
+        "room_cap_scout1-20261017-170942_0039.jpg"
+      ],
+      "weapon_hits": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "any_hit": false,
+      "two_of_three": false,
+      "first_qualifying_sample_index": null
+    },
+    {
+      "session": "room_coke_hero-20261017-173858",
+      "frames": [
+        "room_coke_hero-20261017-173858_0032.jpg",
+        "room_coke_hero-20261017-173858_0033.jpg",
+        "room_coke_hero-20261017-173858_0034.jpg",
+        "room_coke_hero-20261017-173858_0035.jpg",
+        "room_coke_hero-20261017-173858_0036.jpg",
+        "room_coke_hero-20261017-173858_0037.jpg",
+        "room_coke_hero-20261017-173858_0038.jpg",
+        "room_coke_hero-20261017-173858_0039.jpg"
+      ],
+      "weapon_hits": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "any_hit": false,
+      "two_of_three": false,
+      "first_qualifying_sample_index": null
+    },
+    {
+      "session": "room_coke_scout1-20261017-171038",
+      "frames": [
+        "room_coke_scout1-20261017-171038_0032.jpg",
+        "room_coke_scout1-20261017-171038_0033.jpg",
+        "room_coke_scout1-20261017-171038_0034.jpg",
+        "room_coke_scout1-20261017-171038_0035.jpg",
+        "room_coke_scout1-20261017-171038_0036.jpg",
+        "room_coke_scout1-20261017-171038_0037.jpg",
+        "room_coke_scout1-20261017-171038_0038.jpg",
+        "room_coke_scout1-20261017-171038_0039.jpg"
+      ],
+      "weapon_hits": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "any_hit": false,
+      "two_of_three": false,
+      "first_qualifying_sample_index": null
+    },
+    {
+      "session": "room_coke_scout1-20261017-171117",
+      "frames": [
+        "room_coke_scout1-20261017-171117_0032.jpg",
+        "room_coke_scout1-20261017-171117_0033.jpg",
+        "room_coke_scout1-20261017-171117_0034.jpg",
+        "room_coke_scout1-20261017-171117_0035.jpg",
+        "room_coke_scout1-20261017-171117_0036.jpg",
+        "room_coke_scout1-20261017-171117_0037.jpg",
+        "room_coke_scout1-20261017-171117_0038.jpg",
+        "room_coke_scout1-20261017-171117_0039.jpg"
+      ],
+      "weapon_hits": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "any_hit": false,
+      "two_of_three": false,
+      "first_qualifying_sample_index": null
+    },
+    {
+      "session": "room_fedora_hero-20261017-173731",
+      "frames": [
+        "room_fedora_hero-20261017-173731_0032.jpg",
+        "room_fedora_hero-20261017-173731_0033.jpg",
+        "room_fedora_hero-20261017-173731_0034.jpg",
+        "room_fedora_hero-20261017-173731_0035.jpg",
+        "room_fedora_hero-20261017-173731_0036.jpg",
+        "room_fedora_hero-20261017-173731_0037.jpg",
+        "room_fedora_hero-20261017-173731_0038.jpg",
+        "room_fedora_hero-20261017-173731_0039.jpg"
+      ],
+      "weapon_hits": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "any_hit": false,
+      "two_of_three": false,
+      "first_qualifying_sample_index": null
+    },
+    {
+      "session": "room_fedora_scout1-20261017-170814",
+      "frames": [
+        "room_fedora_scout1-20261017-170814_0032.jpg",
+        "room_fedora_scout1-20261017-170814_0033.jpg",
+        "room_fedora_scout1-20261017-170814_0034.jpg",
+        "room_fedora_scout1-20261017-170814_0035.jpg",
+        "room_fedora_scout1-20261017-170814_0036.jpg",
+        "room_fedora_scout1-20261017-170814_0037.jpg",
+        "room_fedora_scout1-20261017-170814_0038.jpg",
+        "room_fedora_scout1-20261017-170814_0039.jpg"
+      ],
+      "weapon_hits": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "any_hit": false,
+      "two_of_three": false,
+      "first_qualifying_sample_index": null
+    },
+    {
+      "session": "room_fedora_scout1-20261017-170901",
+      "frames": [
+        "room_fedora_scout1-20261017-170901_0032.jpg",
+        "room_fedora_scout1-20261017-170901_0033.jpg",
+        "room_fedora_scout1-20261017-170901_0034.jpg",
+        "room_fedora_scout1-20261017-170901_0035.jpg",
+        "room_fedora_scout1-20261017-170901_0036.jpg",
+        "room_fedora_scout1-20261017-170901_0037.jpg",
+        "room_fedora_scout1-20261017-170901_0038.jpg",
+        "room_fedora_scout1-20261017-170901_0039.jpg"
+      ],
+      "weapon_hits": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "any_hit": false,
+      "two_of_three": false,
+      "first_qualifying_sample_index": null
+    },
+    {
+      "session": "room_knife_hero-20261017-173636",
+      "frames": [
+        "room_knife_hero-20261017-173636_0006.jpg",
+        "room_knife_hero-20261017-173636_0007.jpg"
+      ],
+      "weapon_hits": [
+        0,
+        0
+      ],
+      "any_hit": false,
+      "two_of_three": false,
+      "first_qualifying_sample_index": null
+    },
+    {
+      "session": "room_knife_hero-20261017-173649",
+      "frames": [
+        "room_knife_hero-20261017-173649_0032.jpg",
+        "room_knife_hero-20261017-173649_0033.jpg",
+        "room_knife_hero-20261017-173649_0034.jpg",
+        "room_knife_hero-20261017-173649_0035.jpg",
+        "room_knife_hero-20261017-173649_0036.jpg",
+        "room_knife_hero-20261017-173649_0037.jpg",
+        "room_knife_hero-20261017-173649_0038.jpg",
+        "room_knife_hero-20261017-173649_0039.jpg"
+      ],
+      "weapon_hits": [
+        1,
+        1,
+        0,
+        1,
+        0,
+        1,
+        1,
+        1
+      ],
+      "any_hit": true,
+      "two_of_three": true,
+      "first_qualifying_sample_index": 1
+    },
+    {
+      "session": "room_knife_hero-20261017-184411",
+      "frames": [
+        "room_knife_hero-20261017-184411_0032.jpg",
+        "room_knife_hero-20261017-184411_0033.jpg",
+        "room_knife_hero-20261017-184411_0034.jpg",
+        "room_knife_hero-20261017-184411_0035.jpg",
+        "room_knife_hero-20261017-184411_0036.jpg",
+        "room_knife_hero-20261017-184411_0037.jpg",
+        "room_knife_hero-20261017-184411_0038.jpg",
+        "room_knife_hero-20261017-184411_0039.jpg"
+      ],
+      "weapon_hits": [
+        0,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1
+      ],
+      "any_hit": true,
+      "two_of_three": true,
+      "first_qualifying_sample_index": 2
+    },
+    {
+      "session": "room_knife_hero-20261017-184449",
+      "frames": [
+        "room_knife_hero-20261017-184449_0032.jpg",
+        "room_knife_hero-20261017-184449_0033.jpg",
+        "room_knife_hero-20261017-184449_0034.jpg",
+        "room_knife_hero-20261017-184449_0035.jpg",
+        "room_knife_hero-20261017-184449_0036.jpg",
+        "room_knife_hero-20261017-184449_0037.jpg",
+        "room_knife_hero-20261017-184449_0038.jpg",
+        "room_knife_hero-20261017-184449_0039.jpg"
+      ],
+      "weapon_hits": [
+        1,
+        1,
+        1,
+        1,
+        1,
+        0,
+        0,
+        1
+      ],
+      "any_hit": true,
+      "two_of_three": true,
+      "first_qualifying_sample_index": 1
+    },
+    {
+      "session": "room_knife_hero-20261017-193342",
+      "frames": [
+        "room_knife_hero-20261017-193342_0032.jpg",
+        "room_knife_hero-20261017-193342_0033.jpg",
+        "room_knife_hero-20261017-193342_0034.jpg",
+        "room_knife_hero-20261017-193342_0035.jpg",
+        "room_knife_hero-20261017-193342_0036.jpg",
+        "room_knife_hero-20261017-193342_0037.jpg",
+        "room_knife_hero-20261017-193342_0038.jpg",
+        "room_knife_hero-20261017-193342_0039.jpg"
+      ],
+      "weapon_hits": [
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1
+      ],
+      "any_hit": true,
+      "two_of_three": true,
+      "first_qualifying_sample_index": 1
+    },
+    {
+      "session": "room_knife_hero-20261017-193421",
+      "frames": [
+        "room_knife_hero-20261017-193421_0032.jpg",
+        "room_knife_hero-20261017-193421_0033.jpg",
+        "room_knife_hero-20261017-193421_0034.jpg",
+        "room_knife_hero-20261017-193421_0035.jpg",
+        "room_knife_hero-20261017-193421_0036.jpg",
+        "room_knife_hero-20261017-193421_0037.jpg",
+        "room_knife_hero-20261017-193421_0038.jpg",
+        "room_knife_hero-20261017-193421_0039.jpg"
+      ],
+      "weapon_hits": [
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1
+      ],
+      "any_hit": true,
+      "two_of_three": true,
+      "first_qualifying_sample_index": 1
+    },
+    {
+      "session": "room_none_hero-20261017-173934",
+      "frames": [
+        "room_none_hero-20261017-173934_0032.jpg",
+        "room_none_hero-20261017-173934_0033.jpg",
+        "room_none_hero-20261017-173934_0034.jpg",
+        "room_none_hero-20261017-173934_0035.jpg",
+        "room_none_hero-20261017-173934_0036.jpg",
+        "room_none_hero-20261017-173934_0037.jpg",
+        "room_none_hero-20261017-173934_0038.jpg",
+        "room_none_hero-20261017-173934_0039.jpg"
+      ],
+      "weapon_hits": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "any_hit": false,
+      "two_of_three": false,
+      "first_qualifying_sample_index": null
+    },
+    {
+      "session": "room_none_scout1-20261017-171153",
+      "frames": [
+        "room_none_scout1-20261017-171153_0032.jpg",
+        "room_none_scout1-20261017-171153_0033.jpg",
+        "room_none_scout1-20261017-171153_0034.jpg",
+        "room_none_scout1-20261017-171153_0035.jpg",
+        "room_none_scout1-20261017-171153_0036.jpg",
+        "room_none_scout1-20261017-171153_0037.jpg",
+        "room_none_scout1-20261017-171153_0038.jpg",
+        "room_none_scout1-20261017-171153_0039.jpg"
+      ],
+      "weapon_hits": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0
+      ],
+      "any_hit": true,
+      "two_of_three": false,
+      "first_qualifying_sample_index": null
+    }
+  ]
+}

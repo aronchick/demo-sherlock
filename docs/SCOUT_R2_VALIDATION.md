@@ -94,6 +94,28 @@ without losing matches relative to 0.10. Normal non-weapon classes retain the
 runtime's 0.35 threshold; the reported weapon metrics are unaffected by that
 separate filter.
 
+## Repeated observations
+
+The recording should be evaluated by incidents caught, time to the first camera
+command, and false investigations per minute. A person can remain visible across
+many processed frames, so a missed image does not necessarily mean a missed incident.
+
+An audit of the ordered held-out samples found a two-hit window within three
+samples in all five knife sessions containing annotated weapons. The separate
+two-image occluded-camera session had no weapon detections or weapon annotations.
+The sole negative-frame trigger was isolated; none of the ten negative sessions
+contained a two-of-three window. Exact sample lists and source hashes are in
+`results/scout_r2/temporal-sample-audit.json`.
+
+This audit counts any weapon box in an image. It does not associate boxes across
+frames, establish capture intervals, or measure video performance. Nearby samples
+are correlated and come from the same sessions used for model calibration.
+
+Two hits in three processed frames for the same tracked object is a candidate
+trigger policy. The runtime currently uses dwell and deduplication, without an
+N-of-M vote. Validate a changed policy on fresh timed sequences before claiming
+improved incident recall or fewer false investigations.
+
 ## Local latency
 
 CPU single-image prediction, 640px input, confidence 0.15 and NMS IoU 0.6:

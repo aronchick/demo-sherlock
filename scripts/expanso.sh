@@ -275,9 +275,36 @@ cmd_edge() {
   say "Run Sherlock with the sink on:  SHERLOCK_EDGE=1 just live"
 }
 
+start_receipts() {
+  local pidfile="$RUNTIME/receipts.pid" pid
+  if [[ -f "$pidfile" ]]; then
+    pid="$(cat "$pidfile")"
+    if kill -0 "$pid" 2>/dev/null; then
+      ps -p "$pid" -o command= | grep -q 'scripts/core_receipts.py' \
+        || die "receipt watcher PID belongs to another process; inspect $pidfile"
+      return
+    fi
+  fi
+  need uv
+  uv run --no-project python - "$RUNTIME/receipts.log" "$pidfile" "$SHERLOCK_CORE_DIR" <<'PY'
+import pathlib
+import subprocess
+import sys
+
+with open(sys.argv[1], 'ab') as log:
+    process = subprocess.Popen([sys.executable, 'scripts/core_receipts.py',
+                                '--core-dir', sys.argv[3], '--watch'],
+                               stdin=subprocess.DEVNULL, stdout=log, stderr=log,
+                               start_new_session=True)
+pathlib.Path(sys.argv[2]).write_text(str(process.pid) + '\n')
+PY
+}
+
 cmd_core() {
   need expanso-edge "install it: curl -fsSL https://get.expanso.io/edge/install.sh | bash"
+  export SHERLOCK_CORE_DIR="${SHERLOCK_CORE_DIR:-$ROOT/.runtime/expanso/core}"
   if node_running core; then
+    start_receipts
     say "sherlock-core already running; reusing its Cloud connection"
     return
   fi
@@ -290,6 +317,7 @@ cmd_core() {
   mkdir -p "$RUNTIME"
   bootstrap core
   start_node core cloud
+  start_receipts
   say "sherlock-core started; C1 and C2 start once Expanso Cloud assigns them."
   say "Records land in $SHERLOCK_CORE_DIR. Check with: scripts/expanso.sh status"
 }

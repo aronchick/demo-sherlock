@@ -38,7 +38,7 @@ def core_up(name: str):
         raise ValueError('Start the Brev machine before provisioning its Expanso core')
     remote = f'"$HOME"/{REMOTE}'
     # The core directory survives code releases and GPU stop/start.
-    archive = run(['git', 'archive', 'HEAD', 'scripts/expanso.sh', 'edge', 'jobs'],
+    archive = run(['git', 'archive', 'HEAD', 'scripts/expanso.sh', 'scripts/core_receipts.py', 'edge', 'jobs'],
                   cwd=ROOT, capture_output=True).stdout
     run([*ssh(name), f'umask 077; mkdir -p {remote}; tar -xf - -C {remote}'], input=archive)
     installed = subprocess.run([*ssh(name), f'test -x {remote}/bin/expanso-edge'],

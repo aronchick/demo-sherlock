@@ -21,7 +21,13 @@ STATIC = ROOT / 'sherlock/sherlock/dashboard/static'
 class BoardHandler(SimpleHTTPRequestHandler):
     def do_GET(self):
         if self.path == '/':
-            self.path = '/pipeline.html'
+            # Match the application's template substitution, without runtime events.
+            body = (STATIC / 'pipeline.html').read_text().replace('__CFG_JSON__', '{"models":{}}').encode()
+            self.send_response(200)
+            self.send_header('Content-Type', 'text/html; charset=utf-8')
+            self.end_headers()
+            self.wfile.write(body)
+            return
         elif self.path.startswith('/pipeline/assets/'):
             self.path = self.path.removeprefix('/pipeline/assets')
         super().do_GET()
@@ -40,8 +46,8 @@ def probe(output):
             name = f'sherlock-motion-{os.getpid()}-{int(reduced)}'
 
             def browser(*args, session=name):
-                subprocess.run(['agent-browser', '--session', session, *args],
-                               check=True, capture_output=True, text=True, timeout=60)
+                return subprocess.run(['agent-browser', '--session', session, *args],
+                                      check=True, capture_output=True, text=True, timeout=60).stdout
 
             try:
                 browser('set', 'viewport', '1920', '1080')
@@ -49,6 +55,9 @@ def probe(output):
                     browser('set', 'media', 'light', 'reduced-motion')
                 browser('open', f'http://127.0.0.1:{server.server_port}')
                 time.sleep(2.5)
+                errors = json.loads(browser('errors', '--json'))
+                if errors.get('data', {}).get('errors'):
+                    raise RuntimeError(f'Board script errors: {errors}')
                 frames = []
                 for index in range(4):
                     if index:

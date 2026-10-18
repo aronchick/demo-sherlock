@@ -333,7 +333,7 @@ def test_tunnel_target_mismatch_is_not_replaced(monkeypatch):
         workflow.ensure_tunnel('new', {'id': 'owned'}, 8000)
 
 
-def test_presenter_reuses_only_matching_healthy_configuration(monkeypatch):
+def test_presenter_reuses_only_matching_healthy_configuration(monkeypatch, tmp_path):
     settings = {'name': 'new', 'id': 'owned', 'port': 8000, 'config_digest': 'abc'}
     monkeypatch.setattr(workflow, 'read_owned', lambda _: settings)
     monkeypatch.setattr(workflow, 'presenter_settings', lambda *_: settings)
@@ -341,8 +341,15 @@ def test_presenter_reuses_only_matching_healthy_configuration(monkeypatch):
     monkeypatch.setattr(workflow, 'launch_owned', lambda *_: pytest.fail('must reuse'))
     workflow.ensure_presenter('new', {'id': 'owned'}, 8000)
     monkeypatch.setattr(workflow, 'presenter_settings', lambda *_: {**settings, 'config_digest': 'changed'})
-    with pytest.raises(ValueError, match='configuration changed'):
-        workflow.ensure_presenter('new', {'id': 'owned'}, 8000)
+    monkeypatch.setattr(workflow, 'ROOT', tmp_path)
+    (tmp_path / '.runtime').mkdir()
+    actions = []
+    monkeypatch.setattr(workflow, 'stop_owned', lambda kind: actions.append(('stop', kind)))
+    monkeypatch.setattr(workflow, 'require_free_ports', lambda ports: actions.append(('ports', ports)))
+    monkeypatch.setattr(workflow, 'launch_owned', lambda kind, *args, **kwargs:
+                        actions.append(('launch', kind)) or {'pid': 123})
+    workflow.ensure_presenter('new', {'id': 'owned'}, 8000)
+    assert actions == [('stop', 'presenter'), ('ports', [8000]), ('launch', 'presenter')]
 
 
 def test_new_tunnel_smoke_failure_stops_only_new_tunnel(monkeypatch):

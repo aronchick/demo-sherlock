@@ -376,11 +376,13 @@ def ensure_presenter(name, item, port):
     state = read_owned('presenter')
     if state:
         if any(state.get(key) != value for key, value in expected.items()):
-            raise ValueError('Presenter configuration changed; run just down-local first')
-        if not presenter_health(port):
-            raise ValueError('Owned presenter is not healthy; inspect presenter.log')
-        print(f'Sherlock already healthy: http://localhost:{port}/')
-        return
+            print('Presenter source or configuration changed; restarting the owned presenter.')
+            stop_owned('presenter')
+        else:
+            if not presenter_health(port):
+                raise ValueError('Owned presenter is not healthy; inspect presenter.log')
+            print(f'Sherlock already healthy: http://localhost:{port}/')
+            return
     require_free_ports([port])
     state = launch_owned('presenter',
                          ['uv', 'run', '--extra', 'yolo', 'python', str(ROOT / 'run.py'),

@@ -21,22 +21,30 @@
 <p class="eyebrow">02 / Watch the camera respond</p>
 <h1 id="loop-title">Detect. Decide. Zoom.</h1>
 <p class="lead">Follow the short loop from a local detection to a closer look.</p>
-<ol class="sequence"><li><span class="step">01 / Local</span><h2>YOLO</h2><p>Detect an object.<br>Send a small detection ticket.</p></li><li><span class="step">02 / NVIDIA Brev</span><h2>Nemotron Director</h2><p>Choose a camera tool.<br>Request the close-up.</p><small>Red Hat AI FP8 model</small></li><li><span class="step">03 / Camera</span><h2>Zoom in</h2><p>Capture the object detail.<br>Link it to the original scene.</p></li></ol>
+<ol class="sequence"><li><span class="step">01 / Local</span><h2>YOLO</h2><p>Detect an object.<br>Send a small detection ticket.</p></li><li><span class="step">02 / NVIDIA Brev</span><h2>Nemotron Director</h2><p>Choose a camera tool.<br>Request the close-up.</p><small>Red Hat AI FP8 · vLLM serving</small></li><li><span class="step">03 / Camera</span><h2>Zoom in</h2><p>Capture the object detail.<br>Link it to the original scene.</p></li></ol>
 <a class="demo-link" href="/" target="sherlock-board">Open the camera board →</a>
 </section>
 <section id="evidence" aria-labelledby="evidence-title" hidden>
 <p class="eyebrow">03 / From close-up to a case</p>
 <h1 id="evidence-title">A closer look.<br>An accountable decision.</h1>
-<div class="evidence-layout"><div><h2>Check the object</h2><p>Only the masked object crop reaches the vision models. The Verifier checks the claim first; the Analyst describes a confirmed result.</p><h2>Keep the human in the loop</h2><p>Review the location and pictures on the phone. Investigate, notify the team in the demo, then resolve.</p></div><div class="case-note"><span class="eyebrow">Evidence record</span><h2>Trace it back.</h2><p>Original scene and object evidence stay linked. A confirmed alert also retains the face crop for human review.</p><p>Local Ed25519 signatures, image hashes and a revision chain make changes inspectable.</p><a href="/custody" target="sherlock-evidence">Inspect a case →</a></div></div>
+<div class="evidence-layout"><div><h2>Check the object</h2><p>Only the masked object crop reaches the vision models. The Verifier checks the claim first; the Analyst describes a confirmed result.</p><h2>Keep the human in the loop</h2><p>Review the location and pictures on the phone. Investigate, record a team notification, then resolve.</p></div><div class="case-note"><span class="eyebrow">Evidence record</span><h2>Trace it back.</h2><p>Original scene and object evidence stay linked. A confirmed alert also retains the face crop for human review.</p><p>Local Ed25519 signatures, image hashes and a revision chain make changes inspectable.</p><a href="/custody" target="sherlock-evidence">Inspect a case →</a></div></div>
+</section>
+<section id="serving" aria-labelledby="serving-title" hidden>
+<p class="eyebrow">04 / The serving stack</p>
+<h1 id="serving-title">Small tickets.<br>Purpose-built model calls.</h1>
+<p class="lead">NVIDIA Brev runs the models. Expanso carries the incident data.</p>
+<div class="ledger"><p><b>Red Hat AI · FP8</b><span>Nemotron 3.5 Lightning checkpoint, quantized with LLM Compressor.</span></p><p><b>vLLM · Serving</b><span>Tool-call API for the Director. Image requests for SmolVLM.</span></p><p><b>Expanso · Transport</b><span>Incident events and evidence with inspectable downstream receipt.</span></p></div>
+<p class="qualification">FP8 reduces storage per quantized weight. Latency and delivery are verified from the run.</p>
+<a class="demo-link" href="/" target="sherlock-board">Return to the investigation →</a>
 </section>
 <section id="impact" aria-labelledby="impact-title" hidden>
-<p class="eyebrow">04 / The projected difference</p>
+<p class="eyebrow">05 / The projected difference</p>
 <h1 id="impact-title">Less to transmit.<br>More to act on.</h1>
 <div class="ledger"><p><b>Selective escalation</b><span>Fewer uploaded frames and model calls than analyzing every frame.</span></p><p><b>Focused review</b><span>Faster triage with a close-up, location and supporting scene.</span></p><p><b>Inspectable evidence</b><span>Each decision linked to its source images and signed history.</span></p></div>
 <p class="qualification">Projected benefits. Measure bandwidth, calls, latency and false alerts against a full-frame baseline.</p>
 <a class="repo" href="https://github.com/aronchick/demo-sherlock" target="sherlock-repository" rel="noopener">github.com/aronchick/demo-sherlock ↗</a>
 </section>
 </main>
-<footer><span id="slide-status" aria-live="polite" aria-atomic="true">01 / 04</span><span class="key-help">← → or Space to advance</span><div><button id="previous" type="button" aria-label="Previous slide">← Back</button><button id="next" type="button" aria-label="Next slide">Next →</button></div></footer>
+<footer><span id="slide-status" aria-live="polite" aria-atomic="true">01 / 05</span><span class="key-help">← → or Space to advance</span><div><button id="previous" type="button" aria-label="Previous slide">← Back</button><button id="next" type="button" aria-label="Next slide">Next →</button></div></footer>
 </body>
 </html>

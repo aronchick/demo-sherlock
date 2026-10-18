@@ -121,7 +121,6 @@ a:focus-visible, button:focus-visible, summary:focus-visible { outline: 2px soli
   .mini-phone { width: 25px; height: 40px; }
   .phone-indicator small { display: none; }
   #phone-summary { overflow-wrap: anywhere; }
-  #d-alert #phone-error { position: absolute; bottom: 6px; left: 12px; right: 12px; font-size: 11px; }
   .comparison .sub { font-size: 11px; line-height: 1.3; }
   .model-logo { width: 24px; height: 24px; }
   .models > .stage { padding: 8px 12px 8px 16px; }

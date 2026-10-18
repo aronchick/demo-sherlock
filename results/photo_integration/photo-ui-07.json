@@ -1,0 +1,140 @@
+{
+  "index": 7,
+  "source": "/Users/daaronch/code/demo-sherlock-capture/data/scout/images/test/room_none_hero-20261017-173934_0039.jpg",
+  "source_sha256": "305e3b95ce1139eae84eae3a2841f9baefef8af491e18cbbb0c88341b5603a22",
+  "expected_weapon": false,
+  "weapon_detections": 0,
+  "elapsed_s": 0.0001709461212158203,
+  "reports": [],
+  "physical_camera": false,
+  "browser_errors": "{\"success\":true,\"data\":{\"errors\":[{\"column\":15,\"line\":356,\"text\":\"ReferenceError: expansoStatusText is not defined\\n    at expansoFooter (http://127.0.0.1:8000/:357:16)\\n    at http://127.0.0.1:8000/:365:36\",\"url\":null},{\"column\":15,\"line\":356,\"text\":\"ReferenceError: expansoStatusText is not defined\\n    at expansoFooter (http://127.0.0.1:8000/:357:16)\\n    at http://127.0.0.1:8000/:365:36\",\"url\":null},{\"column\":15,\"line\":356,\"text\":\"ReferenceError: expansoStatusText is not defined\\n    at expansoFooter (http://127.0.0.1:8000/:357:16)\\n    at http://127.0.0.1:8000/:365:36\",\"url\":null},{\"column\":15,\"line\":356,\"text\":\"ReferenceError: expansoStatusText is not defined\\n    at expansoFooter (http://127.0.0.1:8000/:357:16)\\n    at http://127.0.0.1:8000/:365:36\",\"url\":null},{\"column\":15,\"line\":356,\"text\":\"ReferenceError: expansoStatusText is not defined\\n    at expansoFooter (http://127.0.0.1:8000/:357:16)\\n    at http://127.0.0.1:8000/:365:36\",\"url\":null},{\"column\":15,\"line\":356,\"text\":\"ReferenceError: expansoStatusText is not defined\\n    at expansoFooter (http://127.0.0.1:8000/:357:16)\\n    at http://127.0.0.1:8000/:365:36\",\"url\":null},{\"column\":15,\"line\":356,\"text\":\"ReferenceError: expansoStatusText is not defined\\n    at expansoFooter (http://127.0.0.1:8000/:357:16)\\n    at http://127.0.0.1:8000/:365:36\",\"url\":null},{\"column\":15,\"line\":356,\"text\":\"ReferenceError: expansoStatusText is not defined\\n    at expansoFooter (http://127.0.0.1:8000/:357:16)\\n    at http://127.0.0.1:8000/:365:36\",\"url\":null},{\"column\":15,\"line\":356,\"text\":\"ReferenceError: expansoStatusText is not defined\\n    at expansoFooter (http://127.0.0.1:8000/:357:16)\\n    at http://127.0.0.1:8000/:365:36\",\"url\":null}],\"lifecycle\":{\"effectiveLaunch\":{\"browserLaunched\":true,\"engine\":\"chrome\",\"launchHash\":11677035664275010974},\"launched\":false,\"relaunchedBrowser\":false,\"restartedBackground\":false,\"restoreStatus\":\"not_configured\",\"reused\":true,\"saveStatus\":\"not_attempted\"}},\"error\":null}\n",
+  "transport": {
+    "edge": true,
+    "configured": true,
+    "delivery_state": "active",
+    "last_delivery_s": 2.0,
+    "sent": {
+      "events": 164,
+      "incidents": 7,
+      "examples": 0,
+      "failed": 0
+    },
+    "examples": false,
+    "mode": "cloud",
+    "serving": {
+      "director": {
+        "requests_running": 0,
+        "prefix_cache_queries": 59961,
+        "kv_cache_usage": 0,
+        "up": true,
+        "prefix_cache_hits": 0,
+        "at": "2026-10-18T04:08:45.370545642Z",
+        "requests_waiting": 0,
+        "received": 1792296525.938411
+      },
+      "vlm": {
+        "requests_running": 0,
+        "prefix_cache_queries": 11004,
+        "kv_cache_usage": 0,
+        "up": true,
+        "prefix_cache_hits": 5168,
+        "at": "2026-10-18T04:08:45.37231397Z",
+        "requests_waiting": 0,
+        "received": 1792296526.635415
+      }
+    },
+    "receipts": [
+      {
+        "incident": "20261018-000845-007",
+        "core_node": "sherlock-core",
+        "proof": "disk_readback",
+        "stored_at": "2026-10-18T04:08:52.265026171Z",
+        "crops": {
+          "weapon_crop": {
+            "sha256": "d792d1b521fada91f8575c53e8566b8f2b2353d3124d8a2c7f2911bf40e7268b",
+            "bytes": 34423,
+            "url": "/evidence/20261018-000845-007/d792d1b521fada91f8575c53e8566b8f2b2353d3124d8a2c7f2911bf40e7268b.jpg"
+          }
+        }
+      },
+      {
+        "incident": "20261018-000836-006",
+        "core_node": "sherlock-core",
+        "proof": "disk_readback",
+        "stored_at": "2026-10-18T04:08:44.020407646Z",
+        "crops": {
+          "weapon_crop": {
+            "sha256": "1bee096e24a8ca6de8683fbf9e1383e636a78c955020de8d69ecf7d637ae99a7",
+            "bytes": 30033,
+            "url": "/evidence/20261018-000836-006/1bee096e24a8ca6de8683fbf9e1383e636a78c955020de8d69ecf7d637ae99a7.jpg"
+          }
+        }
+      },
+      {
+        "incident": "20261018-000734-005",
+        "core_node": "sherlock-core",
+        "proof": "disk_readback",
+        "stored_at": "2026-10-18T04:07:37.307161143Z",
+        "crops": {
+          "weapon_crop": {
+            "sha256": "eabc515ed09899bf8de95d00856a489935ace501735d0aef7aef8a185d576241",
+            "bytes": 31948,
+            "url": "/evidence/20261018-000734-005/eabc515ed09899bf8de95d00856a489935ace501735d0aef7aef8a185d576241.jpg"
+          }
+        }
+      },
+      {
+        "incident": "20261018-000728-004",
+        "core_node": "sherlock-core",
+        "proof": "disk_readback",
+        "stored_at": "2026-10-18T04:07:33.184683748Z",
+        "crops": {
+          "weapon_crop": {
+            "sha256": "e9b3968ab477cc350c4b871efb80e00d8d7b03386c7b663fdd2d60f74d5d7297",
+            "bytes": 42041,
+            "url": "/evidence/20261018-000728-004/e9b3968ab477cc350c4b871efb80e00d8d7b03386c7b663fdd2d60f74d5d7297.jpg"
+          }
+        }
+      },
+      {
+        "incident": "20261018-000717-003",
+        "core_node": "sherlock-core",
+        "proof": "disk_readback",
+        "stored_at": "2026-10-18T04:07:26.523479322Z",
+        "crops": {
+          "weapon_crop": {
+            "sha256": "0ddfc0836e02e619b5cb863ffd80aa4d21c5e33f0bb83f710012a86c5b2038d1",
+            "bytes": 33079,
+            "url": "/evidence/20261018-000717-003/0ddfc0836e02e619b5cb863ffd80aa4d21c5e33f0bb83f710012a86c5b2038d1.jpg"
+          }
+        }
+      },
+      {
+        "incident": "20261018-000712-002",
+        "core_node": "sherlock-core",
+        "proof": "disk_readback",
+        "stored_at": "2026-10-18T04:07:16.484780981Z",
+        "crops": {
+          "weapon_crop": {
+            "sha256": "dfc07629fd2466e7fd5596469262da47654bb41918ad398e3d01ee4108903a7f",
+            "bytes": 33853,
+            "url": "/evidence/20261018-000712-002/dfc07629fd2466e7fd5596469262da47654bb41918ad398e3d01ee4108903a7f.jpg"
+          }
+        }
+      },
+      {
+        "incident": "20261018-000351-001",
+        "core_node": "sherlock-core",
+        "proof": "disk_readback",
+        "stored_at": "2026-10-18T04:03:58.284358662Z",
+        "crops": {
+          "weapon_crop": {
+            "sha256": "e89b0d5beb0bc376c08a7f46875de3befee3b9e4fc980a30ae743fc21d00e78b",
+            "bytes": 89906,
+            "url": "/evidence/20261018-000351-001/e89b0d5beb0bc376c08a7f46875de3befee3b9e4fc980a30ae743fc21d00e78b.jpg"
+          }
+        }
+      }
+    ]
+  }
+}

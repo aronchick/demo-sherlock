@@ -1,0 +1,54 @@
+{
+  "index": 9,
+  "source": "/Users/daaronch/code/demo-sherlock-capture/data/scout/images/test/room_coke_hero-20261017-173858_0034.jpg",
+  "source_sha256": "9543849385b81dc952f411c17b2948621f8203a9d25ce12b37f262e3d3c0b1ea",
+  "expected_weapon": false,
+  "weapon_detections": 0,
+  "elapsed_s": 0.010528087615966797,
+  "reports": [
+    {
+      "done": true,
+      "claim": "benign coke",
+      "confidence": 0.8232054114341736,
+      "action": "ignore",
+      "evidence": [
+        "original_frame"
+      ],
+      "incident": "20261018-000902-009",
+      "t": 1792296542.0856981,
+      "evidence_provenance": {
+        "original_frame": {
+          "camera": "hero",
+          "captured_at": 1792296542.0442612,
+          "source_artifact": null,
+          "relationship": "source_frame",
+          "bbox": null
+        }
+      },
+      "evidence_camera": "hero",
+      "vlm_calls": 0,
+      "total_ms": 6.74316706135869,
+      "trigger": {
+        "camera": "hero",
+        "label": "coke",
+        "bbox": [
+          1360,
+          509,
+          1452,
+          646
+        ],
+        "threat": "benign",
+        "person": null,
+        "head": null
+      },
+      "notification": {
+        "simulated": true,
+        "status": "not_sent",
+        "delivered_at": null,
+        "acknowledged_at": null
+      },
+      "custody_saved": true
+    }
+  ],
+  "physical_camera": false
+}

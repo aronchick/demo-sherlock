@@ -1,0 +1,100 @@
+{
+  "index": 5,
+  "source": "/Users/daaronch/code/demo-sherlock-capture/data/scout/images/test/room_knife_hero-20261017-193421_0035.jpg",
+  "source_sha256": "27b13166a6b1148331e26788131906f7dc23dd9db29b1612e5138b2e8aa98aba",
+  "expected_weapon": true,
+  "weapon_detections": 1,
+  "elapsed_s": 7.059032917022705,
+  "reports": [
+    {
+      "done": true,
+      "claim": "a weapon",
+      "confidence": 0.8,
+      "action": "alert",
+      "evidence": [
+        "original_frame",
+        "weapon_crop",
+        "face_crop"
+      ],
+      "comparison": {
+        "status": "confirmed",
+        "reason": "Verifier confirms the claim",
+        "verifier_supports": true,
+        "claim": "a weapon",
+        "analyst_names_claim": true
+      },
+      "verified": true,
+      "verifier_reason": "Yes.",
+      "description": "Knife.",
+      "incident": "20261018-000836-006",
+      "t": 1792296523.510561,
+      "evidence_provenance": {
+        "original_frame": {
+          "camera": "hero",
+          "captured_at": 1792296516.43168,
+          "source_artifact": null,
+          "relationship": "source_frame",
+          "bbox": null
+        },
+        "weapon_crop": {
+          "camera": "hero",
+          "captured_at": 1792296517.9020422,
+          "source_artifact": "original_frame",
+          "relationship": "subsequent_capture",
+          "bbox": [
+            1454,
+            105,
+            1490,
+            332
+          ]
+        },
+        "face_crop": {
+          "camera": "hero",
+          "captured_at": 1792296519.199417,
+          "source_artifact": "original_frame",
+          "relationship": "subsequent_capture",
+          "bbox": [
+            1209,
+            8,
+            1401,
+            222
+          ]
+        }
+      },
+      "evidence_camera": "hero",
+      "vlm_calls": 2,
+      "total_ms": 7046.856166096404,
+      "trigger": {
+        "camera": "hero",
+        "label": "weapon",
+        "bbox": [
+          1454,
+          105,
+          1490,
+          332
+        ],
+        "threat": "weapon",
+        "person": [
+          1074,
+          8,
+          1537,
+          1080
+        ],
+        "head": [
+          1209,
+          8,
+          1401,
+          222
+        ]
+      },
+      "notification": {
+        "simulated": true,
+        "status": "delivered",
+        "delivered_at": 1792296523.5153952,
+        "acknowledged_at": null
+      },
+      "custody_saved": true
+    }
+  ],
+  "physical_camera": false
+}

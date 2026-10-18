@@ -1,0 +1,192 @@
+{
+  "index": 4,
+  "source": "/Users/daaronch/code/demo-sherlock-capture/data/scout/images/test/room_knife_hero-20261017-193342_0039.jpg",
+  "source_sha256": "63d0be84c99d87710b712ae89b14e17b2b008c286c89a37ba24131e24cc45fb8",
+  "expected_weapon": true,
+  "weapon_detections": 1,
+  "elapsed_s": 2.568640947341919,
+  "reports": [
+    {
+      "done": true,
+      "claim": "a weapon",
+      "confidence": 0.37,
+      "action": "alert",
+      "evidence": [
+        "original_frame",
+        "weapon_crop",
+        "face_crop"
+      ],
+      "comparison": {
+        "status": "confirmed",
+        "reason": "Verifier confirms the claim",
+        "verifier_supports": true,
+        "claim": "a weapon",
+        "analyst_names_claim": false
+      },
+      "verified": true,
+      "verifier_reason": "No.",
+      "description": "",
+      "analyst_mismatch": "Camera.",
+      "incident": "20261018-000734-005",
+      "t": 1792296457.008333,
+      "evidence_provenance": {
+        "original_frame": {
+          "camera": "hero",
+          "captured_at": 1792296454.41721,
+          "source_artifact": null,
+          "relationship": "source_frame",
+          "bbox": null
+        },
+        "weapon_crop": {
+          "camera": "hero",
+          "captured_at": 1792296455.593009,
+          "source_artifact": "original_frame",
+          "relationship": "subsequent_capture",
+          "bbox": [
+            1173,
+            525,
+            1385,
+            561
+          ]
+        },
+        "face_crop": {
+          "camera": "hero",
+          "captured_at": 1792296454.41721,
+          "source_artifact": "original_frame",
+          "relationship": "crop_of_source",
+          "bbox": [
+            1213,
+            1,
+            1405,
+            216
+          ]
+        }
+      },
+      "evidence_camera": "hero",
+      "vlm_calls": 2,
+      "total_ms": 2558.3479998167604,
+      "trigger": {
+        "camera": "hero",
+        "label": "weapon",
+        "bbox": [
+          1173,
+          525,
+          1385,
+          561
+        ],
+        "threat": "weapon",
+        "person": [
+          1085,
+          1,
+          1533,
+          1080
+        ],
+        "head": [
+          1213,
+          1,
+          1405,
+          216
+        ]
+      },
+      "notification": {
+        "simulated": true,
+        "status": "delivered",
+        "delivered_at": 1792296457.012461,
+        "acknowledged_at": null
+      },
+      "custody_saved": true
+    }
+  ],
+  "physical_camera": false,
+  "browser_errors": "{\"success\":true,\"data\":{\"errors\":[{\"column\":15,\"line\":356,\"text\":\"ReferenceError: expansoStatusText is not defined\\n    at expansoFooter (http://127.0.0.1:8000/:357:16)\\n    at http://127.0.0.1:8000/:365:36\",\"url\":null},{\"column\":15,\"line\":356,\"text\":\"ReferenceError: expansoStatusText is not defined\\n    at expansoFooter (http://127.0.0.1:8000/:357:16)\\n    at http://127.0.0.1:8000/:365:36\",\"url\":null},{\"column\":15,\"line\":356,\"text\":\"ReferenceError: expansoStatusText is not defined\\n    at expansoFooter (http://127.0.0.1:8000/:357:16)\\n    at http://127.0.0.1:8000/:365:36\",\"url\":null},{\"column\":15,\"line\":356,\"text\":\"ReferenceError: expansoStatusText is not defined\\n    at expansoFooter (http://127.0.0.1:8000/:357:16)\\n    at http://127.0.0.1:8000/:365:36\",\"url\":null}],\"lifecycle\":{\"effectiveLaunch\":{\"browserLaunched\":true,\"engine\":\"chrome\",\"launchHash\":11677035664275010974},\"launched\":false,\"relaunchedBrowser\":false,\"restartedBackground\":false,\"restoreStatus\":\"not_configured\",\"reused\":true,\"saveStatus\":\"not_attempted\"}},\"error\":null}\n",
+  "transport": {
+    "edge": true,
+    "configured": true,
+    "delivery_state": "active",
+    "last_delivery_s": 0.1,
+    "sent": {
+      "events": 119,
+      "incidents": 5,
+      "examples": 0,
+      "failed": 0
+    },
+    "examples": false,
+    "mode": "cloud",
+    "serving": {
+      "director": {
+        "requests_running": 0,
+        "prefix_cache_queries": 44268,
+        "kv_cache_usage": 0,
+        "up": true,
+        "prefix_cache_hits": 0,
+        "at": "2026-10-18T04:07:35.371430416Z",
+        "requests_waiting": 0,
+        "received": 1792296455.4898849
+      },
+      "vlm": {
+        "requests_running": 0,
+        "prefix_cache_queries": 8398,
+        "kv_cache_usage": 0,
+        "up": true,
+        "prefix_cache_hits": 3984,
+        "at": "2026-10-18T04:07:35.373238579Z",
+        "requests_waiting": 0,
+        "received": 1792296455.691211
+      }
+    },
+    "receipts": [
+      {
+        "incident": "20261018-000728-004",
+        "core_node": "sherlock-core",
+        "proof": "disk_readback",
+        "stored_at": "2026-10-18T04:07:33.184683748Z",
+        "crops": {
+          "weapon_crop": {
+            "sha256": "e9b3968ab477cc350c4b871efb80e00d8d7b03386c7b663fdd2d60f74d5d7297",
+            "bytes": 42041,
+            "url": "/evidence/20261018-000728-004/e9b3968ab477cc350c4b871efb80e00d8d7b03386c7b663fdd2d60f74d5d7297.jpg"
+          }
+        }
+      },
+      {
+        "incident": "20261018-000717-003",
+        "core_node": "sherlock-core",
+        "proof": "disk_readback",
+        "stored_at": "2026-10-18T04:07:26.523479322Z",
+        "crops": {
+          "weapon_crop": {
+            "sha256": "0ddfc0836e02e619b5cb863ffd80aa4d21c5e33f0bb83f710012a86c5b2038d1",
+            "bytes": 33079,
+            "url": "/evidence/20261018-000717-003/0ddfc0836e02e619b5cb863ffd80aa4d21c5e33f0bb83f710012a86c5b2038d1.jpg"
+          }
+        }
+      },
+      {
+        "incident": "20261018-000712-002",
+        "core_node": "sherlock-core",
+        "proof": "disk_readback",
+        "stored_at": "2026-10-18T04:07:16.484780981Z",
+        "crops": {
+          "weapon_crop": {
+            "sha256": "dfc07629fd2466e7fd5596469262da47654bb41918ad398e3d01ee4108903a7f",
+            "bytes": 33853,
+            "url": "/evidence/20261018-000712-002/dfc07629fd2466e7fd5596469262da47654bb41918ad398e3d01ee4108903a7f.jpg"
+          }
+        }
+      },
+      {
+        "incident": "20261018-000351-001",
+        "core_node": "sherlock-core",
+        "proof": "disk_readback",
+        "stored_at": "2026-10-18T04:03:58.284358662Z",
+        "crops": {
+          "weapon_crop": {
+            "sha256": "e89b0d5beb0bc376c08a7f46875de3befee3b9e4fc980a30ae743fc21d00e78b",
+            "bytes": 89906,
+            "url": "/evidence/20261018-000351-001/e89b0d5beb0bc376c08a7f46875de3befee3b9e4fc980a30ae743fc21d00e78b.jpg"
+          }
+        }
+      }
+    ]
+  }
+}

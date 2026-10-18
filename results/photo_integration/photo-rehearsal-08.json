@@ -1,0 +1,87 @@
+{
+  "index": 8,
+  "source": "/Users/daaronch/code/demo-sherlock-capture/data/scout/images/test/room_none_scout1-20261017-171153_0037.jpg",
+  "source_sha256": "cd750046a5158ee4054534e6ebf849bffa4f9356c1e58be12413dc12de9e8f0d",
+  "expected_weapon": false,
+  "weapon_detections": 1,
+  "elapsed_s": 5.525857925415039,
+  "reports": [
+    {
+      "done": true,
+      "claim": "a weapon",
+      "confidence": 0.37,
+      "action": "log",
+      "evidence": [
+        "original_frame",
+        "weapon_crop"
+      ],
+      "comparison": {
+        "status": "rejected",
+        "reason": "Verifier rejects the claim",
+        "verifier_supports": false,
+        "claim": "a weapon",
+        "analyst_names_claim": false
+      },
+      "verified": false,
+      "verifier_reason": "No.",
+      "description": "Frame.",
+      "incident": "20261018-000855-008",
+      "t": 1792296541.503181,
+      "evidence_provenance": {
+        "original_frame": {
+          "camera": "hero",
+          "captured_at": 1792296535.9487622,
+          "source_artifact": null,
+          "relationship": "source_frame",
+          "bbox": null
+        },
+        "weapon_crop": {
+          "camera": "hero",
+          "captured_at": 1792296537.770027,
+          "source_artifact": "original_frame",
+          "relationship": "subsequent_capture",
+          "bbox": [
+            370,
+            433,
+            447,
+            847
+          ]
+        }
+      },
+      "evidence_camera": "hero",
+      "vlm_calls": 2,
+      "total_ms": 5519.74529097788,
+      "trigger": {
+        "camera": "hero",
+        "label": "weapon",
+        "bbox": [
+          370,
+          433,
+          447,
+          847
+        ],
+        "threat": "weapon",
+        "person": [
+          276,
+          420,
+          723,
+          1080
+        ],
+        "head": [
+          440,
+          420,
+          558,
+          552
+        ]
+      },
+      "notification": {
+        "simulated": true,
+        "status": "not_sent",
+        "delivered_at": null,
+        "acknowledged_at": null
+      },
+      "custody_saved": true
+    }
+  ],
+  "physical_camera": false
+}

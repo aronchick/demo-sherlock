@@ -233,3 +233,25 @@ runtime readback, presenter identity comparison and hashes of the private logs.
 The earlier failed reuse attempt remains documented above; this later test
 verifies the corrected behavior. The local gate passed 616 tests and Ruff,
 with one existing Ray warning.
+
+## Publication audit
+
+The repository remains private. Gitleaks scanned 449 commits and reported no
+credential findings, but that scan does not establish image privacy or rights.
+The current tracked image set consists of illustrated UI captures and the
+documented NASA fixture. No room capture dataset is tracked in the current tree.
+The bundled Scout now includes its upstream AGPL license notice.
+
+Historical commits reachable from `main` still contain `photos/IMG_0105.jpeg`
+through `photos/IMG_0110.jpeg` and `IMG_0112.jpeg`. These show hackathon slides
+and props; one slide photo carries an explicit confidentiality marking and
+includes an attendee. Making the existing repository public would expose that
+history. Do not treat removal from the current tree as removal from Git history.
+
+A source-only archive of revision `7b0d6e0` was prepared locally, without Git
+history, runtime files or those historical photos. Its SHA-256 is
+`ba4d280231b5813107d66a228f77bf87a78c30e8714d15ea185fc83afe1565f3`.
+The proposed publication is a separate public repository containing the clean
+snapshot, preserving this private repository. Repository creation and the final
+public name await the owner's confirmation. No visibility change, history
+rewrite, new remote repository or public publication has occurred.

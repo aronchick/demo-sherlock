@@ -1,0 +1,122 @@
+{
+  "hardware": {
+    "scope": "USB PTZ target readback in dark room; no visual prop detection proof",
+    "checks": [
+      {
+        "check": "home",
+        "requested": [
+          0,
+          0,
+          1
+        ],
+        "actual_raw": [
+          0,
+          0,
+          0
+        ],
+        "settled_seconds": 0.20974174980074167
+      },
+      {
+        "check": "pan",
+        "requested": [
+          10,
+          0,
+          1
+        ],
+        "actual_raw": [
+          -32400,
+          0,
+          0
+        ],
+        "settled_seconds": 0.5340764170978218
+      },
+      {
+        "check": "tilt",
+        "requested": [
+          0,
+          5,
+          1
+        ],
+        "actual_raw": [
+          0,
+          18000,
+          0
+        ],
+        "settled_seconds": 0.5342009169980884
+      },
+      {
+        "check": "zoom",
+        "requested": [
+          0,
+          0,
+          2
+        ],
+        "actual_raw": [
+          0,
+          0,
+          33
+        ],
+        "settled_seconds": 2.610655334079638
+      },
+      {
+        "check": "restore",
+        "requested": [
+          0,
+          0,
+          1
+        ],
+        "actual_raw": [
+          0,
+          0,
+          0
+        ],
+        "settled_seconds": 1.5603694170713425
+      }
+    ]
+  },
+  "recovered_startup": {
+    "started_at": 1792310917.083137,
+    "duration_s": 61.14142894744873,
+    "returncode": 0
+  },
+  "incident": "20261018-041003-001",
+  "physical_camera": false,
+  "photo_elapsed_seconds": 4.55573296546936,
+  "action": "alert",
+  "verification": {
+    "signature": "verified",
+    "artifacts": "verified",
+    "history": "verified"
+  },
+  "core_receipts": [
+    {
+      "incident": "20261018-041003-001",
+      "core_node": "sherlock-core",
+      "stored_at": "2026-10-18T08:10:08.298736384Z",
+      "proof": "disk_readback",
+      "crops": {
+        "weapon_crop": {
+          "sha256": "e89b0d5beb0bc376c08a7f46875de3befee3b9e4fc980a30ae743fc21d00e78b",
+          "bytes": 89906
+        }
+      }
+    }
+  ],
+  "scout_sha256": "59ef75726532cd5c403e3e74b0a15cc8a789c71205bee89562cbe18cffd94cfe",
+  "cold_start": {
+    "unattended_success": false,
+    "failure": "SSH connection timed out during Director loading; model containers survived; subsequent just up passed."
+  },
+  "shutdown": {
+    "command": "just down",
+    "returncode": 0,
+    "provider_status": "STOPPED",
+    "local_listeners": {
+      "8000": false,
+      "8020": false,
+      "18001": false,
+      "18002": false,
+      "23121": false
+    }
+  }
+}

@@ -91,7 +91,6 @@
     if (revision === shelfRevision) return;
     shelfRevision = revision;
 
-    if (cloudShelf) cloudShelf.replaceChildren(...entries.slice(0, 3).map(({record, artifact}) => pictureLink(record, artifact)));
     shelf.replaceChildren(...entries.map(({ record, artifact }) => pictureLink(record, artifact)));
 
     if (!entries.length) shelf.append(element('span', 'No saved evidence yet'));
@@ -267,8 +266,27 @@
       if (shelf) renderShelf(await read('/incidents?limit=8&evidence_only=true'));
 
       if (cloudStatus) {
-        const [mode, transport] = await Promise.all([read('/mode'), read('/expanso')]);
-        cloudStatus.textContent = mode.mock ? 'Simulated destination · no upload' : transport.edge ? 'Edge accepted · cloud unconfirmed' : 'Not connected · source previews';
+        const transport = await read('/expanso');
+        const receipts = transport.receipts || [];
+
+        if (cloudShelf) {
+          const links = receipts.flatMap(/** @param {any} receipt */ receipt => Object.entries(receipt.crops).map(([name, crop]) => {
+            const item = /** @type {{url:string}} */ (crop);
+            const link = document.createElement('a');
+            link.href = `/custody?incident=${encodeURIComponent(receipt.incident)}`;
+            link.target = 'sherlock-evidence';
+            const image = document.createElement('img');
+            image.src = item.url;
+            image.alt = `${name.replaceAll('_', ' ')} · core storage verified`;
+            link.append(image);
+
+            return link;
+          }));
+
+          cloudShelf.replaceChildren(...links.slice(0, 3));
+        }
+
+        cloudStatus.textContent = receipts.length ? `${receipts.length} core receipts · crop hashes verified` : transport.edge ? 'Edge accepted · awaiting core readback' : 'Awaiting verified core storage';
       }
     } catch {
       if (phoneError) phoneError.textContent = 'Connection unavailable. Displayed incident may be out of date.';

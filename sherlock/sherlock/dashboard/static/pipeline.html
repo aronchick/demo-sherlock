@@ -358,7 +358,7 @@ function expansoFooter(s) {
     ? 'Expanso Cloud deploys and monitors the pipelines'
     : 'local mode, not deployed from Expanso Cloud';
   const text = live
-    ? `enabled · Expanso Edge accepts incident packages; ${where} · cloud receipt unconfirmed`
+    ? `Expanso Edge active; ${where} · ${s.receipts?.length || 0} verified core receipts`
     : 'not connected in this run · start the Edge pipelines and set SHERLOCK_EDGE=1 to carry events and alerts';
   $('expanso').classList.toggle('live', live);
   $('expansoText').textContent = text;

@@ -20,6 +20,7 @@ from fastapi.staticfiles import StaticFiles
 
 from ..events import BUS
 from ..orchestrator import Sherlock
+from ..receipts import ReceiptStore
 from .model_servers import describe
 from .numbers import read_numbers
 
@@ -152,6 +153,7 @@ def make_app(sherlock: Sherlock) -> FastAPI:
         return {"ok": True}
 
     serving: dict[str, dict] = {}
+    receipts = ReceiptStore(sherlock.incidents) if hasattr(sherlock, "incidents") else None
 
     @app.get("/expanso")
     def expanso():
@@ -161,8 +163,26 @@ def make_app(sherlock: Sherlock) -> FastAPI:
         status = sherlock.edge.status() if sherlock.edge else {"edge": False}
         now = time.time()
         fresh = {k: v for k, v in serving.items() if now - v["received"] < _SERVING_STALE_S}
-        return JSONResponse({**status, "mode": expanso_mode(), "serving": fresh},
+        return JSONResponse({**status, "mode": expanso_mode(), "serving": fresh,
+                             "receipts": receipts.list() if receipts else []},
                             headers={"Cache-Control": "no-store"})
+
+    @app.post("/api/receipts")
+    async def receipt_in(request: Request):
+        if (request.client.host if request.client else "") not in _LOOPBACK:
+            raise HTTPException(403)
+        body = bytearray()
+        async for chunk in request.stream():
+            body.extend(chunk)
+            if len(body) > 4096:
+                raise HTTPException(413)
+        if receipts is None:
+            raise HTTPException(503)
+        try:
+            accepted = receipts.accept(json.loads(body))
+        except (ValueError, OSError, KeyError, TypeError) as error:
+            raise HTTPException(400, "Receipt does not match local signed evidence") from error
+        return {"ok": True, "incident": accepted["incident"]}
 
     @app.post("/api/serving")
     async def serving_in(request: Request):

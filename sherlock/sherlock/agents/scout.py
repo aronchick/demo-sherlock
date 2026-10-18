@@ -128,9 +128,21 @@ class YoloScout:
         self.weapon_conf = float(os.environ.get("SCOUT_WEAPON_CONF", str(conf)))
         if not 0 <= self.weapon_conf <= 1:
             raise ValueError("SCOUT_WEAPON_CONF must be between 0 and 1")
+        self.predict_options = {}
+        if size := os.environ.get("SCOUT_IMGSZ"):
+            size = int(size)
+            if size < 32 or size > 2048 or size % 32:
+                raise ValueError("SCOUT_IMGSZ must be a multiple of 32 between 32 and 2048")
+            self.predict_options["imgsz"] = size
+        if overlap := os.environ.get("SCOUT_NMS_IOU"):
+            overlap = float(overlap)
+            if not 0 < overlap <= 1:
+                raise ValueError("SCOUT_NMS_IOU must be greater than 0 and at most 1")
+            self.predict_options["iou"] = overlap
 
     def detect(self, frame: np.ndarray, camera: str) -> list[Detection]:
-        res = self.model.predict(frame, conf=min(self.conf, self.weapon_conf), verbose=False)[0]
+        res = self.model.predict(frame, conf=min(self.conf, self.weapon_conf),
+                                 verbose=False, **self.predict_options)[0]
         out = []
         for b in res.boxes:
             label = res.names[int(b.cls)]

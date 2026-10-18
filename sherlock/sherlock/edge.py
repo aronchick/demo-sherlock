@@ -47,6 +47,7 @@ class EdgeSink:
         self.incidents_url = incidents_url
         self.examples_url = examples_url
         self.timeout = timeout
+        self.failed_at: float | None = None
         self.delivered_at: float | None = None
         self.sent = {"events": 0, "incidents": 0, "examples": 0, "failed": 0}
         self._reports: queue.Queue = queue.Queue(maxsize=100)
@@ -83,7 +84,10 @@ class EdgeSink:
 
     def status(self) -> dict:
         age = None if self.delivered_at is None else time.time() - self.delivered_at
-        return {"edge": age is not None and age < LIVE_SECONDS,
+        recent = age is not None and age < LIVE_SECONDS
+        failed = self.failed_at is not None and (self.delivered_at is None or self.failed_at > self.delivered_at)
+        state = "failed" if failed else "active" if recent else "idle" if age is not None else "waiting"
+        return {"edge": recent, "configured": True, "delivery_state": state,
                 "last_delivery_s": None if age is None else round(age, 1),
                 "sent": dict(self.sent), "examples": self.examples_url is not None}
 
@@ -101,6 +105,7 @@ class EdgeSink:
             self.delivered_at = time.time()
             self.sent[kind] += n
         else:
+            self.failed_at = time.time()
             self.sent["failed"] += n
         return ok
 

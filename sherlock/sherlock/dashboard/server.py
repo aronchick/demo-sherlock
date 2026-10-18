@@ -160,7 +160,7 @@ def make_app(sherlock: Sherlock) -> FastAPI:
         """What the footers may claim. 'edge' is true only while the Edge pipelines on
         this laptop are accepting this run's events; serving is what the cloud core's
         vLLM metrics pipeline last pushed, dropped once it goes stale."""
-        status = sherlock.edge.status() if sherlock.edge else {"edge": False}
+        status = sherlock.edge.status() if sherlock.edge else {"edge": False, "configured": False, "delivery_state": "disabled"}
         now = time.time()
         fresh = {k: v for k, v in serving.items() if now - v["received"] < _SERVING_STALE_S}
         return JSONResponse({**status, "mode": expanso_mode(), "serving": fresh,

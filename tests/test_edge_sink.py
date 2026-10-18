@@ -284,3 +284,19 @@ def test_transport_refuses_unsafe_artifact_reads(tmp_path):
     assert incident_record(report, tmp_path)["crops"] == {}
     assert incident_record(_report("../outside"), tmp_path)["crops"] == {}
     assert example_record(_report("../outside", verified=False), tmp_path) is None
+
+
+def test_idle_transport_is_configured_without_claiming_recent_delivery(tmp_path, monkeypatch):
+    sink = EdgeSink(tmp_path, 'http://127.0.0.1:9/events', 'http://127.0.0.1:9/incident')
+    monkeypatch.setattr('sherlock.edge.time.time', lambda: 100)
+    assert sink.status()['delivery_state'] == 'waiting'
+    sink.delivered_at = 50
+    status = sink.status()
+    assert status['configured'] is True
+    assert status['edge'] is False
+    assert status['delivery_state'] == 'idle'
+    assert status['last_delivery_s'] == 50
+    sink.failed_at = 90
+    assert sink.status()['delivery_state'] == 'failed'
+    sink.delivered_at = 95
+    assert sink.status()['delivery_state'] == 'active'

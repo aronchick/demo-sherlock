@@ -108,6 +108,7 @@
 </div>
 
 <script src="/pipeline/assets/pipeline-models.js"></script>
+<script src="/pipeline/assets/expanso-status.js"></script>
 <script>
 'use strict';
 const CFG = __CFG_JSON__;
@@ -162,14 +163,8 @@ if (CFG.mock) {
 // Expanso status comes from /expanso: live only while the Edge pipelines on this
 // laptop accept this run's events. Nothing here is configured by hand.
 function expansoFooter(s) {
-  const live = !!(s && s.edge);
-  const where = s && s.mode === 'cloud'
-    ? 'Expanso Cloud deploys and monitors the pipelines'
-    : 'local mode, not deployed from Expanso Cloud';
-  const text = live
-    ? `Expanso Edge active; ${where} · ${s.receipts?.length || 0} verified core receipts`
-    : 'not connected in this run · start the Edge pipelines and set SHERLOCK_EDGE=1 to carry events and alerts';
-  $('expanso').classList.toggle('live', live);
+  const text = expansoStatusText(s);
+  $('expanso').classList.toggle('live', s?.delivery_state === 'active');
   $('expansoText').textContent = text;
   $('expanso').title = text;
   return s;

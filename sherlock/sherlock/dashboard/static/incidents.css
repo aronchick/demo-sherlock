@@ -140,7 +140,7 @@ a:focus-visible, button:focus-visible, summary:focus-visible { outline: 2px soli
 .phone-shell .phone-id { font: 11px/1.4 var(--mono); }
 .artifact.original-scene { grid-column: 1 / -1; }
 .artifact.original-scene img { height: auto; max-height: 400px; }
-.comparison-record { border-left: 3px solid var(--verifier, #94456a); padding: 12px 18px; margin-block: 20px; background: var(--card); }
+.comparison-record { border: 1px solid var(--line); padding: 12px 18px; margin-block: 20px; background: var(--card); }
 .comparison-record h3, .comparison-record p { margin: 4px 0; }
 @media (min-width: 1100px) and (min-height: 650px) and (max-height: 800px) {
   #phone-view .phone-full h2 { font-size: 23px; margin: 10px 0 6px; }

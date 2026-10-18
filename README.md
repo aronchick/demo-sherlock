@@ -56,11 +56,15 @@ monitors those pipelines
    after 0.5 s without slowing the others.
 2. **The Scout gates everything.** YOLOv8n (3.2M parameters, about 10 ms a
    frame) runs on the laptop (`agents/scout.py`). Its tracker raises an
-   object only after it stays **0.6 s** (`DWELL_SECONDS`) and forgets it
+   object after a dwell period (normally **0.6 s**, capped at **0.12 s** for
+   weapons and hat inspections) and forgets it
    after **3 s**. Labels map to a threat: `weapon` (knife, scissors,
    baseball bat) escalates; `badge`, `bottle`, cup, phone and other COCO
-   objects are `benign`; `person` only supplies the head box. `motion` and
-   scripted-scene backends replace YOLO for the hat demo and mock mode.
+   objects are `benign`. `cap`, `fedora` and `hat` trigger an `inspect` path:
+   the Director zooms to the hat, saves an object crop, and logs the result.
+   Hats never become weapon alerts, even when the Verifier confirms the hat.
+   The promoted Scout detects caps and fedoras; stock YOLO lacks those classes.
+   `person` supplies context; motion and scripted scenes are alternate backends.
 3. **Duplicates and overlaps are dropped.** The same label seen on another
    camera moments ago counts as a duplicate. A detection that arrives while
    an investigation is running is counted as `dropped_busy`, not "avoided".

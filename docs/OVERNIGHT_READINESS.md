@@ -22,8 +22,21 @@ with five briefing slides and at least ten complete rehearsals.
 The current runtime gives the Verifier the alert decision; the Analyst adds
 a description after the Verifier check. It is not a two-model consensus. Only the masked object crop
 reaches the models. Original scene and face evidence are retained locally under
-the current evidence policy. These differ from earlier requested parallel/context
-behavior and must not be narrated as implemented.
+the current evidence policy.
+
+This follows the deliberate change in merged
+[PR #103](https://github.com/aronchick/demo-sherlock/pull/103), which replaced
+the parallel scene-context implementation from #83. Its recorded real-model
+evaluation found that the Analyst's structured verdict failed to parse in all
+12 cases and supported all six cups as well as all six knives. Contact sheets
+also weakened Verifier margins. The replacement reported 14/14 knives alerted
+and 15/15 cups rejected using masked object crops, with the Verifier first.
+Those are the PR's historical measurements, not a fresh GPU evaluation.
+
+Preserve this tested decision for the recording. Parallel scene/person analysis
+would require a new model evaluation before reintroduction; it is not an
+unfinished feature to restore automatically. Narration must describe the
+Verifier deciding and the Analyst describing, without claiming consensus.
 
 Expanso transports events, incident records, masked image bytes, and serving
 metrics. It does not execute the camera inference loop. Local HTTP acceptance

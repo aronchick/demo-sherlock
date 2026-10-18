@@ -53,11 +53,10 @@
   /* ---- feeds -------------------------------------------------------------- */
   .frame { position: relative; display: grid; grid-template-rows: auto minmax(0,1fr); min-height: 0; background: var(--card);
     border: 1px solid var(--line); border-radius: 8px; overflow: hidden; transition: border-color .3s, box-shadow .3s; }
-  .frame .fh { display: flex; align-items: center; gap: 8px; padding: 6px 10px; font: 500 11px var(--mono);
+  .frame .fh { display: flex; align-items: center; gap: 8px; padding: 8px 10px; font: 500 11px var(--mono);
     letter-spacing: .14em; text-transform: uppercase; color: var(--ink); }
   .frame .fh small { margin-left: auto; font-size: 11px; letter-spacing: .04em; text-transform: none; color: var(--dim); }
-  .frame .fh i { width: 7px; height: 7px; border-radius: 50%; background: var(--scout); animation: blink 1.8s infinite; }
-  @keyframes blink { 50% { opacity: .25; } }
+  .frame .fh i { width: 7px; height: 7px; border-radius: 50%; background: var(--scout); }
   .view { position: relative; min-height: 0; background: #16181b; }
   .view img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; display: block; }
   .frame.alert { border-color: var(--weapon); outline: 1px solid var(--weapon); animation: alertpulse 1.2s ease-in-out 3; }
@@ -121,7 +120,7 @@
   .record { display: grid; grid-template-columns: clamp(92px, 9vw, 120px) repeat(5, minmax(0,1fr)); gap: 8px; align-items: stretch; min-width: 0; }
   .record .lede { align-self: center; font: 500 11px var(--mono); letter-spacing: .14em; text-transform: uppercase; color: var(--ink); }
   .record .lede small { display: block; margin-top: 2px; font-size: 11px; letter-spacing: .02em; text-transform: none; color: var(--dim); }
-  .cell { position: relative; min-width: 0; height: clamp(58px, 9.5vh, 84px); padding: 7px 10px 6px 13px; border: 1px dashed var(--rail);
+  .cell { position: relative; min-width: 0; height: clamp(58px, 9.5vh, 84px); padding: 8px 10px 8px 13px; border: 1px dashed var(--rail);
     border-radius: 7px; overflow: hidden; }
   .cell::before { content: ""; position: absolute; left: 0; top: 8px; bottom: 8px; width: 3px; border-radius: 0 3px 3px 0; background: var(--rail); }
   .cell .k { font: 500 11px var(--mono); letter-spacing: .14em; text-transform: uppercase; color: var(--faint); }
@@ -143,7 +142,7 @@
   footer .expanso span { overflow: hidden; text-overflow: ellipsis; }
   footer a { color: var(--dim); text-decoration: none; border-bottom: 1px solid var(--line); }
   footer a:hover, footer a:focus-visible { color: var(--ink); border-color: var(--ink); outline: none; }
-  button { background: transparent; color: var(--dim); border: 1px solid var(--line); border-radius: 6px; padding: 5px 10px; font: 500 11px var(--mono); cursor: pointer; }
+  button { background: transparent; color: var(--dim); border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px; font: 500 11px var(--mono); cursor: pointer; }
   button:hover { border-color: var(--ink); color: var(--ink); }
   button:focus-visible, a:focus-visible { outline: 2px solid var(--scout); outline-offset: 2px; }
   #fx { position: fixed; inset: 0; pointer-events: none; }

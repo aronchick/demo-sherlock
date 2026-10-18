@@ -27,6 +27,10 @@ function modelIdentity(model) {
     return {name: shortName.replace(/-Instruct$/, '').replaceAll('-', ' '), brand: 'huggingface', vendor: 'Hugging Face'};
   }
 
+  if (shortName === 'scout-r2-960.pt') {
+    return {name: 'YOLOv8n · fine-tuned', brand: 'ultralytics', vendor: 'Ultralytics'};
+  }
+
   if (/yolo/i.test(model)) {
     return {name: shortName.replace(/\.pt$/, '').replace(/^yolo/i, 'YOLO'), brand: 'ultralytics', vendor: 'Ultralytics'};
   }
@@ -44,7 +48,9 @@ function scoutIdentity(backend, model) {
   if (backend === 'yolo') {
     const identity = modelIdentity(model || 'yolo');
 
-    return {...identity, tag: identity.name, runtime: 'Configured model', sub: 'YOLO, every frame'};
+    const runtime = model.split('/').pop() === 'scout-r2-960.pt' ? 'scout-r2-960.pt · revision 2' : 'Configured model';
+
+    return {...identity, tag: identity.name, runtime, sub: 'YOLO, every frame'};
   }
 
   const none = {brand: '', vendor: ''};

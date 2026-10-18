@@ -180,3 +180,12 @@ def test_recording_briefing_routes_and_navigation():
     for name in ("slides.css", "slides.js"):
         assert client.get(f"/pipeline/assets/{name}").status_code == 200
     assert 'href="/slides"' in client.get("/").text
+
+
+@needs_node
+def test_promoted_scout_keeps_architecture_and_checkpoint_identity():
+    shown = scout_cards({'mock': False, 'models': {'scout': {'model': 'models/scout-r2-960.pt'}}}, ['yolo'])
+    card = shown['yolo']
+    assert card['name'] == 'YOLOv8n · fine-tuned'
+    assert card['logo'] == '/pipeline/assets/brand-ultralytics.svg'
+    assert card['runtime'] == 'scout-r2-960.pt · revision 2'

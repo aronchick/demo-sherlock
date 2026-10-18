@@ -108,7 +108,7 @@
   function renderCustody(record, custody = document.createElement('div')) {
     custody.replaceChildren();
     const summary = element('div', '', 'incident-summary');
-    summary.append(fact('Incident', record.incident), fact('Trigger camera', record.trigger?.camera || 'Not recorded'), fact('Evidence camera', record.evidence_camera || 'Not recorded'), fact('Analysis', record.models?.mock ? 'Mock run' : 'Live run'), fact('Decision', record.state === 'investigating' ? 'Investigating' : record.action), fact('Recorded', timestamp(record.t)));
+    summary.append(fact('Incident', record.incident), fact('Trigger camera', record.trigger?.camera || 'Not recorded'), fact('Evidence camera', record.evidence_camera || 'Not recorded'), fact('Analysis', record.models?.mock ? 'Mock run' : 'Model inference'), fact('Decision', record.state === 'investigating' ? 'Investigating' : record.action), fact('Recorded', timestamp(record.t)));
     custody.append(summary);
 
     const grid = element('div', '', 'artifact-grid');

@@ -1,0 +1,127 @@
+{
+  "index": 3,
+  "source": "/Users/daaronch/code/demo-sherlock-capture/data/scout/images/test/room_knife_hero-20261017-184449_0039.jpg",
+  "source_sha256": "78cf1c9c1cdbaab69953cffcbb6a94ab365d06d92b5244a6d152a3ebb8342baf",
+  "expected_weapon": true,
+  "weapon_detections": 1,
+  "elapsed_s": 4.47172212600708,
+  "reports": [
+    {
+      "done": true,
+      "claim": "a weapon",
+      "confidence": 0.87,
+      "action": "alert",
+      "evidence": [
+        "original_frame",
+        "weapon_crop",
+        "face_crop"
+      ],
+      "comparison": {
+        "status": "confirmed",
+        "reason": "Verifier confirms the claim",
+        "verifier_supports": true,
+        "claim": "a weapon",
+        "analyst_names_claim": true
+      },
+      "verified": true,
+      "verifier_reason": "Yes.",
+      "description": "Gun.",
+      "incident": "20261018-005842-006",
+      "t": 1792299527.1163409,
+      "evidence_provenance": {
+        "original_frame": {
+          "camera": "hero",
+          "captured_at": 1792299522.608051,
+          "source_artifact": null,
+          "relationship": "source_frame",
+          "bbox": null
+        },
+        "weapon_crop": {
+          "camera": "hero",
+          "captured_at": 1792299524.398208,
+          "source_artifact": "original_frame",
+          "relationship": "subsequent_capture",
+          "bbox": [
+            1,
+            422,
+            204,
+            473
+          ]
+        },
+        "face_crop": {
+          "camera": "hero",
+          "captured_at": 1792299525.361448,
+          "source_artifact": "original_frame",
+          "relationship": "subsequent_capture",
+          "bbox": [
+            394,
+            28,
+            582,
+            238
+          ]
+        }
+      },
+      "evidence_camera": "hero",
+      "vlm_calls": 2,
+      "total_ms": 4463.061165995896,
+      "trigger": {
+        "camera": "hero",
+        "label": "weapon",
+        "bbox": [
+          1,
+          422,
+          204,
+          473
+        ],
+        "threat": "weapon",
+        "person": [
+          144,
+          28,
+          832,
+          1080
+        ],
+        "head": [
+          394,
+          28,
+          582,
+          238
+        ]
+      },
+      "notification": {
+        "simulated": true,
+        "status": "delivered",
+        "delivered_at": 1792299527.118252,
+        "acknowledged_at": null
+      },
+      "custody_saved": true
+    }
+  ],
+  "physical_camera": false,
+  "take": 4,
+  "completed_at": 1792299536.1840022,
+  "walkthrough_seconds": 16.98539423942566,
+  "verification": {
+    "signature": "verified",
+    "artifacts": "verified",
+    "history": "verified"
+  },
+  "response": {
+    "status": "investigating",
+    "simulated": true,
+    "team_notified_at": 1792299535.450508,
+    "events": [
+      {
+        "action": "investigate",
+        "t": 1792299535.3868642,
+        "simulated": true
+      },
+      {
+        "action": "notify_team",
+        "t": 1792299535.450508,
+        "simulated": true
+      }
+    ]
+  },
+  "core_receipt": true,
+  "browser_errors": "{\"success\":true,\"data\":{\"errors\":[],\"lifecycle\":{\"effectiveLaunch\":{\"browserLaunched\":true,\"engine\":\"chrome\",\"launchHash\":11677035664275010974},\"launched\":false,\"relaunchedBrowser\":false,\"restartedBackground\":false,\"restoreStatus\":\"not_configured\",\"reused\":true,\"saveStatus\":\"not_attempted\"}},\"error\":null}\n"
+}

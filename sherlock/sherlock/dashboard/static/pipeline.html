@@ -410,6 +410,7 @@ function cellSet(key, text, meta) {
   el.style.animation = 'none'; void el.offsetWidth; el.style.animation = '';
 }
 function cellsReset() {
+  $('record').querySelector('.lede small').textContent = 'Current investigation';
   for (const k of CELLS) {
     const el = $('c-' + k); el.classList.remove('on');
     el.querySelector('.v').textContent = 'waiting'; el.querySelector('.m').textContent = '';

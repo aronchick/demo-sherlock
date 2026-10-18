@@ -1,0 +1,126 @@
+{
+  "count": 10,
+  "scope": "Supplied photos, real YOLO and Nebius models, software PTZ, actual Expanso core receipts; not physical-camera measurements",
+  "walkthroughs": [
+    {
+      "take": 1,
+      "incident": "20261018-005756-003",
+      "verification": {
+        "signature": "verified",
+        "artifacts": "verified",
+        "history": "verified"
+      },
+      "core_receipt": true,
+      "browser_errors": [],
+      "physical_camera": false
+    },
+    {
+      "take": 2,
+      "incident": "20261018-005810-004",
+      "verification": {
+        "signature": "verified",
+        "artifacts": "verified",
+        "history": "verified"
+      },
+      "core_receipt": true,
+      "browser_errors": [],
+      "physical_camera": false
+    },
+    {
+      "take": 3,
+      "incident": "20261018-005825-005",
+      "verification": {
+        "signature": "verified",
+        "artifacts": "verified",
+        "history": "verified"
+      },
+      "core_receipt": true,
+      "browser_errors": [],
+      "physical_camera": false
+    },
+    {
+      "take": 4,
+      "incident": "20261018-005842-006",
+      "verification": {
+        "signature": "verified",
+        "artifacts": "verified",
+        "history": "verified"
+      },
+      "core_receipt": true,
+      "browser_errors": [],
+      "physical_camera": false
+    },
+    {
+      "take": 5,
+      "incident": "20261018-005858-007",
+      "verification": {
+        "signature": "verified",
+        "artifacts": "verified",
+        "history": "verified"
+      },
+      "core_receipt": true,
+      "browser_errors": [],
+      "physical_camera": false
+    },
+    {
+      "take": 6,
+      "incident": "20261018-005908-008",
+      "verification": {
+        "signature": "verified",
+        "artifacts": "verified",
+        "history": "verified"
+      },
+      "core_receipt": true,
+      "browser_errors": [],
+      "physical_camera": false
+    },
+    {
+      "take": 7,
+      "incident": "20261018-005924-009",
+      "verification": {
+        "signature": "verified",
+        "artifacts": "verified",
+        "history": "verified"
+      },
+      "core_receipt": true,
+      "browser_errors": [],
+      "physical_camera": false
+    },
+    {
+      "take": 8,
+      "incident": "20261018-005939-010",
+      "verification": {
+        "signature": "verified",
+        "artifacts": "verified",
+        "history": "verified"
+      },
+      "core_receipt": true,
+      "browser_errors": [],
+      "physical_camera": false
+    },
+    {
+      "take": 9,
+      "incident": "20261018-005948-011",
+      "verification": {
+        "signature": "verified",
+        "artifacts": "verified",
+        "history": "verified"
+      },
+      "core_receipt": true,
+      "browser_errors": [],
+      "physical_camera": false
+    },
+    {
+      "take": 10,
+      "incident": "20261018-010004-012",
+      "verification": {
+        "signature": "verified",
+        "artifacts": "verified",
+        "history": "verified"
+      },
+      "core_receipt": true,
+      "browser_errors": [],
+      "physical_camera": false
+    }
+  ]
+}

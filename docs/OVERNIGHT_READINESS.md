@@ -13,8 +13,8 @@ with five briefing slides and at least ten complete rehearsals.
 | Expanso | Cloud-connected edge and core, active jobs, same incident received on core with matching crop hash | Verified real Cloud execution, remote disk-readback crop receipts and serving metrics on Nebius |
 | vLLM ecosystem | Correct model names and serving proof; sourced FP8/LLM Compressor explanation | Both FP8 Director and SmolVLM passed inference smoke; narration and five slides updated |
 | Three-minute story | Timed script, slides, complete visible flow | 350-word script with 3:00 screen cues; physical recording still pending |
-| Ten rehearsals | Ten individually recorded outcomes and inspected browser evidence | Ten full photo-driven workflow passes plus negative cases; asset-loading defect fixed, browser retest pending |
-| Recording layout | No clipping/overlap/internal scroll at 1920×1080 and 1280×720 | 720p board, phone and expanded custody pass overflow checks; JSON coloring and zero browser errors verified; full walkthrough retest underway |
+| Ten rehearsals | Ten individually recorded outcomes and inspected browser evidence | Ten final full photo walkthroughs passed after fixes, zero browser errors and matching core receipts; negative cases also exercised |
+| Recording layout | No clipping/overlap/internal scroll at 1920×1080 and 1280×720 | 720p board, phone and expanded custody pass overflow checks; JSON coloring and zero browser errors verified; ten final full walkthroughs passed |
 | Startup/shutdown | Documented commands and truthful GPU billing state | `just down` reached Nebius STOPPED and closed local ports; restart passed both model smokes; Scaleway retained |
 
 ## Boundaries
@@ -62,8 +62,8 @@ with stop/start and complete demo verification before deleting Scaleway.
 Completed migration gates: both model smoke calls, Cloud core connected,
 matching downstream incident/crop hashes, and verified Nebius stop.
 Restart recovery passed both model inference checks, and repeated startup preserved
-healthy Cloud executions. Final full walkthrough retest and the physical camera
-loop remain pending before old-instance deletion readback.
+healthy Cloud executions. Ten final full walkthroughs passed after restart. The physical camera loop
+remains pending before old-instance deletion readback.
 
 ## Retrained Scout and integration evidence
 
@@ -85,8 +85,11 @@ was ignored locally. The corresponding nine incident histories and image
 hashes verified; all eight cases with transmitted crops received core receipts.
 
 Browser review found a missing asset allowlist entry and missing saved-state
-restoration after reload. Both are fixed in source; final browser validation
-must run on the restarted application before the UI is declared ready.
+restoration after reload. Both fixes passed final browser validation on the restarted application.
+`results/photo_integration/final-walkthroughs/summary.json` records the ten
+passing retests; private screenshots remain in `.runtime/recording-validation/`.
+A subsequent browser retest also confirmed that new events replace the saved
+incident label with Current investigation.
 
 ## Final validation checkpoint
 
@@ -95,3 +98,7 @@ findings. Twenty view tests passed again after narration corrections. The runtim
 reports the selected Scout SHA, and signed incident metadata now records it.
 Director prefetch configuration passed both model smoke calls; this warm-cache
 reconfiguration is not a measured improvement in cold provider restart time.
+
+The three changed standalone browser modules passed anti-slop lint and TypeScript
+checking with browser-only libraries (no inherited unrelated Node or React types).
+The final label correction passed 23 targeted tests and a browser event retest.

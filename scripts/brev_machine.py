@@ -126,7 +126,7 @@ def start_existing(name):
     deadline = time.monotonic() + 180
     while True:
         try:
-            result = run(['brev', 'start', name], capture_output=True, text=True)
+            result = run(['brev', 'start', name, '--detached'], capture_output=True, text=True)
             if result.stdout:
                 print(result.stdout.strip(), flush=True)
             return
@@ -146,7 +146,7 @@ def up(name):
         if item['status'] == 'STOPPING':
             raise ValueError('Instance is still stopping; retry after it has stopped')
         start_existing(name)
-    elif item['status'] != 'RUNNING':
+    elif item['status'] not in {'RUNNING', 'STARTING', 'UNHEALTHY'}:
         raise ValueError(f"Instance is {item['status']}; wait for Brev to finish")
     run(['brev', 'refresh'])
     wait_for_ssh(name)

@@ -238,7 +238,7 @@ def test_start_retries_provider_stopping_race(monkeypatch):
     monkeypatch.setattr(workflow, 'run', start)
     monkeypatch.setattr(workflow.time, 'sleep', lambda _: None)
     workflow.start_existing('new')
-    assert attempts == [['brev', 'start', 'new']] * 2
+    assert attempts == [['brev', 'start', 'new', '--detached']] * 2
 
 
 def test_start_does_not_retry_unrelated_provider_errors(monkeypatch):

@@ -106,5 +106,17 @@
   "cold_start": {
     "unattended_success": false,
     "failure": "SSH connection timed out during Director loading; model containers survived; subsequent just up passed."
+  },
+  "shutdown": {
+    "command": "just down",
+    "returncode": 0,
+    "provider_status": "STOPPED",
+    "local_listeners": {
+      "8000": false,
+      "8020": false,
+      "18001": false,
+      "18002": false,
+      "23121": false
+    }
   }
 }

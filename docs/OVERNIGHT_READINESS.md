@@ -171,6 +171,9 @@ dark. Hardware control was tested separately from photo-driven detection.
   permanent Scout checkpoint and defaults. Its SHA matches the untouched
   `runs/scout_r2_960/weights/best.pt`, and the actual presenter reported that
   SHA at `/mode`. The leftover photo-rehearsal process was stopped.
+- `just down` completed and Brev reported Nebius STOPPED. Local ports 8000,
+  8020, 18001, 18002 and 23121 had no listeners. Retained storage remains
+  billable, and provider shutdown can lag the inventory status.
 
 The requested visible prop-to-camera loop remains a daylight validation step.
 The old Scaleway instance has not been deleted; its compute billing continues.

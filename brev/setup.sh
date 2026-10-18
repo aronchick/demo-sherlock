@@ -47,6 +47,18 @@ for name in director vlm; do
   if [[ "$model" != "$expected" || "$image" != "$IMG" ]]; then
     reuse=0
   fi
+  if [[ "$name" == director ]]; then
+    # Accept either CLI spelling and compare the effective (last) argument.
+    strategy=$(printf '%s\n' "$args" | awk '
+      previous == "--safetensors-load-strategy" {value=$0}
+      /^--safetensors-load-strategy=/ {value=substr($0,29)}
+      {previous=$0}
+      END {print value}')
+    if [[ "$strategy" != prefetch ]]; then
+      echo 'Director loading strategy changed; replacing known model containers.'
+      reuse=0
+    fi
+  fi
 done
 
 if [[ "$reuse" == 1 ]]; then

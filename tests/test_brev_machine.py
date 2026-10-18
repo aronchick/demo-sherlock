@@ -479,7 +479,15 @@ def test_invalid_receipt_cannot_skip_gpu_shutdown(receipt, tmp_path, monkeypatch
     assert calls == ['new']
 
 
-def test_setup_restarts_matching_containers_without_deleting_caches(tmp_path):
+@pytest.mark.parametrize('strategy,replaced', [
+    ('--safetensors-load-strategy prefetch', False),
+    ('--safetensors-load-strategy=prefetch', False),
+    ('', True),
+    ('--safetensors-load-strategy lazy', True),
+    ('--safetensors-load-strategy=prefetch --safetensors-load-strategy lazy', True),
+])
+@pytest.mark.parametrize('running', ['true', 'false'])
+def test_setup_reconciles_strategy_and_reuses_matching_caches(tmp_path, strategy, replaced, running):
     import os
 
     fake = tmp_path / 'bin'
@@ -490,9 +498,9 @@ def test_setup_restarts_matching_containers_without_deleting_caches(tmp_path):
 printf '%s\\n' "$*" >> "$CALLS"
 case "$*" in
   *Config.Image*) echo vllm/vllm-openai:v0.28.0 ;;
-  *Config.Cmd*director) printf '%s\\n' --model RedHatAI/NVIDIA-Nemotron-3.5-Lightning-30B-A3B-FP8 ;;
+  *Config.Cmd*director) printf '%s\\n' --model RedHatAI/NVIDIA-Nemotron-3.5-Lightning-30B-A3B-FP8 $STRATEGY ;;
   *Config.Cmd*vlm) printf '%s\\n' --model HuggingFaceTB/SmolVLM-500M-Instruct ;;
-  *State.Running*) echo false ;;
+  *State.Running*) echo "$RUNNING" ;;
 esac
 ''')
     docker.chmod(0o755)
@@ -501,9 +509,24 @@ esac
         tool.write_text('#!/bin/sh\nexit 0\n')
         tool.chmod(0o755)
     result = subprocess.run(['bash', str(ROOT / 'brev/setup.sh')],
-                            env={**os.environ, 'PATH': f'{fake}:{os.environ["PATH"]}', 'CALLS': str(calls)},
+                            env={**os.environ, 'PATH': f'{fake}:{os.environ["PATH"]}',
+                                 'CALLS': str(calls), 'STRATEGY': strategy, 'RUNNING': running},
                             capture_output=True, text=True, check=False)
     assert result.returncode == 0, result.stderr
     operations = calls.read_text().splitlines()
-    assert operations.index('start vlm') < operations.index('start director')
-    assert not any(line.startswith(('rm ', 'pull ', 'run ')) for line in operations)
+    if replaced:
+        assert operations.index('pull vllm/vllm-openai:v0.28.0') < operations.index('container stop --timeout 30 director')
+        assert 'container rm director' in operations
+        starts = [line for line in operations if line.startswith('run ')]
+        assert len(starts) == 2
+        assert '--name vlm' in starts[0]
+        assert '--name director' in starts[1]
+        assert '--safetensors-load-strategy prefetch' in starts[1]
+        assert all('/.cache/huggingface:/root/.cache/huggingface' in line for line in starts)
+        assert not any('prune' in line or 'volume rm' in line for line in operations)
+    else:
+        if running == 'false':
+            assert operations.index('start vlm') < operations.index('start director')
+        else:
+            assert not any(line.startswith('start ') for line in operations)
+        assert not any(line.startswith(('container rm ', 'container stop ', 'pull ', 'run ')) for line in operations)

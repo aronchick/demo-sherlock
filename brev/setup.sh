@@ -23,6 +23,7 @@ fi
 
 # Validate both names before stopping either. Preserve HF downloads and other containers.
 reuse=1
+running=1
 for name in director vlm; do
   expected="$DIRECTOR"
   [[ "$name" == vlm ]] && expected="$VLM"
@@ -41,14 +42,28 @@ for name in director vlm; do
     echo "Refusing to replace $name from image $image" >&2; exit 1;
   }
   if [[ "$args" == *--speculative* ]]; then reuse=0; fi
-  running=$(docker inspect --format '{{.State.Running}}' "$name")
-  if [[ "$model" != "$expected" || "$image" != "$IMG" || "$running" != true ]]; then
+  active=$(docker inspect --format '{{.State.Running}}' "$name")
+  [[ "$active" == true ]] || running=0
+  if [[ "$model" != "$expected" || "$image" != "$IMG" ]]; then
     reuse=0
   fi
 done
 
 if [[ "$reuse" == 1 ]]; then
-  echo 'Exact FP8 and VLM containers already running; checking readiness without restart.'
+  if [[ "$running" == 1 ]]; then
+    echo 'Exact FP8 and VLM containers already running; checking readiness without restart.'
+  else
+    # Keep container compilation caches across a GPU stop/start. Profile the
+    # small VLM first, as on initial deployment, before loading the Director.
+    docker start vlm >/dev/null
+    deadline=$((SECONDS + 600))
+    until curl -sf http://127.0.0.1:8002/v1/models >/dev/null; do
+      (( SECONDS < deadline )) || { echo 'VLM restart timed out' >&2; exit 1; }
+      sleep 5
+    done
+    docker start director >/dev/null
+    echo 'Reused existing model containers and caches after GPU restart.'
+  fi
 else
   # Download before disrupting working services. Keep the shared model cache.
   docker pull "$IMG"

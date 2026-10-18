@@ -210,3 +210,26 @@ Allow at least 25 minutes before recording for a cold start; this is planning
 headroom around one measured run, not a startup guarantee. The capture checkout
 has current code and weights, but use the configured presenter checkout at
 `~/code/second-brain/projects/demos/demo-sherlock` for the camera and Cloud run.
+
+## Startup and reuse verified after #133
+
+The next cold start completed unattended in **20 minutes 6 seconds**. SSH
+disconnected during source upload; the new retry reconnected and transferred
+the archive successfully. Both models passed inference smoke tests, all five
+Expanso Cloud jobs reported running, and the OBSBOT presenter became ready.
+
+A second `just up` completed in **55.82 seconds**, preserving the presenter
+PID and full ownership identity. It reused the running model containers and
+Cloud executions. The presenter reported the promoted Scout SHA and received
+fresh serving metrics for both remote models.
+
+`just down` completed in **64.40 seconds**. Brev reported Nebius STOPPED, and
+ports 8000, 8020, 18001, 18002 and 23121 were closed. Retained storage remains
+billable. Scaleway remained RUNNING; deletion still awaits the agreed visible
+physical-camera validation. No physical prop run occurred in this cycle.
+
+`results/recording_readiness/startup-reuse-133.json` retains the timing,
+runtime readback, presenter identity comparison and hashes of the private logs.
+The earlier failed reuse attempt remains documented above; this later test
+verifies the corrected behavior. The local gate passed 616 tests and Ruff,
+with one existing Ray warning.
